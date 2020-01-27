@@ -1,0 +1,45 @@
+digraph {
+	graph [size="12,12"]
+	node [align=left fontsize=12 height=0.2 ranksep=0.1 shape=box style=filled]
+	4628021544 [label=MseLossBackward fillcolor=darkolivegreen1]
+	4627971152 -> 4628021544
+	4627971152 [label=SumBackward1]
+	4760997112 -> 4627971152
+	4760997112 [label=MulBackward0]
+	4762953488 -> 4760997112
+	4762953488 [label=SigmoidBackward]
+	4762955504 -> 4762953488
+	4762955504 [label=AddmmBackward]
+	4761648656 -> 4762955504
+	4761648656 [label="
+ (8)" fillcolor=lightblue]
+	4761695232 -> 4762955504
+	4761695232 [label=ReluBackward0]
+	4761739104 -> 4761695232
+	4761739104 [label=AddmmBackward]
+	4762297008 -> 4761739104
+	4762297008 [label="
+ (15)" fillcolor=lightblue]
+	4762298352 -> 4761739104
+	4762298352 [label=ReluBackward0]
+	4762297344 -> 4762298352
+	4762297344 [label=AddmmBackward]
+	4762298296 -> 4762297344
+	4762298296 [label="
+ (30)" fillcolor=lightblue]
+	4762297512 -> 4762297344
+	4762297512 [label=TBackward]
+	4762468928 -> 4762297512
+	4762468928 [label="
+ (30, 15)" fillcolor=lightblue]
+	4762298464 -> 4761739104
+	4762298464 [label=TBackward]
+	4762297120 -> 4762298464
+	4762297120 [label="
+ (15, 30)" fillcolor=lightblue]
+	4761695288 -> 4762955504
+	4761695288 [label=TBackward]
+	4762297064 -> 4761695288
+	4762297064 [label="
+ (8, 15)" fillcolor=lightblue]
+}
