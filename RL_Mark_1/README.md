@@ -9,6 +9,6 @@
 * Delete the examples.npz and run in train mode to create a new set of datapoints
 
 # Useful Links
-[Blog] https://towardsdatascience.com/why-going-from-implementing-q-learning-to-deep-q-learning-can-be-difficult-36e7ea1648af
-[Paper] https://web.stanford.edu/class/psych209/Readings/MnihEtAlHassibis15NatureControlDeepRL.pdf
-[gym-racer] https://github.com/Pitrified/gym-racer
+[Blog](https://towardsdatascience.com/why-going-from-implementing-q-learning-to-deep-q-learning-can-be-difficult-36e7ea1648af)
+[Paper](https://web.stanford.edu/class/psych209/Readings/MnihEtAlHassibis15NatureControlDeepRL.pdf)
+[gym-racer documentation](https://github.com/Pitrified/gym-racer)
