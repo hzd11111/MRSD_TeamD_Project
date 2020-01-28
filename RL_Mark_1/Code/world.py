@@ -14,6 +14,7 @@ from IPython import embed
 import torch 
 from graphviz import Digraph
 from torchviz import make_dot
+from torch.utils.tensorboard import SummaryWriter
 
 class World(object):
     def __init__(self, params):
@@ -136,7 +137,11 @@ class World(object):
         loss_hist = []
         agent = self.__agent
         self.create_database()
-        for epoch in range(0, NUM_EPOCHS):      
+        writer = SummaryWriter("../Logs/")
+        for epoch in range(0, NUM_EPOCHS):
+            if((epoch*100/NUM_EPOCHS)%10==0):
+                print("{}% training done".format(epoch*100/NUM_EPOCHS))
+                writer.close()
             batch = self.memory.sample(BATCH_SIZE)
             current_state, action, next_state, reward = self.create_batch(batch)
             current_state_tensor = torch.from_numpy(current_state).float().to(DEVICE)
@@ -156,10 +161,9 @@ class World(object):
             target = (reward_tensor + max_q_vals).reshape(-1)
             # TD difference update
             loss = self.__network.loss_fn(pred, target)
+            writer.add_scalar('Loss/train', loss, epoch)
             if epoch == 0:
                 make_dot(loss).view()
-            if epoch%100 == 0:
-                print(loss)
             self.__network.optimiser.zero_grad()
             loss.backward()
             self.__network.optimiser.step()
