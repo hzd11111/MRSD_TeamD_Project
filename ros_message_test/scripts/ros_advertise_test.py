@@ -37,19 +37,62 @@
 ## to the 'chatter' topic
 
 import rospy
+import copy
 from std_msgs.msg import String
+from ros_message_test.msg import Example
+from ros_message_test.msg import LanePoint
+from ros_message_test.msg import Lane
+from ros_message_test.msg import VehicleState
+from ros_message_test.msg import RewardInfo
+from ros_message_test.msg import EnvironmentState
 
 NODE_NAME = 'talker'
 PUBLISHING_TOPIC_NAME = 'test_chat'
 
 def talker():
-    pub = rospy.Publisher(PUBLISHING_TOPIC_NAME, String, queue_size=10)
+    pub = rospy.Publisher(PUBLISHING_TOPIC_NAME, EnvironmentState, queue_size=10)
     rospy.init_node(NODE_NAME, anonymous=True)
     rate = rospy.Rate(10) # 10hz
     while not rospy.is_shutdown():
-        hello_str = "hello world %s" % rospy.get_time()
-        rospy.loginfo(hello_str)
-        pub.publish(hello_str)
+        # sample Lane Point
+        lane_point_sample = LanePoint()
+        lane_point_sample.pose.x = 1
+	lane_point_sample.pose.y = 1
+	lane_point_sample.pose.theta = 0
+	
+	# sample Lane
+	lane = Lane()
+	lane.lane = [copy.copy(lane_point_sample), copy.copy(lane_point_sample)]
+	
+	# sample vehicle
+	vehicle = VehicleState()
+	vehicle.vehicle_location.x = 2
+	vehicle.vehicle_location.y = 2
+	vehicle.vehicle_location.theta = 1
+	vehicle.vehicle_speed = 10
+	vehicle.length = 5
+	vehicle.width = 2
+
+	# sample reward info
+	reward = RewardInfo()
+	reward.collision = 1
+	reward.time_elapsed = 10.0
+	reward.new_run = 0
+
+	# sample enviroment state
+	env_state = EnvironmentState()
+	env_state.cur_vehicle_state = copy.copy(vehicle)
+	env_state.front_vehicle_state = copy.copy(vehicle)
+	env_state.back_vehicle_state = copy.copy(vehicle)
+	env_state.adjacent_lane_vehicles = [copy.copy(vehicle), copy.copy(vehicle)]
+	env_state.max_num_vehicles = 2
+	env_state.speed_limit = 40
+	env_state.current_lane = copy.copy(lane)
+	env_state.next_lane = copy.copy(lane)
+	env_state.reward = copy.copy(reward)
+
+        rospy.loginfo("Publishing")
+        pub.publish(env_state)
         rate.sleep()
 
 if __name__ == '__main__':
