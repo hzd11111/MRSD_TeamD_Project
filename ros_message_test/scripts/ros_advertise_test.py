@@ -45,12 +45,20 @@ from ros_message_test.msg import Lane
 from ros_message_test.msg import VehicleState
 from ros_message_test.msg import RewardInfo
 from ros_message_test.msg import EnvironmentState
+from ros_message_test.msg import RLCommand
+from ros_message_test.msg import PathPlan
 
 NODE_NAME = 'talker'
 PUBLISHING_TOPIC_NAME = 'test_chat'
+RL_TOPIC_NAME = 'reinforcement_learning_test'
+PATH_TOPIC_NAME = 'path_plan_test'
 
 def talker():
+    # initialize publishers
     pub = rospy.Publisher(PUBLISHING_TOPIC_NAME, EnvironmentState, queue_size=10)
+    pub_rl = rospy.Publisher(RL_TOPIC_NAME, RLCommand, queue_size = 10)
+    pub_path = rospy.Publisher(PATH_TOPIC_NAME, PathPlan, queue_size = 10)
+
     rospy.init_node(NODE_NAME, anonymous=True)
     rate = rospy.Rate(10) # 10hz
     while not rospy.is_shutdown():
@@ -91,8 +99,21 @@ def talker():
 	env_state.next_lane = copy.copy(lane)
 	env_state.reward = copy.copy(reward)
 
+	# sample RL command
+	rl_command = RLCommand()
+	rl_command.constant_speed = 1
+
+	# sample Path Plan
+	path_plan = PathPlan()
+	path_plan.tracking_pose.x = 1
+	path_plan.tracking_pose.y = 1
+	path_plan.tracking_pose.theta = 1
+	path_plan.tracking_speed = 10
+
         rospy.loginfo("Publishing")
         pub.publish(env_state)
+	pub_rl.publish(rl_command)
+	pub_path.publish(path_plan)
         rate.sleep()
 
 if __name__ == '__main__':

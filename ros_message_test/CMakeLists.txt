@@ -57,6 +57,8 @@ add_message_files(
   VehicleState.msg
   RewardInfo.msg
   EnvironmentState.msg
+  RLCommand.msg
+  PathPlan.msg
 #   Message2.msg
 )
 
