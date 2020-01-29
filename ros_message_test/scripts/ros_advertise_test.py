@@ -1,4 +1,4 @@
-#!/usr/bin/env python
+#!/usr/bin/env python2.7
 # Software License Agreement (BSD License)
 #
 # Copyright (c) 2008, Willow Garage, Inc.
@@ -39,9 +39,12 @@
 import rospy
 from std_msgs.msg import String
 
+NODE_NAME = 'talker'
+PUBLISHING_TOPIC_NAME = 'test_chat'
+
 def talker():
-    pub = rospy.Publisher('chatter', String, queue_size=10)
-    rospy.init_node('talker', anonymous=True)
+    pub = rospy.Publisher(PUBLISHING_TOPIC_NAME, String, queue_size=10)
+    rospy.init_node(NODE_NAME, anonymous=True)
     rate = rospy.Rate(10) # 10hz
     while not rospy.is_shutdown():
         hello_str = "hello world %s" % rospy.get_time()
