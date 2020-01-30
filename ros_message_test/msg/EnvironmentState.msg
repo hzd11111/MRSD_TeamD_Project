@@ -7,3 +7,4 @@ float64 speed_limit
 Lane current_lane
 Lane next_lane
 RewardInfo reward
+int32 id
