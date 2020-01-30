@@ -109,19 +109,38 @@ class TrajGenerator:
 	def __init__(self, traj_parameters):
 		self.traj_parameters = traj_parameters
 
+	def trajPlan(self, rl_data, sim_data):
+		if rl_data.rl_decision == RLDecision.CONSTANT_SPEED:
+			return self.constSpeedTraj(rl_data, sim_data)
+		elif rl_data.rl_decision == RLDecision.ACCELERATE:
+			return self.constSpeedTraj(rl_data, sim_data)
+		elif rl_data.rl_decision == RLDecision.DECELERATE:
+			return self.constSpeedTraj(rl_data, sim_data)
+		elif rl_data.rl_decision == RLDecision.SWITCH_LANE:
+			return self.laneChangeTraj(rl_data, sim_data)
+		else:
+			print("RL Decision Error")
+
+	def constSpeedTraj(self, rl_data, sim_data):
+		pass
+
+	def laneChangeTraj(self, rl_data, sim_data):
+		pass
+		
 backlog_manager = BacklogData()
-TRAJ_PARAM = {'look_up_distance' : 10 ,\
+TRAJ_PARAM = {'look_up_distance' : 0 ,\
 		'lane_change_length' : 10,\
 		'accelerate_amt' : 3,\
 		'decelerate_amt' : 3,\
 		'min_speed' : 0
 }
 
-class PathPlannerManager():
+class PathPlannerManager:
 	def __init__(self):
 		self.rl_sub = None
 		self.sim_sub = None
 		self.pub_path = None
+		self.traj_gen = None
 
 	def rlCallback(self.data):
 		backlog_manager.newRLMessage(data)
@@ -138,8 +157,10 @@ class PathPlannerManager():
 			rl_data, sim_data = backlog_manager.newPair()
 
 			# gernerate the path
-		
+			traj = self.traj_gen.trajPlan(rl_data, sim_data)			
+
 			# publish the path
+			self.pub_path.publish(path_plan)
 
 	def initialize(self):
 		# initialize publisher
@@ -155,38 +176,15 @@ class PathPlannerManager():
 		self.rl_sub = rospy.Subscriber(RL_TOPIC_NAME, RLCommand, self.rlCallback)
 		self.sim_sub = rospy.Subscriber(SIM_TOPIC_NAME, EnvironmentState, self.simCallback)
 
+		# initialize trajectory generator
+		self.traj_gen = TrajGenerator(TRAJ_PARAM)
+
+		# spin
 		rospy.spin()	
 		
-def pathPlannerMain():
-	# initialize publisher
-	pub_path = rospy.Publisher(PATH_PLAN_TOPIC_NAME, PathPlan, queue_size = 10)
-
-	# initialize node
-	rospy.init_node(NODE_NAME, anonymous=True)
-
-	# refresh rate
-	rate = rospy.Rate(500) # 500Hz
-	
-	# initialize subscriber
-	rospy.Subscriber(RL_TOPIC_NAME, RLCommand, rlCallback)
-	rospy.Subscriber(SIM_TOPIC_NAME, EnvironmentState, simCallback)
-
-	rospy.spin()	
-	while not rospy.is_shutdown():
-		# check if there is a new pair of messages
-		if backlog_manager.completePair():
-			# get the data
-			rl_data, sim_data = backlog_manager.newPair()
-			
-			# generate the path
-
-			# publish the path
-	
-		# ros spin
-		rospy.spin()
-
 if __name__ == '__main__':
 	try:
-		pathPlannerMain()
+		path_planner_main = PathPlannerManager()
+		path_planner_main.initialize()
 	except rospy.ROSInterruptException:
 		pass
