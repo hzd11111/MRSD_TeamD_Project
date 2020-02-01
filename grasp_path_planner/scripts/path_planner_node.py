@@ -5,13 +5,13 @@ import Queue
 import math
 
 from enum import Enum
-from ros_message_test.msg import LanePoint
-from ros_message_test.msg import Lane
-from ros_message_test.msg import VehicleState
-from ros_message_test.msg import RewardInfo
-from ros_message_test.msg import EnvironmentState
-from ros_message_test.msg import RLCommand
-from ros_message_test.msg import PathPlan
+from grasp_path_planner.msg import LanePoint
+from grasp_path_planner.msg import Lane
+from grasp_path_planner.msg import VehicleState
+from grasp_path_planner.msg import RewardInfo
+from grasp_path_planner.msg import EnvironmentState
+from grasp_path_planner.msg import RLCommand
+from grasp_path_planner.msg import PathPlan
 
 
 NODE_NAME = 'path_planner'
@@ -30,6 +30,7 @@ class RLDataProcessor:
 		acc = rl_data.accelerate
 		dec = rl_data.decelerate
 		cl = rl_data.change_lane
+		self.reset_run = rl_data.reset_run
 		if not ((const_speed + acc + dec + cl) == 1):
 			print("RL Message Content Error")
 		if const_speed:
@@ -90,6 +91,11 @@ class BacklogData:
 	def __init__(self):
 		self.rl_backlog = Queue.Queue()
 		self.sim_backlog = Queue.Queue()
+	def reset(self):
+		with self.rl_backlog.mutex:
+			self.rl_backlog.clear()
+		with self.sim_backlog.mutex:
+			self.sim_backlog.clear()		
 
 	def completePair(self):
 		if self.rl_backlog.empty() or self.sim_backlog.empty():
@@ -102,9 +108,9 @@ class BacklogData:
 	def newSimMessage(self, data):
 		self.sim_backlog.put(SimDataProcessor(data))
 
-	def newPair():
-		rl_msg = rl_backlog.get()
-		sim_msg = sim_backlog.get()
+	def newPair(self):
+		rl_msg = self.rl_backlog.get()
+		sim_msg = self.sim_backlog.get()
 		return rl_msg, sim_msg
 
 class VecTemp:
@@ -140,12 +146,13 @@ class PoseTemp:
 		self.x = 0
 		self.y = 0
 		self.theta = 0
+
 	def __init__(self, ros_pose):
 		self.x = ros_pose.x
 		self.y = ros_pose.y
-		self.theta = wrapToPi(ros_pose.theta)
+		self.theta = self.wrapToPi(ros_pose.theta)
 
-	def wrapToPi(theta):
+	def wrapToPi(self, theta):
 		return (theta + math.pi) % (2. * math.pi) - math.pi
 
 	def distance(self, pose):
@@ -155,7 +162,7 @@ class PoseTemp:
 		new_pose = PoseTemp()
 		new_pose.x = self.x + pose.x * math.cos(self.theta) - pose.y * math.sin(self.theta)
 		new_pose.y = self.y + pose.x * math.sin(self.theta) + pose.y * math.cos(self.theta)
-		new_pose.theta = wrapToPi(self.theta + pose.theta)
+		new_pose.theta = self.wrapToPi(self.theta + pose.theta)
 		return new_pose
 	
 	def vecTo(self, pose):
@@ -235,7 +242,7 @@ class TrajGenerator:
 		for lane_waypoint in lane_pose_array:
 			closest_pose = lane_waypoint
 			way_pose = PoseTemp(lane_waypoint.pose)
-			if way_pose.distance(cur_vehicle_pose) < SAME_POSE_THRESHOLD and\
+			if way_pose.distance(cur_vehicle_pose) < TrajGenerator.SAME_POSE_THRESHOLD and\
 				way_pose.isInfrontOf(cur_vehicle_pose):
 				break	
 
@@ -292,7 +299,7 @@ class TrajGenerator:
 		cur_vehicle_pose = PoseTemp(sim_data.ego_vehicle.vehicle_location)
 		
 		# generate trajectory
-		if not self.lane_switching
+		if not self.lane_switching:
 			# ToDo: Use closest pose for lane width
 			neutral_traj = cubicSplineGen(sim_data.cur_lane.lane[0].width,\
 						sim_data.next_lane.lane[0].width)
@@ -311,13 +318,13 @@ class TrajGenerator:
 
 			# offset the trajectory with the closest pose
 			for pose_speed in neutral_traj:
-				self.generated_path.append(pose_speed.addToPose(closest_pose)
+				self.generated_path.append(pose_speed.addToPose(closest_pose))
 	
 			# change lane switching status	
 			self.lane_switching = True
 
 		# find the next tracking point
-		while (self.path_pointer < len(self.generated_path):
+		while (self.path_pointer < len(self.generated_path)):
 			# traj pose
 			pose_speed = self.generated_path[path_pointer]
 
@@ -340,9 +347,8 @@ class TrajGenerator:
 		new_path_plan.tracking_pose.theta = self.generated_path[path_pointer].theta
 		new_path_plan.reset_sim = 0
 		new_path_plan.tracking_speed = self.gernerated_path[path_pointer].speed
-				
+		return new_path_plan		
 
-backlog_manager = BacklogData()
 TRAJ_PARAM = {'look_up_distance' : 0 ,\
 		'lane_change_length' : 30,\
 		'lane_change_time_constant' : 1.05,\
@@ -358,26 +364,33 @@ class PathPlannerManager:
 		self.sim_sub = None
 		self.pub_path = None
 		self.traj_gen = None
+		self.backlog_manager = BacklogData()
 
-	def rlCallback(self.data):
-		backlog_manager.newRLMessage(data)
+	def rlCallback(self, data):
+		self.backlog_manager.newRLMessage(data)
 		self.pathPlanCallback()
 
-	def simCallback(self.data):
-		backlog_manager.newSimMessage(data)
+	def simCallback(self, data):
+		self.backlog_manager.newSimMessage(data)
 		self.pathPlanCallback()
 
 	def pathPlanCallback(self):
 		# check if there is a new pair of messages
-		if backlog_manager.completePair():
+		if self.backlog_manager.completePair():
 			# get the pair
-			rl_data, sim_data = backlog_manager.newPair()
+			rl_data, sim_data = self.backlog_manager.newPair()
 
 			# gernerate the path
 			traj = self.traj_gen.trajPlan(rl_data, sim_data)			
-
+		
+			# reset the backlog if simulation needs to be reset
+			if traj.reset_sim:
+				self.backlog_manager.reset()
+		
 			# publish the path
-			self.pub_path.publish(path_plan)
+			self.pub_path.publish(traj)
+
+			
 
 	def initialize(self):
 		# initialize publisher

@@ -177,6 +177,7 @@ include_directories(
 
 catkin_install_python(PROGRAMS
   scripts/path_planner_node
+  scripts/path_test_node
   DESTINATION ${CATKIN_PACKAGE_BIN_DESTINATION}
 )
 ## Mark executable scripts (Python etc.) for installation
