@@ -236,7 +236,7 @@ class TrajGenerator:
 			closest_pose = lane_waypoint
 			way_pose = PoseTemp(lane_waypoint.pose)
 			if way_pose.distance(cur_vehicle_pose) < SAME_POSE_THRESHOLD and\
-				cur_vehicle_pose.isInfrontOf(way_pose):
+				way_pose.isInfrontOf(cur_vehicle_pose):
 				break	
 
 		new_path_plan = PathPlan()
@@ -289,6 +289,8 @@ class TrajGenerator:
 		
 
 	def laneChangeTraj(self, rl_data, sim_data):
+		cur_vehicle_pose = PoseTemp(sim_data.ego_vehicle.vehicle_location)
+		
 		# generate trajectory
 		if not self.lane_switching
 			# ToDo: Use closest pose for lane width
@@ -303,7 +305,7 @@ class TrajGenerator:
 				closest_pose = lane_waypoint
 				way_pose = PoseTemp(lane_waypoint.pose)
 				if way_pose.distance(cur_vehicle_pose) < SAME_POSE_THRESHOLD and\
-					cur_vehicle_pose.isInfrontOf(way_pose):
+					way_pose.isInfrontOf(cur_vehicle_pose):
 					break	
 			closest_pose = PoseTemp(closes_pose)
 
@@ -314,14 +316,32 @@ class TrajGenerator:
 			# change lane switching status	
 			self.lane_switching = True
 
-		# change lane switching status
+		# find the next tracking point
+		while (self.path_pointer < len(self.generated_path):
+			# traj pose
+			pose_speed = self.generated_path[path_pointer]
 
-		# determine if lane switch is completed
+			if pose_speed.isInfrontOf(cur_vehicle_pose):
+				break
 
-		# determine if Traj Generator needs to be reset
-
-		# find the closest point
+			self.path_pointer += 1
 		
+			
+		new_path_plan = PathPlan()
+		# determine if lane switch is completed
+		if path_pointer >= len(self.generated_path):
+			# reset the trajectory
+			self.reset()
+			new_path_plan.reset_sim = 1
+			return new_path_plan	
+		
+		new_path_plan.tracking_pose.x = self.generated_path[path_pointer].x
+		new_path_plan.tracking_pose.y = self.generated_path[path_pointer].y
+		new_path_plan.tracking_pose.theta = self.generated_path[path_pointer].theta
+		new_path_plan.reset_sim = 0
+		new_path_plan.tracking_speed = self.gernerated_path[path_pointer].speed
+				
+
 backlog_manager = BacklogData()
 TRAJ_PARAM = {'look_up_distance' : 0 ,\
 		'lane_change_length' : 30,\
