@@ -114,17 +114,17 @@ class BacklogData:
 		return rl_msg, sim_msg
 
 class VecTemp:
-	def __init__(self):
-		self.x = 0
-		self.y = 0
-
-	def __init__(self, x, y):
+	def __init__(self, x=0, y=0):
 		self.x = x
 		self.y = y
 
-	def __init__(self, pose):
-		self.x = pose.x
-		self.y = pose.y
+	#def __init__(self, x, y):
+	#	self.x = x
+	#	self.y = y
+
+	#def __init__(self, pose):
+	#	self.x = pose.x
+	#	self.y = pose.y
 
 	def norm(self):
 		return math.sqrt(self.x **2 + self.y**2)
@@ -138,19 +138,26 @@ class VecTemp:
 	def dot(self, other):
 		upper = self.x*other.x + self.y+other.y
 		lower = self.norm() * other.norm()
+		if lower <= 0.00001:
+			return 1
 		return upper / lower
 		
 	
 class PoseTemp:
-	def __init__(self):
-		self.x = 0
-		self.y = 0
-		self.theta = 0
+	def __init__(self, ros_pose=False):
+		if ros_pose:
+			self.x=ros_pose.x
+			self.y=ros_pose.y
+			self.theta=self.wrapToPi(ros_pose.theta)
+		else:
+			self.x = 0
+			self.y = 0
+			self.theta = 0
 
-	def __init__(self, ros_pose):
-		self.x = ros_pose.x
-		self.y = ros_pose.y
-		self.theta = self.wrapToPi(ros_pose.theta)
+	#def __init__(self, ros_pose):
+	#	self.x = ros_pose.x
+	#	self.y = ros_pose.y
+	#	self.theta = self.wrapToPi(ros_pose.theta)
 
 	def wrapToPi(self, theta):
 		return (theta + math.pi) % (2. * math.pi) - math.pi
@@ -187,16 +194,16 @@ class PoseTemp:
 
 class PoseSpeedTemp(PoseTemp):
 	def __init__(self):
-		self.speed = 0
 		PoseTemp.__init__(self)
-	def __init__(self, pose, speed):
-		self.speed = speed
-		PoseTemp.__init__(self,pose)
+		self.speed = 0
+	#def __init__(self, pose, speed):
+	#	self.speed = speed
+	#	PoseTemp.__init__(self,pose)
 	def addToPose(self, pose):
 		new_pose = PoseSpeedTemp()
 		new_pose.x = self.x + pose.x * math.cos(self.theta) - pose.y * math.sin(self.theta)
 		new_pose.y = self.y + pose.x * math.sin(self.theta) + pose.y * math.cos(self.theta)
-		new_pose.theta = wrapToPi(self.theta + pose.theta)
+		new_pose.theta = self.wrapToPi(self.theta + pose.theta)
 		new_pose.speed = self.speed
 		return new_pose
 
@@ -276,7 +283,7 @@ class TrajGenerator:
 
 		# time loop
 		time_disc = self.traj_parameters['lane_change_time_disc'] 
-		total_loop_count = tf / time_disc + 1
+		total_loop_count = int(tf / time_disc + 1)
 		for i in range(total_loop_count):
 			t = i * time_disc
 			x_value = ax*(t**3.)+bx*(t**2.)+cx*t+dx
@@ -301,20 +308,20 @@ class TrajGenerator:
 		# generate trajectory
 		if not self.lane_switching:
 			# ToDo: Use closest pose for lane width
-			neutral_traj = cubicSplineGen(sim_data.cur_lane.lane[0].width,\
-						sim_data.next_lane.lane[0].width)
+			neutral_traj = self.cubicSplineGen(sim_data.cur_lane.lane[0].width,\
+						sim_data.next_lane.lane[0].width, sim_data.ego_vehicle.vehicle_speed)
 
 			# determine the closest next pose in the current lane
 			lane_pose_array = sim_data.cur_lane.lane
-			closest_pose = lane_pose_array[0]
+			closest_pose = lane_pose_array[0].pose
 
 			for lane_waypoint in lane_pose_array:
-				closest_pose = lane_waypoint
+				closest_pose = lane_waypoint.pose
 				way_pose = PoseTemp(lane_waypoint.pose)
-				if way_pose.distance(cur_vehicle_pose) < SAME_POSE_THRESHOLD and\
+				if way_pose.distance(cur_vehicle_pose) < TrajGenerator.SAME_POSE_THRESHOLD and\
 					way_pose.isInfrontOf(cur_vehicle_pose):
 					break	
-			closest_pose = PoseTemp(closes_pose)
+			closest_pose = PoseTemp(closest_pose)
 
 			# offset the trajectory with the closest pose
 			for pose_speed in neutral_traj:
@@ -326,7 +333,7 @@ class TrajGenerator:
 		# find the next tracking point
 		while (self.path_pointer < len(self.generated_path)):
 			# traj pose
-			pose_speed = self.generated_path[path_pointer]
+			pose_speed = self.generated_path[self.path_pointer]
 
 			if pose_speed.isInfrontOf(cur_vehicle_pose):
 				break
@@ -336,17 +343,17 @@ class TrajGenerator:
 			
 		new_path_plan = PathPlan()
 		# determine if lane switch is completed
-		if path_pointer >= len(self.generated_path):
+		if self.path_pointer >= len(self.generated_path):
 			# reset the trajectory
 			self.reset()
 			new_path_plan.reset_sim = 1
 			return new_path_plan	
 		
-		new_path_plan.tracking_pose.x = self.generated_path[path_pointer].x
-		new_path_plan.tracking_pose.y = self.generated_path[path_pointer].y
-		new_path_plan.tracking_pose.theta = self.generated_path[path_pointer].theta
+		new_path_plan.tracking_pose.x = self.generated_path[self.path_pointer].x
+		new_path_plan.tracking_pose.y = self.generated_path[self.path_pointer].y
+		new_path_plan.tracking_pose.theta = self.generated_path[self.path_pointer].theta
 		new_path_plan.reset_sim = 0
-		new_path_plan.tracking_speed = self.gernerated_path[path_pointer].speed
+		new_path_plan.tracking_speed = self.generated_path[self.path_pointer].speed
 		return new_path_plan		
 
 TRAJ_PARAM = {'look_up_distance' : 0 ,\

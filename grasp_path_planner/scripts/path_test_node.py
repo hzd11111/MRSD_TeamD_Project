@@ -60,30 +60,37 @@ def talker():
     rospy.init_node(NODE_NAME, anonymous=True)
     rate = rospy.Rate(10) # 10hz
     while not rospy.is_shutdown():
-        # sample Lane Point
-        lane_point_sample = LanePoint()
-        lane_point_sample.pose.x = 1
-	lane_point_sample.pose.y = 1
-	lane_point_sample.pose.theta = 0
+	# current Lane
+	lane_cur = Lane()
+	lane_points = []
+	for i in range(100):
+		lane_point = LanePoint()
+		lane_point.pose.y = 0
+		lane_point.pose.x = i/10.
+		lane_point.pose.theta = 0
+		lane_point.width = 3
+		lane_points.append(lane_point)
+	lane_cur.lane = lane_points
+	# next Lane
+	lane_next = Lane()
+	lane_points_next = []
+	for i in range(100):
+		lane_point = LanePoint()
+		lane_point.pose.y = 3
+		lane_point.pose.x = i/10.
+		lane_point.pose.theta = 0
+		lane_point.width = 3
+		lane_points_next.append(lane_point)
+	lane_next.lane = lane_points_next
 	
-	# sample Lane
-	lane = Lane()
-	lane.lane = [copy.copy(lane_point_sample), copy.copy(lane_point_sample)]
-	
-	# sample vehicle
+	# current vehicle	
 	vehicle = VehicleState()
 	vehicle.vehicle_location.x = 2
-	vehicle.vehicle_location.y = 2
-	vehicle.vehicle_location.theta = 1
+	vehicle.vehicle_location.y = 0
+	vehicle.vehicle_location.theta = 0
 	vehicle.vehicle_speed = 10
 	vehicle.length = 5
 	vehicle.width = 2
-
-	# sample reward info
-	reward = RewardInfo()
-	reward.collision = 1
-	reward.time_elapsed = 10.0
-	reward.new_run = 0
 
 	# sample enviroment state
 	env_state = EnvironmentState()
@@ -93,13 +100,12 @@ def talker():
 	env_state.adjacent_lane_vehicles = [copy.copy(vehicle), copy.copy(vehicle)]
 	env_state.max_num_vehicles = 2
 	env_state.speed_limit = 40
-	env_state.current_lane = copy.copy(lane)
-	env_state.next_lane = copy.copy(lane)
-	env_state.reward = copy.copy(reward)
+	env_state.current_lane = copy.copy(lane_cur)
+	env_state.next_lane = copy.copy(lane_next)
 
 	# sample RL command
 	rl_command = RLCommand()
-	rl_command.constant_speed = 1
+	rl_command.change_lane = 1
 
         rospy.loginfo("Publishing")
         pub.publish(env_state)
