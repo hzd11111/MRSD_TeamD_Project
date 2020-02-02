@@ -1,0 +1,1 @@
+/home/mayank/Carla/carla/Dist/0.9.6/CarlaUE4.sh
