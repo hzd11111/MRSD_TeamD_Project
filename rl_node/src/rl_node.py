@@ -39,47 +39,76 @@
 import rospy
 import copy
 from std_msgs.msg import String
-from ros_message_test.msg import Example
-from ros_message_test.msg import LanePoint
-from ros_message_test.msg import Lane
-from ros_message_test.msg import VehicleState
-from ros_message_test.msg import RewardInfo
-from ros_message_test.msg import EnvironmentState
-from ros_message_test.msg import RLCommand
-from ros_message_test.msg import PathPlan
+from grasp_path_planner.msg import LanePoint
+from grasp_path_planner.msg import Lane
+from grasp_path_planner.msg import VehicleState
+from grasp_path_planner.msg import RewardInfo
+from grasp_path_planner.msg import EnvironmentState
+from grasp_path_planner.msg import RLCommand
 
 NODE_NAME = 'rl_node'
-RL_TOPIC_NAME = 'reinforcement_learning'
+RL_TOPIC_NAME = 'rl_decision'
 ENVIRONMENT_TOPIC_NAME = 'environment_state'
-VEHICLE_TOPIC_NAME = 'vehicle_state'
-LANE_TOPIC_NAME = 'lane'
 
-def callback_env(message):
-	pass
+class RLManager:
+	def __init__(self):
+		self.pub_rl = None
+		self.env_sub = None
+		self.rl_agent = None
 
-def callback_vehicle(message):
-	pass
+	def simCallback(self, data):
+		
+		# sample code for data loading ToDo: Delete
+		current_vehicle = data.cur_vehicle_state
+		adjacent_lane_vehicles = data.adjacent_lane_vehicles
+		current_lane = data.current_lane
+		
+		cur_vehicle_location = current_vehicle.vehicle_location
+		cur_vehicle_speed = current_vehicle.vehicle_speed
+		
+		print('New Environment State')
+		print('Current Vehicle Speed', cur_vehicle_speed)
+		
+		for vehicle in adjacent_lane_vehicles:
+			# load them the same as current_vehicle
+			speed = vehicle.vehicle_speed
 
-def callback_lane(message):
-	pass
+		# computation with rl_agent
+		
+		
+		# dummy msg ToDo: Delete these when rl is done
+		rl_decision = RLCommand()
+		rl_decision.change_lane = 1
+		rl_decision.constant_speed = 0
+		rl_decision.accelerate = 0
+		rl_decision.decelerate = 0
+		rl_decision.reset_run = 0
+		rl_decision.id = data.id		
 
-def main():
-    # initialize publishers
-	pub_rl = rospy.Publisher(RL_TOPIC_NAME, RLCommand, queue_size = 10)
-	rospy.Subscriber(ENVIRONMENT_TOPIC_NAME, EnvironmentState, callback_env)
-	rospy.Subscriber(VEHICLE_TOPIC_NAME, VehicleState, callback_vehicle)
-	rospy.Subscriber(LANE_TOPIC_NAME, Lane, callback_lane)
-	rospy.init_node(NODE_NAME, anonymous=True)
-	rate = rospy.Rate(10) # 10hz
-	while not rospy.is_shutdown():
-		rospy.loginfo("Publishing")
-		rl_command = RLCommand()
-		rl_command.constant_speed = 1
-		pub_rl.publish(rl_command)
-		rate.sleep()
+		# publish message
+		self.pub_rl.publish(rl_decision)
+		
+
+	def initialize(self):
+		
+		#initialize node
+		rospy.init_node(NODE_NAME, anonymous=True)
+
+		# initialize subscriber
+		self.env_sub = rospy.Subscriber(ENVIRONMENT_TOPIC_NAME, EnvironmentState, self.simCallback)
+
+		# initialize pulbisher
+		self.pub_rl = rospy.Publisher(RL_TOPIC_NAME, RLCommand, queue_size = 10)
+
+		# initlialize rl class
+		
+
+		# spin
+		rospy.spin()
 
 if __name__ == '__main__':
     try:
-        main()
+        rl_manager = RLManager()
+	rl_manager.initialize()
     except rospy.ROSInterruptException:
         pass

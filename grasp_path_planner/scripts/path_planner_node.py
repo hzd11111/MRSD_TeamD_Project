@@ -406,9 +406,6 @@ class PathPlannerManager:
 		# initialize node
 		rospy.init_node(NODE_NAME, anonymous=True)
 
-		# refresh rate
-		rate = rospy.Rate(500) # 500Hz
-	
 		# initialize subscriber
 		self.rl_sub = rospy.Subscriber(RL_TOPIC_NAME, RLCommand, self.rlCallback)
 		self.sim_sub = rospy.Subscriber(SIM_TOPIC_NAME, EnvironmentState, self.simCallback)
