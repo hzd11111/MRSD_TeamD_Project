@@ -25,6 +25,7 @@ class CarlaHandler:
 		self.client = client  # TODO: Is this needed?
 		self.world = client.get_world()
 		self.world_map = self.world.get_map()
+		self.all_waypoints = self.get_waypoints()
 		self.blueprint_library = self.world.get_blueprint_library()
 		self.actor_dict = {}
 
@@ -65,12 +66,16 @@ class CarlaHandler:
 
 		return self.world_map.generate_waypoints(distance=distance)
 
-	def filter_waypoints(self, waypoints, road_id=None):
+	def filter_waypoints(self, waypoints, road_id=None, lane_id=None):
 
 		filtered_waypoints = []
 		for waypoint in waypoints:
-			if(waypoint.road_id == road_id):
-				filtered_waypoints.append(waypoint)
+			if(lane_id == None):
+				if(waypoint.road_id == road_id):
+					filtered_waypoints.append(waypoint)
+			else:
+				if(waypoint.road_id == road_id and waypoint.lane_id == lane_id):
+					filtered_waypoints.append(waypoint)
 
 		return filtered_waypoints
 
@@ -117,6 +122,99 @@ class CarlaHandler:
 			transform_position_as_seen_from_actor = np.dot(R_world_to_actor, transform_coords)
 			
 			return transform_position_as_seen_from_actor
+
+
+	def get_state_information(self, ego_vehicle=None):
+
+		# Check for valid inputs
+		if(ego_vehicle==None):
+			print("No ego vehicle specified..")
+			return None
+		else:
+			# Get ego vehicle location and nearest waypoint for reference.
+			ego_vehicle_location = ego_vehicle.get_location()
+			nearest_waypoint = self.world_map.get_waypoint(ego_vehicle_location, project_to_road=True)
+
+			# Get current road and lane IDs
+			current_road_ID = nearest_waypoint.road_id
+			#print("Spawn Road ID Inside Handler:", current_road_ID)
+			current_lane_ID = nearest_waypoint.lane_id
+
+			# Get IDs of left and right lanes
+			left_lane_ID = nearest_waypoint.get_left_lane().lane_id
+			right_lane_ID = nearest_waypoint.get_right_lane().lane_id
+
+			# Finding waypoints in current, left and right lanes
+			current_lane_waypoints = self.filter_waypoints(self.all_waypoints, road_id=current_road_ID, lane_id=current_lane_ID)
+			left_lane_waypoints = self.filter_waypoints(self.all_waypoints, road_id=current_road_ID, lane_id=left_lane_ID)
+			right_lane_waypoints = self.filter_waypoints(self.all_waypoints, road_id=current_road_ID, lane_id=right_lane_ID)
+
+			# Containers for leading and rear vehicle in current lane
+			front_vehicle = None
+			rear_vehicle = None
+
+			closest_distance_front = 10000000000 #TODO Change this to more formal value
+			closest_distance_rear = -10000000000 #TODO Change this to more formal value
+
+			# Containers for actors in current, left and right lanes
+			actors_in_current_lane = []
+			actors_in_left_lane = []
+			actors_in_right_lane = []
+
+			# Fill containers defined above
+			for actor in self.world.get_actors().filter('vehicle.*'):
+
+
+				# For all actors that are not ego vehicle
+				if(actor.id != ego_vehicle.id):
+
+
+
+					# Find nearest waypoint on the map
+					actor_nearest_waypoint = self.world_map.get_waypoint(actor.get_location(), project_to_road=True)
+
+					# If actor is on the same road as the ego vehicle
+					if(actor_nearest_waypoint.road_id == current_road_ID):
+						
+						#print(actor_nearest_waypoint.road_id, actor_nearest_waypoint.lane_id, "OLA")
+						# If actor is on the same lane as the ego vehicle: Add to relevant container, and find if it's the leading or trailing vehicle
+						if(actor_nearest_waypoint.lane_id == current_lane_ID):
+							actors_in_current_lane.append(actor)
+							
+							curr_actor_location_in_ego_vehicle_frame = self.convert_global_transform_to_actor_frame(actor=ego_vehicle, transform=actor.get_transform())
+							print(curr_actor_location_in_ego_vehicle_frame)
+							if(curr_actor_location_in_ego_vehicle_frame[0][0] > 0.0):
+								front_vehicle = actor
+								closest_distance_front = curr_actor_location_in_ego_vehicle_frame[0][0]
+							elif(curr_actor_location_in_ego_vehicle_frame[0][0] < 0.0):
+								rear_vehicle = actor
+								closest_distance_rear = curr_actor_location_in_ego_vehicle_frame[0][0]
+							
+						# Add to relevant container
+						elif(actor_nearest_waypoint.lane_id == left_lane_ID):
+							actors_in_left_lane.append(actor)
+						# Add to relevant container
+						elif(actor_nearest_waypoint.lane_id == right_lane_ID):
+							actors_in_right_lane.append(actor)
+
+			return current_lane_waypoints, left_lane_waypoints, right_lane_waypoints, front_vehicle, rear_vehicle, actors_in_current_lane, actors_in_left_lane, actors_in_right_lane
+
+
+			
+
+			
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 

@@ -1,3 +1,5 @@
+import sys
+sys.path.remove('/opt/ros/kinetic/lib/python2.7/dist-packages')
 import random
 import time
 import numpy as np
@@ -5,7 +7,6 @@ import cv2
 import carla
 import glob
 import os
-import sys
 
 from carla_handler import CarlaHandler
 from utils import get_matrix, create_bb_points
@@ -177,16 +178,18 @@ while(True):
 	for actor in all_actors.filter('vehicle.*'):
 
 		if(actor.id != ego_vehicle.id):
+
 			actor_nearest_waypoint = carla_handler_1.world_map.get_waypoint(actor.get_location(), project_to_road=True)
+			print(actor_nearest_waypoint.road_id, current_road_ID)
 			if(actor_nearest_waypoint.road_id == current_road_ID):
 				
 				if(actor_nearest_waypoint.lane_id == current_lane_ID):
 					actors_in_current_lane.append(actor.id)
-					# tmp_vehicle = actor
-					# tmp_transform = tmp_vehicle.get_transform()
-					# tmp_bounding_box = tmp_vehicle.bounding_box
-					# tmp_bounding_box.location += tmp_transform.location
-					# carla_handler_1.world.debug.draw_box(tmp_bounding_box, tmp_transform.rotation, life_time=0.05)
+					tmp_vehicle = actor
+					tmp_transform = tmp_vehicle.get_transform()
+					tmp_bounding_box = tmp_vehicle.bounding_box
+					tmp_bounding_box.location += tmp_transform.location
+					carla_handler_1.world.debug.draw_box(tmp_bounding_box, tmp_transform.rotation, life_time=0.05)
 					curr_actor_location_in_ego_vehicle_frame = carla_handler_1.convert_global_transform_to_actor_frame(actor=ego_vehicle, transform=actor.get_transform())
 					if(curr_actor_location_in_ego_vehicle_frame[0][0] > 0.0):
 						
