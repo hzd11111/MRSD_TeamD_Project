@@ -229,6 +229,8 @@ class CarlaManager:
 		env_state.front_vehicle_state = vehicle_front
 		env_state.back_vehicle_state = vehicle_rear
 		env_state.adjacent_lane_vehicles = [self.getVehicleState(actor) for actor in actors_in_left_lane] #TODO : Only considering left lane for now. Need to make this more general 
+		env_state.current_lane = lane_cur
+		env_state.next_lane = lane_left
 		env_state.max_num_vehicles = 2
 		env_state.speed_limit = 40
 		self.env_pub.publish(env_state)
