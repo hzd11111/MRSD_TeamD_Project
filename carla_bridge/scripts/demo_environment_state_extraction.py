@@ -52,6 +52,10 @@ class CarlaManager:
 		self.ego_vehicle = None
 
 	def getVehicleState(self, actor):
+
+		if(actor == None):
+			return None
+
 		vehicle = VehicleState()
 		vehicle.vehicle_location.x = actor.get_transform().location.x
 		vehicle.vehicle_location.y = actor.get_transform().location.y
@@ -116,10 +120,16 @@ class CarlaManager:
 		vehicle_ego = self.getVehicleState(self.ego_vehicle);
 		
 		# Front vehicle	
-		vehicle_front = self.getVehicleState(front_vehicle)
+		if(front_vehicle == None):
+			vehicle_front = vehicle_ego
+		else:
+			vehicle_front = self.getVehicleState(front_vehicle)
 		
-		# Rear vehicle	
-		vehicle_rear = self.getVehicleState(rear_vehicle)
+		# Rear vehicle
+		if(rear_vehicle = None):
+			vehicle_rear = vehicle_ego
+		else:	
+			vehicle_rear = self.getVehicleState(rear_vehicle)
 	
 		# sample enviroment state
 		env_state = EnvironmentState()
@@ -201,17 +211,24 @@ class CarlaManager:
 		vehicle_ego = self.getVehicleState(self.ego_vehicle);
 		
 		# Front vehicle	
-		vehicle_front = self.getVehicleState(front_vehicle)
+		if(front_vehicle == None):
+			vehicle_front = vehicle_ego
+		else:
+			vehicle_front = self.getVehicleState(front_vehicle)
 		
-		# Rear vehicle	
-		vehicle_rear = self.getVehicleState(rear_vehicle)
-	
+		# Rear vehicle
+		if(rear_vehicle = None):
+			vehicle_rear = vehicle_ego
+		else:	
+			vehicle_rear = self.getVehicleState(rear_vehicle)
+
+			
 		# sample enviroment state
 		env_state = EnvironmentState()
-		env_state.cur_vehicle_state = copy.copy(vehicle_ego)
-		env_state.front_vehicle_state = copy.copy(vehicle_front)
-		env_state.back_vehicle_state = copy.copy(vehicle_rear)
-		env_state.adjacent_lane_vehicles = [copy.copy(self.getVehicleState(actor)) for actor in actors_in_left_lane] #TODO : Only considering left lane for now. Need to make this more general 
+		env_state.cur_vehicle_state = vehicle_ego
+		env_state.front_vehicle_state = vehicle_front
+		env_state.back_vehicle_state = vehicle_rear
+		env_state.adjacent_lane_vehicles = [self.getVehicleState(actor) for actor in actors_in_left_lane] #TODO : Only considering left lane for now. Need to make this more general 
 		env_state.max_num_vehicles = 2
 		env_state.speed_limit = 40
 		self.env_pub.publish(env_state)
