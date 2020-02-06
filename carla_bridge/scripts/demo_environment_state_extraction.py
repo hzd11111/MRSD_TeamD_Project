@@ -181,16 +181,20 @@ class CarlaManager:
 		spawn_point.location.z = spawn_point.location.z + 2 # To avoid collision during spawn
 		ego_vehicle, ego_vehicle_ID = self.carla_handler.spawn_vehicle(spawn_point=spawn_point)
 
-		state_information = self.carla_handler.get_state_information(ego_vehicle)
-		current_lane_waypoints, left_lane_waypoints, right_lane_waypoints, front_vehicle, rear_vehicle, actors_in_current_lane, actors_in_left_lane, actors_in_right_lane = state_information
-
-		
-		##############################################################################################################
-		# publish the first frame ToDo: change it to an actual one
-		time.sleep(2)
+		time.sleep(3)
 		rate = rospy.Rate(10000)
 		rate.sleep()#ToDo: Delete this line	
 
+		state_information = self.carla_handler.get_state_information(ego_vehicle)
+		current_lane_waypoints, left_lane_waypoints, right_lane_waypoints, front_vehicle, rear_vehicle, actors_in_current_lane, actors_in_left_lane, actors_in_right_lane = state_information
+
+		print("Spawn road ID:", self.carla_handler.world_map.get_waypoint(ego_vehicle.get_location(), project_to_road=True).road_id)
+		
+		##############################################################################################################
+		# publish the first frame ToDo: change it to an actual one
+		
+
+		print("Spawn road ID:", self.carla_handler.world_map.get_waypoint(ego_vehicle.get_location(), project_to_road=True).road_id)
 		# Current Lane
 		lane_cur = self.getLanePoints(current_lane_waypoints)
 		

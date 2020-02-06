@@ -137,6 +137,7 @@ class CarlaHandler:
 
 			# Get current road and lane IDs
 			current_road_ID = nearest_waypoint.road_id
+			print("Spawn Road ID Inside Handler:", current_road_ID)
 			current_lane_ID = nearest_waypoint.lane_id
 
 			# Get IDs of left and right lanes
