@@ -137,7 +137,7 @@ class CarlaHandler:
 
 			# Get current road and lane IDs
 			current_road_ID = nearest_waypoint.road_id
-			print("Spawn Road ID Inside Handler:", current_road_ID)
+			#print("Spawn Road ID Inside Handler:", current_road_ID)
 			current_lane_ID = nearest_waypoint.lane_id
 
 			# Get IDs of left and right lanes
@@ -176,7 +176,7 @@ class CarlaHandler:
 					# If actor is on the same road as the ego vehicle
 					if(actor_nearest_waypoint.road_id == current_road_ID):
 						
-						print(actor_nearest_waypoint.road_id, actor_nearest_waypoint.lane_id, "OLA")
+						#print(actor_nearest_waypoint.road_id, actor_nearest_waypoint.lane_id, "OLA")
 						# If actor is on the same lane as the ego vehicle: Add to relevant container, and find if it's the leading or trailing vehicle
 						if(actor_nearest_waypoint.lane_id == current_lane_ID):
 							actors_in_current_lane.append(actor)

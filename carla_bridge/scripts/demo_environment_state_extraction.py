@@ -19,6 +19,7 @@ sys.path.insert(0, "/home/mayank/Mayank/MRSD_TeamD_Project")
 import carla
 import rospy
 import copy
+import numpy as np
 
 sys.path.remove('/opt/ros/kinetic/lib/python2.7/dist-packages')
 from carla_handler import CarlaHandler
@@ -48,13 +49,14 @@ class CarlaManager:
 		## CARLA Deps ##
 		self.client = None
 		self.carla_handler = None
+		self.ego_vehicle = None
 
 	def getVehicleState(self, actor):
 		vehicle = VehicleState()
 		vehicle.vehicle_location.x = actor.get_transform().location.x
 		vehicle.vehicle_location.y = actor.get_transform().location.y
 		vehicle.vehicle_location.theta = actor.get_transform().rotation.yaw #TODO : This has roll, pith and yaw. Need 2 more variables?
-		vehicle.vehicle_speed = 3 # TODO : This has x, y, and z components. Need 2 more variables. 
+		vehicle.vehicle_speed = np.sqrt(actor.get_velocity().x**2 + actor.get_velocity().y**2 + actor.get_velocity().z**2) # TODO : This has x, y, and z components. Need 2 more variables. 
 		vehicle.length = 5
 		vehicle.width = 2
 
@@ -95,50 +97,39 @@ class CarlaManager:
 		# ToDo: make CARLA step for one frame and reset if necessary
 
 		# ToDo: extract environment data from CARLA
+		########################################################################################3
+		state_information = self.carla_handler.get_state_information(self.ego_vehicle)
+		current_lane_waypoints, left_lane_waypoints, right_lane_waypoints, front_vehicle, rear_vehicle, actors_in_current_lane, actors_in_left_lane, actors_in_right_lane = state_information
 
-		# ToDo: fillin the ros msg with environment data
+		# Current Lane
+		lane_cur = self.getLanePoints(current_lane_waypoints)
+		
+		# Left Lane
+		lane_left = self.getLanePoints(left_lane_waypoints)
+		
+		# Right Lane
+		lane_right = self.getLanePoints(right_lane_waypoints)
+		
 
-		# sample code for pulbishing the msg ToDo:Delete these when the above are done
-		# current Lane
-		lane_cur = Lane()
-		lane_points = []
-		for i in range(100):
-			lane_point = LanePoint()
-			lane_point.pose.y = 0
-			lane_point.pose.x = i/10.
-			lane_point.pose.theta = 0
-			lane_point.width = 3
-			lane_points.append(lane_point)
-		lane_cur.lane = lane_points
-		# next Lane
-		lane_next = Lane()
-		lane_points_next = []
-		for i in range(100):
-			lane_point = LanePoint()
-			lane_point.pose.y = 3
-			lane_point.pose.x = i/10.
-			lane_point.pose.theta = 0
-			lane_point.width = 3
-			lane_points_next.append(lane_point)
-		lane_next.lane = lane_points_next
+		# TODO : Can wrap this as a function member of the class. //Done  
+		# Ego vehicle	
+		vehicle_ego = self.getVehicleState(self.ego_vehicle);
+		
+		# Front vehicle	
+		vehicle_front = self.getVehicleState(front_vehicle)
+		
+		# Rear vehicle	
+		vehicle_rear = self.getVehicleState(rear_vehicle)
 	
-		# current vehicle	
-		vehicle = VehicleState()
-		vehicle.vehicle_location.x = 2
-		vehicle.vehicle_location.y = 0
-		vehicle.vehicle_location.theta = 0
-		vehicle.vehicle_speed = 10
-		vehicle.length = 5
-		vehicle.width = 2
-
 		# sample enviroment state
 		env_state = EnvironmentState()
-		env_state.cur_vehicle_state = copy.copy(vehicle)
-		env_state.front_vehicle_state = copy.copy(vehicle)
-		env_state.back_vehicle_state = copy.copy(vehicle)
-		env_state.adjacent_lane_vehicles = [copy.copy(vehicle), copy.copy(vehicle)]
+		env_state.cur_vehicle_state = vehicle_ego
+		env_state.front_vehicle_state = vehicle_front
+		env_state.back_vehicle_state = vehicle_rear
+		env_state.adjacent_lane_vehicles = [self.getVehicleState(actor) for actor in actors_in_left_lane] #TODO : Only considering left lane for now. Need to make this more general 
 		env_state.max_num_vehicles = 2
 		env_state.speed_limit = 40
+
 		rate = rospy.Rate(2000)
 
 		# publish environment state
@@ -179,22 +170,22 @@ class CarlaManager:
 		filtered_waypoints = self.carla_handler.filter_waypoints(self.carla_handler.get_waypoints(), road_id=12)
 		spawn_point = filtered_waypoints[100].transform # Select random point from filtered waypoint list #TODO Initialization Scheme Design
 		spawn_point.location.z = spawn_point.location.z + 2 # To avoid collision during spawn
-		ego_vehicle, ego_vehicle_ID = self.carla_handler.spawn_vehicle(spawn_point=spawn_point)
+		self.ego_vehicle, ego_vehicle_ID = self.carla_handler.spawn_vehicle(spawn_point=spawn_point)
 
 		time.sleep(3)
 		rate = rospy.Rate(10000)
 		rate.sleep()#ToDo: Delete this line	
 
-		state_information = self.carla_handler.get_state_information(ego_vehicle)
+		state_information = self.carla_handler.get_state_information(self.ego_vehicle)
 		current_lane_waypoints, left_lane_waypoints, right_lane_waypoints, front_vehicle, rear_vehicle, actors_in_current_lane, actors_in_left_lane, actors_in_right_lane = state_information
 
-		print("Spawn road ID:", self.carla_handler.world_map.get_waypoint(ego_vehicle.get_location(), project_to_road=True).road_id)
+		#print("Spawn road ID:", self.carla_handler.world_map.get_waypoint(ego_vehicle.get_location(), project_to_road=True).road_id)
 		
 		##############################################################################################################
 		# publish the first frame ToDo: change it to an actual one
 		
 
-		print("Spawn road ID:", self.carla_handler.world_map.get_waypoint(ego_vehicle.get_location(), project_to_road=True).road_id)
+		#print("Spawn road ID:", self.carla_handler.world_map.get_waypoint(ego_vehicle.get_location(), project_to_road=True).road_id)
 		# Current Lane
 		lane_cur = self.getLanePoints(current_lane_waypoints)
 		
@@ -207,7 +198,7 @@ class CarlaManager:
 
 		# TODO : Can wrap this as a function member of the class. //Done  
 		# Ego vehicle	
-		vehicle_ego = self.getVehicleState(ego_vehicle);
+		vehicle_ego = self.getVehicleState(self.ego_vehicle);
 		
 		# Front vehicle	
 		vehicle_front = self.getVehicleState(front_vehicle)
