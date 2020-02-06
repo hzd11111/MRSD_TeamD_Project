@@ -178,7 +178,7 @@ class CarlaManager:
  
 		# Spawn ego vehicle on road 
 		filtered_waypoints = self.carla_handler.filter_waypoints(self.carla_handler.get_waypoints(), road_id=12)
-		spawn_point = filtered_waypoints[100].transform # Select random point from filtered waypoint list #TODO Initialization Scheme Design
+		spawn_point = filtered_waypoints[0].transform # Select random point from filtered waypoint list #TODO Initialization Scheme Design
 		spawn_point.location.z = spawn_point.location.z + 2 # To avoid collision during spawn
 		self.ego_vehicle, ego_vehicle_ID = self.carla_handler.spawn_vehicle(spawn_point=spawn_point)
 
