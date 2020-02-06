@@ -126,7 +126,7 @@ class CarlaManager:
 			vehicle_front = self.getVehicleState(front_vehicle)
 		
 		# Rear vehicle
-		if(rear_vehicle = None):
+		if(rear_vehicle == None):
 			vehicle_rear = vehicle_ego
 		else:	
 			vehicle_rear = self.getVehicleState(rear_vehicle)
@@ -217,7 +217,7 @@ class CarlaManager:
 			vehicle_front = self.getVehicleState(front_vehicle)
 		
 		# Rear vehicle
-		if(rear_vehicle = None):
+		if(rear_vehicle == None):
 			vehicle_rear = vehicle_ego
 		else:	
 			vehicle_rear = self.getVehicleState(rear_vehicle)

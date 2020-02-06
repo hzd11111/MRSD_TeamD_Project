@@ -182,11 +182,11 @@ class CarlaHandler:
 							actors_in_current_lane.append(actor)
 							
 							curr_actor_location_in_ego_vehicle_frame = self.convert_global_transform_to_actor_frame(actor=ego_vehicle, transform=actor.get_transform())
-							print(curr_actor_location_in_ego_vehicle_frame)
-							if(curr_actor_location_in_ego_vehicle_frame[0][0] > 0.0):
+							
+							if(curr_actor_location_in_ego_vehicle_frame[0][0] > 0.0 and curr_actor_location_in_ego_vehicle_frame[0][0] < closest_distance_front):
 								front_vehicle = actor
 								closest_distance_front = curr_actor_location_in_ego_vehicle_frame[0][0]
-							elif(curr_actor_location_in_ego_vehicle_frame[0][0] < 0.0):
+							elif(curr_actor_location_in_ego_vehicle_frame[0][0] < 0.0 and curr_actor_location_in_ego_vehicle_frame[0][0] > closest_distance_rear):
 								rear_vehicle = actor
 								closest_distance_rear = curr_actor_location_in_ego_vehicle_frame[0][0]
 							
