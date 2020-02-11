@@ -256,10 +256,13 @@ class TrajGenerator:
 		new_path_plan = PathPlan()
 		new_path_plan.tracking_pose = closest_pose.pose
 		new_path_plan.reset_sim = rl_data.reset_run
-		new_path_plan.tracking_speed = cur_vehicle_pose
+		#new_path_plan.tracking_speed = cur_vehicle_speed
+		new_path_plan.tracking_speed = 20
 		return new_path_plan
 
 	def cubicSplineGen(self, cur_lane_width, next_lane_width, v_cur):
+		if v_cur < 10:
+			v_cur = 10
 		# determine external parameters
 		w = (cur_lane_width + next_lane_width)/2.
 		l = self.traj_parameters['lane_change_length']

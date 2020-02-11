@@ -14,15 +14,19 @@ import subprocess
 import sys
 import sys
 sys.path.insert(0, "/home/mayank/Mayank/MRSD_TeamD_Project")
+sys.path.insert(0, "/home/mayank/Carla/carla/PythonAPI/carla/")
 
 
 import carla
+import agents.navigation.controller
 import rospy
 import copy
 import numpy as np
 
 sys.path.remove('/opt/ros/kinetic/lib/python2.7/dist-packages')
 from carla_handler import CarlaHandler
+sys.path.insert(0, "/home/mayank/Mayank/GRASP_ws/src/MRSD_TeamD_Project/carla_bridge/scripts")
+from grasp_controller import GRASPPIDController
 sys.path.insert(0, '/opt/ros/kinetic/lib/python2.7/dist-packages')
 
 from std_msgs.msg import String
@@ -50,6 +54,7 @@ class CarlaManager:
 		self.client = None
 		self.carla_handler = None
 		self.ego_vehicle = None
+		self.vehicle_controller = None
 
 	def getVehicleState(self, actor):
 
@@ -94,10 +99,34 @@ class CarlaManager:
 		print("Tracking Speed:", tracking_speed)
 		print("Reset Sim:", reset_sim)
 
+
+		# current_location = carla.Location()
+		# current_rotation = carla.Rotation()
+
+		# current_location.x = tracking_pose.x
+		# current_location.y = tracking_pose.y
+		# current_location
+		# current_rotation.yaw = tracking_pose.theta
+
+		# required_transform = carla.Transform()
+		# required_transform.location = current_location
+		# required_transform.rotation = current_rotation
+
+
+		# # required_waypoint = Waypoint()
+		# # required_waypoint.transform = required_transform
+
+		# end_waypoint = self.carla_handler.world_map.get_waypoint(current_location)
+
 		# ToDo: load the path data
 
 		# ToDo: call the controller to follow the path
 
+		#nearest_waypoint = self.carla_handler.world_map.get_waypoint(self.ego_vehicle.get_location(), project_to_road=True)
+		#nearest_waypoint.transform = required_transform
+		
+		self.ego_vehicle.apply_control(self.vehicle_controller.run_step(tracking_speed, tracking_pose))
+		print("Control Called")
 		# ToDo: make CARLA step for one frame and reset if necessary
 
 		# ToDo: extract environment data from CARLA
@@ -136,6 +165,8 @@ class CarlaManager:
 		env_state.cur_vehicle_state = vehicle_ego
 		env_state.front_vehicle_state = vehicle_front
 		env_state.back_vehicle_state = vehicle_rear
+		env_state.current_lane = lane_cur
+		env_state.next_lane = lane_left
 		env_state.adjacent_lane_vehicles = [self.getVehicleState(actor) for actor in actors_in_left_lane] #TODO : Only considering left lane for now. Need to make this more general 
 		env_state.max_num_vehicles = 2
 		env_state.speed_limit = 40
@@ -175,12 +206,16 @@ class CarlaManager:
 		# Create a CarlaHandler object. CarlaHandler provides some cutom built APIs for the Carla Server.
 
 		self.carla_handler = CarlaHandler(client)
+		
  
+ 		
 		# Spawn ego vehicle on road 
 		filtered_waypoints = self.carla_handler.filter_waypoints(self.carla_handler.get_waypoints(), road_id=12)
 		spawn_point = filtered_waypoints[0].transform # Select random point from filtered waypoint list #TODO Initialization Scheme Design
 		spawn_point.location.z = spawn_point.location.z + 2 # To avoid collision during spawn
 		self.ego_vehicle, ego_vehicle_ID = self.carla_handler.spawn_vehicle(spawn_point=spawn_point)
+
+		self.vehicle_controller = GRASPPIDController(self.ego_vehicle, args_lateral = {'K_P': 1.0, 'K_D': 0.0, 'K_I': 0}, args_longitudinal = {'K_P': 1.0, 'K_D': 0.0, 'K_I': 0.0})
 
 		time.sleep(3)
 		rate = rospy.Rate(10000)
