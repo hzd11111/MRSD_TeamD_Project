@@ -127,6 +127,10 @@ class CarlaManager:
 		
 		self.ego_vehicle.apply_control(self.vehicle_controller.run_step(tracking_speed, tracking_pose))
 		print("Control Called")
+		
+		# self.carla_handler.world.tick()
+		
+		#self.carla_handler.world.wait_for_tick()
 		# ToDo: make CARLA step for one frame and reset if necessary
 
 		# ToDo: extract environment data from CARLA
@@ -146,7 +150,12 @@ class CarlaManager:
 
 		# TODO : Can wrap this as a function member of the class. //Done  
 		# Ego vehicle	
-		vehicle_ego = self.getVehicleState(self.ego_vehicle);
+		vehicle_ego = self.getVehicleState(self.ego_vehicle)
+
+		print("Location:", vehicle_ego.vehicle_location.x, vehicle_ego.vehicle_location.y)
+
+
+
 		
 		# Front vehicle	
 		if(front_vehicle == None):
@@ -175,7 +184,11 @@ class CarlaManager:
 
 		# publish environment state
 		self.env_pub.publish(env_state)
-		rate.sleep()#ToDo: Delete this line	
+		#rate.sleep()#ToDo: Delete this line	
+
+		####
+
+		####
 
 	def initialize(self):
 		# initialize node
@@ -206,7 +219,15 @@ class CarlaManager:
 		# Create a CarlaHandler object. CarlaHandler provides some cutom built APIs for the Carla Server.
 
 		self.carla_handler = CarlaHandler(client)
-		
+	
+		## Update World Information
+		# settings = self.carla_handler.world.get_settings()
+		# settings.synchronous_mode = True
+		# settings.fixed_delta_seconds = 0.2
+		# self.carla_handler.world.apply_settings(settings)
+
+
+
  
  		
 		# Spawn ego vehicle on road 
@@ -219,7 +240,7 @@ class CarlaManager:
 
 		time.sleep(3)
 		rate = rospy.Rate(10000)
-		rate.sleep()#ToDo: Delete this line	
+		#rate.sleep()#ToDo: Delete this line	
 
 		state_information = self.carla_handler.get_state_information(self.ego_vehicle)
 		current_lane_waypoints, left_lane_waypoints, right_lane_waypoints, front_vehicle, rear_vehicle, actors_in_current_lane, actors_in_left_lane, actors_in_right_lane = state_information
@@ -269,6 +290,10 @@ class CarlaManager:
 		env_state.max_num_vehicles = 2
 		env_state.speed_limit = 40
 		self.env_pub.publish(env_state)
+
+		####
+		#self.carla_handler.world.tick()
+		####
 		
 		print("Start Ros Spin")	
 		# spin
