@@ -3,6 +3,7 @@
 import rospy
 import Queue
 import math
+import copy
 
 from enum import Enum
 from grasp_path_planner.msg import LanePoint
@@ -31,6 +32,7 @@ class RLDataProcessor:
 		dec = rl_data.decelerate
 		cl = rl_data.change_lane
 		self.reset_run = rl_data.reset_run
+		self.id = rl_data.id
 		if not ((const_speed + acc + dec + cl) == 1):
 			print("RL Message Content Error")
 		if const_speed:
@@ -63,6 +65,7 @@ class SimDataProcessor:
 		self.cur_lane = sim_data.current_lane
 		self.next_lane = sim_data.next_lane
 		self.ego_vehicle = sim_data.cur_vehicle_state
+		self.id = sim_data.id
 	@property
 	def cur_lane(self):
 		return self.__cur_lane
@@ -375,21 +378,27 @@ class PathPlannerManager:
 		self.pub_path = None
 		self.traj_gen = None
 		self.backlog_manager = BacklogData()
+		self.calls = 0
 
 	def rlCallback(self, data):
-		self.backlog_manager.newRLMessage(data)
+		print("RL ID Received:",data.id)
+		self.backlog_manager.newRLMessage(copy.copy(data))
+		print("RL ID Added:",data.id)
 		self.pathPlanCallback()
 
 	def simCallback(self, data):
-		self.backlog_manager.newSimMessage(data)
+		print("Simulation ID Received:",data.id)
+		self.backlog_manager.newSimMessage(copy.copy(data))
+		print("Simulation ID Added:",data.id)
 		self.pathPlanCallback()
 
 	def pathPlanCallback(self):
 		# check if there is a new pair of messages
 		if self.backlog_manager.completePair():
+
 			# get the pair
 			rl_data, sim_data = self.backlog_manager.newPair()
-
+			print"Publishing for sim:", sim_data.id, "rl:", rl_data.id
 			# gernerate the path
 			traj = self.traj_gen.trajPlan(rl_data, sim_data)			
 		

@@ -49,7 +49,8 @@ class CarlaManager:
 	def __init__(self):
 		self.env_pub = None
 		self.path_sub = None
-
+		#id
+		self.id = 0
 		## CARLA Deps ##
 		self.client = None
 		self.carla_handler = None
@@ -90,14 +91,14 @@ class CarlaManager:
 
 	def pathCallback(self, data):
 		# sample path load code ToDo: Delete
-		tracking_pose = data.tracking_pose
-		tracking_speed = data.tracking_speed
-		reset_sim = data.reset_sim
+		tracking_pose = copy.copy(data.tracking_pose)
+		tracking_speed = copy.copy(data.tracking_speed)
+		reset_sim = copy.copy(data.reset_sim)
 		
-		print("New Path Plan")
-		print("Tracking Pose:",tracking_pose.x,",",tracking_pose.y,",",tracking_pose.theta)
-		print("Tracking Speed:", tracking_speed)
-		print("Reset Sim:", reset_sim)
+		# print("New Path Plan")
+		# print("Tracking Pose:",tracking_pose.x,",",tracking_pose.y,",",tracking_pose.theta)
+		# print("Tracking Speed:", tracking_speed)
+		# print("Reset Sim:", reset_sim)
 
 
 		# current_location = carla.Location()
@@ -126,15 +127,16 @@ class CarlaManager:
 		#nearest_waypoint.transform = required_transform
 		
 		self.ego_vehicle.apply_control(self.vehicle_controller.run_step(tracking_speed, tracking_pose))
-		print("Control Called")
+		# print("Control Called")
 		
-		# self.carla_handler.world.tick()
+		#self.carla_handler.world.tick()
 		
 		#self.carla_handler.world.wait_for_tick()
 		# ToDo: make CARLA step for one frame and reset if necessary
 
 		# ToDo: extract environment data from CARLA
 		########################################################################################3
+		#print("Time End-4:", time.time())
 		state_information = self.carla_handler.get_state_information(self.ego_vehicle)
 		current_lane_waypoints, left_lane_waypoints, right_lane_waypoints, front_vehicle, rear_vehicle, actors_in_current_lane, actors_in_left_lane, actors_in_right_lane = state_information
 
@@ -155,7 +157,7 @@ class CarlaManager:
 		print("Location:", vehicle_ego.vehicle_location.x, vehicle_ego.vehicle_location.y)
 
 
-
+		#print("Time End-3:", time.time())
 		
 		# Front vehicle	
 		if(front_vehicle == None):
@@ -169,6 +171,7 @@ class CarlaManager:
 		else:	
 			vehicle_rear = self.getVehicleState(rear_vehicle)
 	
+		#print("Time End-2:", time.time())
 		# sample enviroment state
 		env_state = EnvironmentState()
 		env_state.cur_vehicle_state = vehicle_ego
@@ -179,13 +182,14 @@ class CarlaManager:
 		env_state.adjacent_lane_vehicles = [self.getVehicleState(actor) for actor in actors_in_left_lane] #TODO : Only considering left lane for now. Need to make this more general 
 		env_state.max_num_vehicles = 2
 		env_state.speed_limit = 40
-
-		rate = rospy.Rate(2000)
-
+		env_state.id = self.id
+		print("Publishing Id:",self.id)
+		self.id += 1
+		#print("Time End-1:", time.time())
+		rate = rospy.Rate(100)
 		# publish environment state
 		self.env_pub.publish(env_state)
-		#rate.sleep()#ToDo: Delete this line	
-
+		rate.sleep()#ToDo: Delete this line	
 		####
 
 		####
@@ -195,7 +199,7 @@ class CarlaManager:
 		rospy.init_node(NODE_NAME, anonymous=True)
 	
 		# initialize publisher
-		self.env_pub = rospy.Publisher(SIM_TOPIC_NAME, EnvironmentState, queue_size = 10)
+		self.env_pub = rospy.Publisher(SIM_TOPIC_NAME, EnvironmentState, queue_size = 1000)
 		
 		# initlize subscriber
 		self.path_sub = rospy.Subscriber(PATH_PLAN_TOPIC_NAME, PathPlan, self.pathCallback)
@@ -239,7 +243,7 @@ class CarlaManager:
 		self.vehicle_controller = GRASPPIDController(self.ego_vehicle, args_lateral = {'K_P': 1.0, 'K_D': 0.0, 'K_I': 0}, args_longitudinal = {'K_P': 1.0, 'K_D': 0.0, 'K_I': 0.0})
 
 		time.sleep(3)
-		rate = rospy.Rate(10000)
+		rate = rospy.Rate(2000)
 		#rate.sleep()#ToDo: Delete this line	
 
 		state_information = self.carla_handler.get_state_information(self.ego_vehicle)
@@ -290,6 +294,7 @@ class CarlaManager:
 		env_state.max_num_vehicles = 2
 		env_state.speed_limit = 40
 		self.env_pub.publish(env_state)
+		print("Publishing Env")
 
 		####
 		#self.carla_handler.world.tick()

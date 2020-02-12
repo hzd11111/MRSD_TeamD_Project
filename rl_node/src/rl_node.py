@@ -87,6 +87,7 @@ class RLManager:
 
 		# publish message
 		self.pub_rl.publish(rl_decision)
+		print "Published:",rl_decision.id
 		
 
 	def initialize(self):
@@ -99,7 +100,6 @@ class RLManager:
 
 		# initialize pulbisher
 		self.pub_rl = rospy.Publisher(RL_TOPIC_NAME, RLCommand, queue_size = 10)
-
 		# initlialize rl class
 		
 
