@@ -128,5 +128,7 @@ if __name__ == '__main__':
     try:
         rl_manager = RLManager()
 	rl_manager.initialize()
+	pub_thread = threading.Thread(target=rl_manager.publishFunc)
+	rl_manager.spin()
     except rospy.ROSInterruptException:
         pass

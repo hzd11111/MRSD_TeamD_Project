@@ -162,7 +162,7 @@ class CarlaManager:
 		# Ego vehicle	
 		vehicle_ego = self.getVehicleState(self.ego_vehicle)
 
-		print("Location:", vehicle_ego.vehicle_location.x, vehicle_ego.vehicle_location.y)
+		#print("Location:", vehicle_ego.vehicle_location.x, vehicle_ego.vehicle_location.y)
 
 
 		#print("Time End-3:", time.time())
@@ -191,7 +191,7 @@ class CarlaManager:
 		env_state.max_num_vehicles = 2
 		env_state.speed_limit = 40
 		env_state.id = self.id
-		print("Publishing Id:",self.id)
+		#print("Publishing Id:",self.id)
 		self.id_waiting = self.id
 		self.id += 1
 		if self.id > 100000:
@@ -257,11 +257,11 @@ class CarlaManager:
  		
 		# Spawn ego vehicle on road 
 		filtered_waypoints = self.carla_handler.filter_waypoints(self.carla_handler.get_waypoints(), road_id=12)
-		spawn_point = filtered_waypoints[0].transform # Select random point from filtered waypoint list #TODO Initialization Scheme Design
+		spawn_point = filtered_waypoints[4].transform # Select random point from filtered waypoint list #TODO Initialization Scheme Design
 		spawn_point.location.z = spawn_point.location.z + 2 # To avoid collision during spawn
 		self.ego_vehicle, ego_vehicle_ID = self.carla_handler.spawn_vehicle(spawn_point=spawn_point)
 
-		self.vehicle_controller = GRASPPIDController(self.ego_vehicle, args_lateral = {'K_P': 1.0, 'K_D': 0.0, 'K_I': 0}, args_longitudinal = {'K_P': 1.0, 'K_D': 0.0, 'K_I': 0.0})
+		self.vehicle_controller = GRASPPIDController(self.ego_vehicle, args_lateral = {'K_P': 0.05, 'K_D': 0.0, 'K_I': 0}, args_longitudinal = {'K_P': 0.5, 'K_D': 0.0, 'K_I': 0.0})
 
 		time.sleep(3)
 		rate = rospy.Rate(2000)
@@ -314,8 +314,19 @@ class CarlaManager:
 		env_state.next_lane = lane_left
 		env_state.max_num_vehicles = 2
 		env_state.speed_limit = 40
+		env_state.id = self.id
+		#print("Publishing Id:",self.id)
+		self.id_waiting = self.id
+		self.id += 1
+		if self.id > 100000:
+			self.id = 0
+		#print("Time End-1:", time.time())
+		rate = rospy.Rate(100)
+		# publish environment state
+		self.env_msg = env_state
 		self.env_pub.publish(env_state)
-		print("Publishing Env")
+		#rate.sleep()#ToDo: Delete this line	
+		#print("Publishing Env")
 
 		####
 		#self.carla_handler.world.tick()

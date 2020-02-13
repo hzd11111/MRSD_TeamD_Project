@@ -437,14 +437,14 @@ class PathPlannerManager:
 		
 		if self.newest_rl_data and self.newest_sim_data:
 			# generate the path
-			traj = self.traj_gen.tranjPlan(rl_data, sim_data)
+			traj = self.traj_gen.trajPlan(self.newest_rl_data, self.newest_sim_data)
 		
 			# reset the backlog if simulation needs to be reset
 			if traj.reset_sim:
 				self.backlog_manager.reset()
 
 			# update id		
-			traj.id = sim_data.id
+			traj.id = self.newest_sim_data.id
 			self.backlog_manager.previous_id = traj.id
 
 			# reset newest data
@@ -454,6 +454,7 @@ class PathPlannerManager:
 			# publish the path
 			self.pub_path.publish(traj)
 			self.prev_traj = traj
+			print "Publishing Traj:",traj.id
 	
 	def publishFunc(self):
 		rate = rospy.Rate(10)
