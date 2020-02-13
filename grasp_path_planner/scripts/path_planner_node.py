@@ -4,6 +4,7 @@ import rospy
 import Queue
 import math
 import copy
+import threading
 
 from enum import Enum
 from grasp_path_planner.msg import LanePoint
@@ -90,10 +91,13 @@ class SimDataProcessor:
 	def ego_vehicle(self, ego_vehicle):
 		self.ego_vehicle = ego_vehicle
 
+
 class BacklogData:
 	def __init__(self):
 		self.rl_backlog = Queue.Queue()
 		self.sim_backlog = Queue.Queue()
+		self.previous_id = -1
+
 	def reset(self):
 		with self.rl_backlog.mutex:
 			self.rl_backlog.clear()
@@ -111,8 +115,27 @@ class BacklogData:
 	def newSimMessage(self, data):
 		self.sim_backlog.put(SimDataProcessor(data))
 
+	def getNextRLData(self):
+		if self.rl_backlog.empty():
+			return False
+		rl_data = self.rl_backlog.get()
+		while rl_data.id == self.previous_id:
+			if self.rl_backlog.empty():
+				return False
+			rl_data = self.rl_backlog.get()
+		return rl_data
+
+	def getNextSimData(self):
+		if self.sim_backlog.empty():
+			return False
+		sim_data = self.sim_backlog.get()
+		while sim_data.id == self.previous_id:
+			if self.sim_backlog.empty():
+				return False
+			sim_data = self.sim_backlog.get()
+		return sim_data
 	def newPair(self):
-		rl_msg = self.rl_backlog.get()
+		rl_msg = self.rl_backlog.get()	
 		sim_msg = self.sim_backlog.get()
 		return rl_msg, sim_msg
 
@@ -379,37 +402,67 @@ class PathPlannerManager:
 		self.traj_gen = None
 		self.backlog_manager = BacklogData()
 		self.calls = 0
+		self.newest_rl_data = False
+		self.newest_sim_data = False
+		self.prev_traj = False
+		self.lock = threading.Lock()
 
 	def rlCallback(self, data):
+		self.lock.acquire()
 		print("RL ID Received:",data.id)
 		self.backlog_manager.newRLMessage(copy.copy(data))
 		print("RL ID Added:",data.id)
-		self.pathPlanCallback()
+		# get the rl data if rl missing
+		if not self.newest_rl_data:
+			rl_data = self.backlog_manager.getNextRLData()
+			if rl_data:
+				self.newest_rl_data = rl_data
+				self.pathPlanCallback()
+		self.lock.release()
 
 	def simCallback(self, data):
+		self.lock.acquire()
 		print("Simulation ID Received:",data.id)
 		self.backlog_manager.newSimMessage(copy.copy(data))
 		print("Simulation ID Added:",data.id)
-		self.pathPlanCallback()
+		# get the sim data if sim missing
+		if not self.newest_sim_data:
+			sim_data = self.backlog_manager.getNextSimData()
+			if sim_data:
+				self.newest_sim_data = sim_data
+				self.pathPlanCallback()
+		self.lock.release()
 
 	def pathPlanCallback(self):
-		# check if there is a new pair of messages
-		if self.backlog_manager.completePair():
-
-			# get the pair
-			rl_data, sim_data = self.backlog_manager.newPair()
-			print"Publishing for sim:", sim_data.id, "rl:", rl_data.id
-			# gernerate the path
-			traj = self.traj_gen.trajPlan(rl_data, sim_data)			
+		
+		if self.newest_rl_data and self.newest_sim_data:
+			# generate the path
+			traj = self.traj_gen.tranjPlan(rl_data, sim_data)
 		
 			# reset the backlog if simulation needs to be reset
 			if traj.reset_sim:
 				self.backlog_manager.reset()
-		
+
+			# update id		
+			traj.id = sim_data.id
+			self.backlog_manager.previous_id = traj.id
+
+			# reset newest data
+			self.newest_rl_data = False
+			self.newest_sim_data = False
+
 			# publish the path
 			self.pub_path.publish(traj)
-
-			
+			self.prev_traj = traj
+	
+	def publishFunc(self):
+		rate = rospy.Rate(10)
+		while not rospy.is_shutdown():
+			self.lock.acquire()
+			if self.prev_traj:
+				self.pub_path.publish(self.prev_traj)	
+			self.lock.release()
+			rate.sleep()
 
 	def initialize(self):
 		# initialize publisher
@@ -425,6 +478,7 @@ class PathPlannerManager:
 		# initialize trajectory generator
 		self.traj_gen = TrajGenerator(TRAJ_PARAM)
 
+	def spin(self): 
 		# spin
 		rospy.spin()	
 		
@@ -432,5 +486,7 @@ if __name__ == '__main__':
 	try:
 		path_planner_main = PathPlannerManager()
 		path_planner_main.initialize()
+		pub_thread = threading.Thread(target=path_planner_main.publishFunc)
+		path_planner_main.spin()
 	except rospy.ROSInterruptException:
 		pass

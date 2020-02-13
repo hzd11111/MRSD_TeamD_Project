@@ -38,6 +38,8 @@
 
 import rospy
 import copy
+import threading
+
 from std_msgs.msg import String
 from grasp_path_planner.msg import LanePoint
 from grasp_path_planner.msg import Lane
@@ -55,9 +57,14 @@ class RLManager:
 		self.pub_rl = None
 		self.env_sub = None
 		self.rl_agent = None
-
+		self.lock = threading.Lock()
+		self.rl_decision = False
+		self.previous_id = -1
 	def simCallback(self, data):
-		
+		self.lock.acquire()
+		if data.id == self.previous_id:
+			self.lock.release()
+			return
 		# sample code for data loading ToDo: Delete
 		current_vehicle = data.cur_vehicle_state
 		adjacent_lane_vehicles = data.adjacent_lane_vehicles
@@ -84,11 +91,13 @@ class RLManager:
 		rl_decision.decelerate = 0
 		rl_decision.reset_run = 0
 		rl_decision.id = data.id		
-
+		self.previous_id = data.id
 		# publish message
 		self.pub_rl.publish(rl_decision)
+		self.rl_decision = rl_decision
 		print "Published:",rl_decision.id
 		
+		self.lock.release()
 
 	def initialize(self):
 		
@@ -102,7 +111,16 @@ class RLManager:
 		self.pub_rl = rospy.Publisher(RL_TOPIC_NAME, RLCommand, queue_size = 10)
 		# initlialize rl class
 		
+	def publishFunc(self):
+		rate = rospy.Rate(10)
+		while not rospy.is_shutdown():
+			self.lock.acquire()
+			if self.rl_decision:
+				self.pub_rl.publish(self.rl_decision)
+			self.lock.release()
+			rate.sleep()
 
+	def spin(self):
 		# spin
 		rospy.spin()
 

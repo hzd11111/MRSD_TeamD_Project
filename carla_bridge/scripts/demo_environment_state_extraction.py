@@ -9,6 +9,7 @@ __version__ = "0.1"
 
 #####################################################################################
 
+import threading
 import time
 import subprocess
 import sys
@@ -51,11 +52,14 @@ class CarlaManager:
 		self.path_sub = None
 		#id
 		self.id = 0
+		self.id_waiting = 0
 		## CARLA Deps ##
 		self.client = None
 		self.carla_handler = None
 		self.ego_vehicle = None
 		self.vehicle_controller = None
+		self.lock = threading.Lock()
+		self.env_msg = False
 
 	def getVehicleState(self, actor):
 
@@ -90,11 +94,15 @@ class CarlaManager:
 
 
 	def pathCallback(self, data):
+		self.lock.acquire()
 		# sample path load code ToDo: Delete
 		tracking_pose = copy.copy(data.tracking_pose)
 		tracking_speed = copy.copy(data.tracking_speed)
 		reset_sim = copy.copy(data.reset_sim)
 		
+		if not data.id == self.id_waiting:
+			self.lock.release()
+			return
 		# print("New Path Plan")
 		# print("Tracking Pose:",tracking_pose.x,",",tracking_pose.y,",",tracking_pose.theta)
 		# print("Tracking Speed:", tracking_speed)
@@ -184,15 +192,28 @@ class CarlaManager:
 		env_state.speed_limit = 40
 		env_state.id = self.id
 		print("Publishing Id:",self.id)
+		self.id_waiting = self.id
 		self.id += 1
+		if self.id > 100000:
+			self.id = 0
 		#print("Time End-1:", time.time())
 		rate = rospy.Rate(100)
 		# publish environment state
+		self.env_msg = env_state
 		self.env_pub.publish(env_state)
-		rate.sleep()#ToDo: Delete this line	
+		#rate.sleep()#ToDo: Delete this line	
+		####
+		self.lock.release()
 		####
 
-		####
+	def publishFunc(self):
+		rate = rospy.Rate(10)
+		while not rospy.is_shutdown():
+			self.lock.acquire()
+			if self.env_msg:
+				self.env_pub.publish(self.env_msg)
+			self.lock.release()
+			rate.sleep()
 
 	def initialize(self):
 		# initialize node
@@ -300,6 +321,7 @@ class CarlaManager:
 		#self.carla_handler.world.tick()
 		####
 		
+	def spin(self):
 		print("Start Ros Spin")	
 		# spin
 		rospy.spin()
@@ -308,6 +330,8 @@ if __name__ == '__main__':
 	try:
 		carla_manager = CarlaManager()
 		carla_manager.initialize()
+		pub_thread = threading.Thread(target=carla_manager.publishFunc)
+		carla_manager.spin()
 	except rospy.ROSInterruptException:
 		pass
 	
