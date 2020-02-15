@@ -69,22 +69,25 @@ class CarlaManager:
 		vehicle = VehicleState()
 		vehicle.vehicle_location.x = actor.get_transform().location.x
 		vehicle.vehicle_location.y = actor.get_transform().location.y
-		vehicle.vehicle_location.theta = actor.get_transform().rotation.yaw #TODO : This has roll, pith and yaw. Need 2 more variables?
-		vehicle.vehicle_speed = np.sqrt(actor.get_velocity().x**2 + actor.get_velocity().y**2 + actor.get_velocity().z**2) # TODO : This has x, y, and z components. Need 2 more variables. 
+		vehicle.vehicle_location.theta = actor.get_transform().rotation.yaw * np.pi / 180 #CHECK : Changed this to radians. 
+		vehicle.vehicle_speed = np.sqrt(actor.get_velocity().x**2 + actor.get_velocity().y**2 + actor.get_velocity().z**2) 
 		vehicle.length = 5
 		vehicle.width = 2
 
 		return vehicle
 
-	def getLanePoints(self, waypoints):
+	def getLanePoints(self, waypoints, flip=False):
 
 		lane_cur = Lane()
 		lane_points = []
-		for waypoint in waypoints:
+		for i,waypoint in enumerate(waypoints):
 			lane_point = LanePoint()
 			lane_point.pose.y = waypoint.transform.location.y
 			lane_point.pose.x = waypoint.transform.location.x
-			lane_point.pose.theta = waypoint.transform.rotation.yaw # TODO : this has roll, pitch and yaw
+			lane_point.pose.theta = waypoint.transform.rotation.yaw * np.pi / 180# CHECK : Changed this to radians.
+			if(flip == True):
+				lane_point.pose.theta += np.pi
+				#lane_point.pose.theta = lane_point.pose.theta % (2*np.pi)
 			lane_point.width = 3 # TODO
 			lane_points.append(lane_point)
 		lane_cur.lane = lane_points
@@ -136,8 +139,16 @@ class CarlaManager:
 		
 		self.ego_vehicle.apply_control(self.vehicle_controller.run_step(tracking_speed, tracking_pose))
 		# print("Control Called")
+
+		tracking_loc = carla.Location(x=tracking_pose.x, y=tracking_pose.y, z=self.ego_vehicle.get_location().z)
+		self.carla_handler.world.debug.draw_string(tracking_loc, 'O', draw_shadow=False,
+			                               color=carla.Color(r=255, g=0, b=0), life_time=2,
+			                               persistent_lines=True)
 		
-		#self.carla_handler.world.tick()
+		try:
+			self.carla_handler.world.tick()
+		except:
+			print("Missed Tick....................................................................................")
 		
 		#self.carla_handler.world.wait_for_tick()
 		# ToDo: make CARLA step for one frame and reset if necessary
@@ -152,7 +163,9 @@ class CarlaManager:
 		lane_cur = self.getLanePoints(current_lane_waypoints)
 		
 		# Left Lane
-		lane_left = self.getLanePoints(left_lane_waypoints)
+		lane_left = self.getLanePoints(left_lane_waypoints, flip=False) ##TODO Check this. Reversed 
+
+		
 		
 		# Right Lane
 		lane_right = self.getLanePoints(right_lane_waypoints)
@@ -256,12 +269,12 @@ class CarlaManager:
  
  		
 		# Spawn ego vehicle on road 
-		filtered_waypoints = self.carla_handler.filter_waypoints(self.carla_handler.get_waypoints(), road_id=12)
+		filtered_waypoints = self.carla_handler.filter_waypoints(self.carla_handler.get_waypoints(1), road_id=12)
 		spawn_point = filtered_waypoints[4].transform # Select random point from filtered waypoint list #TODO Initialization Scheme Design
-		spawn_point.location.z = spawn_point.location.z + 2 # To avoid collision during spawn
+		spawn_point.location.z = spawn_point.location.z + 1 # To avoid collision during spawn
 		self.ego_vehicle, ego_vehicle_ID = self.carla_handler.spawn_vehicle(spawn_point=spawn_point)
 
-		self.vehicle_controller = GRASPPIDController(self.ego_vehicle, args_lateral = {'K_P': 0.05, 'K_D': 0.0, 'K_I': 0}, args_longitudinal = {'K_P': 0.5, 'K_D': 0.0, 'K_I': 0.0})
+		self.vehicle_controller = GRASPPIDController(self.ego_vehicle, args_lateral = {'K_P': 0.01, 'K_D': 0.0, 'K_I': 0}, args_longitudinal = {'K_P': 0.5, 'K_D': 0.0, 'K_I': 0.0})
 
 		time.sleep(3)
 		rate = rospy.Rate(2000)
@@ -281,7 +294,8 @@ class CarlaManager:
 		lane_cur = self.getLanePoints(current_lane_waypoints)
 		
 		# Left Lane
-		lane_left = self.getLanePoints(left_lane_waypoints)
+		lane_left = self.getLanePoints(left_lane_waypoints, flip=True)
+		#self.carla_handler.draw_arrow(left_lane_waypoints)
 		
 		# Right Lane
 		lane_right = self.getLanePoints(right_lane_waypoints)

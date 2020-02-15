@@ -100,9 +100,9 @@ class BacklogData:
 
 	def reset(self):
 		with self.rl_backlog.mutex:
-			self.rl_backlog.clear()
+			self.rl_backlog.queue.clear()
 		with self.sim_backlog.mutex:
-			self.sim_backlog.clear()		
+			self.sim_backlog.queue.clear()		
 
 	def completePair(self):
 		if self.rl_backlog.empty() or self.sim_backlog.empty():
@@ -337,6 +337,7 @@ class TrajGenerator:
 		# generate trajectory
 		if not self.lane_switching:
 			# ToDo: Use closest pose for lane width
+			print("reached here")
 			neutral_traj = self.cubicSplineGen(sim_data.cur_lane.lane[0].width,\
 						sim_data.next_lane.lane[0].width, sim_data.ego_vehicle.vehicle_speed)
 

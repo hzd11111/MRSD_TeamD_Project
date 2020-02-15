@@ -10,6 +10,7 @@ __version__ = "0.1"
 
 import random
 import time
+import math
 
 import numpy as np
 import cv2
@@ -32,11 +33,13 @@ class CarlaHandler:
 		print("Handler Initialized!\n")
 
 	def __del__(self):
+		self.destroy_actors()
 		print("Handler destroyed..\n")
 
 	def destroy_actors(self):
 		for actor in self.world.get_actors():
-			actor.destroy()
+			if actor.id in self.actor_dict:
+				actor.destroy()
 		print("All actors destroyed..\n") 
 
 
@@ -83,22 +86,40 @@ class CarlaHandler:
 
 		for waypoint in waypoints:
 		
-			if(waypoint.road_id == road_id):
+			if(road_id == None or waypoint.road_id == road_id):
 				self.world.debug.draw_string(waypoint.transform.location, 'O', draw_shadow=False,
 			                               color=carla.Color(r=0, g=255, b=0), life_time=life_time,
 			                               persistent_lines=True)
 
+	def draw_arrow(self, waypoints, road_id=None, section_id=None, life_time=50.0):
 
-	def move_vehicle(self, vehicle_id=None, throttle=None, steer=None):
+		for i,waypoint in enumerate(waypoints):
+			if(i == len(waypoints)-1):
+				continue
+			trans = waypoints[i+1].transform
+			#yaw_in_rad = math.radians(trans.rotation.yaw)
+			yaw_in_rad = math.radians(np.arctan(waypoint.transform.location.y - trans.location.y)/(waypoint.transform.location.x - trans.location.x)) 
+			#pitch_in_rad = math.radians(trans.rotation.pitch)
+			p1 = carla.Location(
+			x=trans.location.x + math.cos(yaw_in_rad),
+			y=trans.location.y + math.sin(yaw_in_rad),
+			z=trans.location.z)
 
-		if(vehicle_id==None or throttle==None or steer==None):
+			if(road_id == None or waypoint.road_id == road_id):
+				self.world.debug.draw_arrow(waypoint.transform.location, p1, thickness = 0.01, arrow_size=0.05,
+			                               color=carla.Color(r=0, g=255, b=0), life_time=life_time)
+
+
+	def move_vehicle(self, vehicle_id=None, control=None):
+
+		if(vehicle_id==None or control==None):
 			print("Invalid vechicle motion parameters.")
 		else:
 			if(self.actor_dict[vehicle_id]==None):
 				print("Actor with given ID does not exist")
 			else:
 				vehicle = self.actor_dict[vehicle_id]
-				vehicle.apply_control(carla.VehicleControl(throttle=throttle, steer=steer))
+				vehicle.apply_control(control)
 
 
 	def convert_global_transform_to_actor_frame(self, actor=None, transform=None):
