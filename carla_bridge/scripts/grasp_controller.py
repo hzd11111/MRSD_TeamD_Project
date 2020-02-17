@@ -55,7 +55,7 @@ class GRASPPIDController():
         :return: distance (in meters) to the waypoint
         """
 
-        print("Target Pose:", pose)
+        #print("Target Pose:", pose)
         throttle = self._lon_controller.run_step(target_speed)
         steering = self._lat_controller.run_step(pose)
 
@@ -167,8 +167,8 @@ class PIDLateralController():
         w_vec = np.array([pose.x -
                           v_begin.x, pose.y -
                           v_begin.y, 0.0])
-        print("v_vec:", v_vec)
-        print("w_vec:", w_vec)        
+        #print("v_vec:", v_vec)
+        #print("w_vec:", w_vec)        
         _dot = math.acos(np.clip(np.dot(w_vec, v_vec) /
                                  (np.linalg.norm(w_vec) * np.linalg.norm(v_vec)), -1.0, 1.0))
 
@@ -184,7 +184,7 @@ class PIDLateralController():
             _de = 0.0
             _ie = 0.0
 
-        print("P Error:", _dot)
+        #print("P Error:", _dot)
 
         return np.clip((self._K_P * _dot) + (self._K_D * _de /
                                              self._dt) + (self._K_I * _ie * self._dt), -1.0, 1.0)

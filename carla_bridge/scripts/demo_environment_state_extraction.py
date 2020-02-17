@@ -69,7 +69,7 @@ class CarlaManager:
 		vehicle = VehicleState()
 		vehicle.vehicle_location.x = actor.get_transform().location.x
 		vehicle.vehicle_location.y = actor.get_transform().location.y
-		vehicle.vehicle_location.theta = actor.get_transform().rotation.yaw * np.pi / 180 #CHECK : Changed this to radians. 
+		vehicle.vehicle_location.theta = actor.get_transform().rotation.yaw * np.pi / 180#CHECK : Changed this to radians. 
 		vehicle.vehicle_speed = np.sqrt(actor.get_velocity().x**2 + actor.get_velocity().y**2 + actor.get_velocity().z**2) 
 		vehicle.length = 5
 		vehicle.width = 2
@@ -142,7 +142,7 @@ class CarlaManager:
 
 		tracking_loc = carla.Location(x=tracking_pose.x, y=tracking_pose.y, z=self.ego_vehicle.get_location().z)
 		self.carla_handler.world.debug.draw_string(tracking_loc, 'O', draw_shadow=False,
-			                               color=carla.Color(r=255, g=0, b=0), life_time=2,
+			                               color=carla.Color(r=255, g=0, b=0), life_time=20,
 			                               persistent_lines=True)
 		
 		try:

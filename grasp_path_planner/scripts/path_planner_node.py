@@ -227,8 +227,10 @@ class PoseSpeedTemp(PoseTemp):
 	#	PoseTemp.__init__(self,pose)
 	def addToPose(self, pose):
 		new_pose = PoseSpeedTemp()
-		new_pose.x = self.x + pose.x * math.cos(self.theta) - pose.y * math.sin(self.theta)
-		new_pose.y = self.y + pose.x * math.sin(self.theta) + pose.y * math.cos(self.theta)
+		#new_pose.x = self.x + pose.x * math.cos(self.theta) - pose.y * math.sin(self.theta)
+		#new_pose.y = self.y + pose.x * math.sin(self.theta) + pose.y * math.cos(self.theta)
+		new_pose.x = pose.x + self.x * math.cos(pose.theta) - self.y * math.sin(pose.theta)
+		new_pose.y = pose.y + self.x * math.sin(pose.theta) + self.y * math.cos(pose.theta)
 		new_pose.theta = self.wrapToPi(self.theta + pose.theta)
 		new_pose.speed = self.speed
 		return new_pose
@@ -337,10 +339,10 @@ class TrajGenerator:
 		# generate trajectory
 		if not self.lane_switching:
 			# ToDo: Use closest pose for lane width
-			print("reached here")
+			print("reached here...........................................")
 			neutral_traj = self.cubicSplineGen(sim_data.cur_lane.lane[0].width,\
 						sim_data.next_lane.lane[0].width, sim_data.ego_vehicle.vehicle_speed)
-
+			
 			# determine the closest next pose in the current lane
 			lane_pose_array = sim_data.cur_lane.lane
 			closest_pose = lane_pose_array[0].pose
@@ -352,12 +354,21 @@ class TrajGenerator:
 					way_pose.isInfrontOf(cur_vehicle_pose):
 					break	
 			closest_pose = PoseTemp(closest_pose)
+			closest_pose.theta = cur_vehicle_pose.theta
+			
+			print("Closest Pose:",closest_pose.x, closest_pose.y)
+			
 
 			# offset the trajectory with the closest pose
 			for pose_speed in neutral_traj:
 				self.generated_path.append(pose_speed.addToPose(closest_pose))
-	
+				#self.generated_path.append(closest_pose.addToPose(pose_speed))
+				#print("Trajectory:", pose_speed.x, pose_speed.y)
+				# self.generated_path.append(closest_pose)
 			# change lane switching status	
+			# for generated_waypoint in self.generated_path:
+			# 	print("Generated:", generated_waypoint.x, generated_waypoint.y)
+			# brak
 			self.lane_switching = True
 
 		# find the next tracking point
@@ -384,6 +395,7 @@ class TrajGenerator:
 		new_path_plan.tracking_pose.theta = self.generated_path[self.path_pointer].theta
 		new_path_plan.reset_sim = 0
 		new_path_plan.tracking_speed = self.generated_path[self.path_pointer].speed
+		#print(new_path_plan)
 		return new_path_plan		
 
 TRAJ_PARAM = {'look_up_distance' : 0 ,\
@@ -438,8 +450,8 @@ class PathPlannerManager:
 		
 		if self.newest_rl_data and self.newest_sim_data:
 			# generate the path
+
 			traj = self.traj_gen.trajPlan(self.newest_rl_data, self.newest_sim_data)
-		
 			# reset the backlog if simulation needs to be reset
 			if traj.reset_sim:
 				self.backlog_manager.reset()
