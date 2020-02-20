@@ -126,7 +126,7 @@ class CarlaManager:
 			vehicle_front = self.getVehicleState(front_vehicle)
 		
 		# Rear vehicle
-		if(rear_vehicle = None):
+		if(rear_vehicle == None):
 			vehicle_rear = vehicle_ego
 		else:	
 			vehicle_rear = self.getVehicleState(rear_vehicle)
@@ -178,8 +178,8 @@ class CarlaManager:
  
 		# Spawn ego vehicle on road 
 		filtered_waypoints = self.carla_handler.filter_waypoints(self.carla_handler.get_waypoints(), road_id=12)
-		spawn_point = filtered_waypoints[100].transform # Select random point from filtered waypoint list #TODO Initialization Scheme Design
-		spawn_point.location.z = spawn_point.location.z + 2 # To avoid collision during spawn
+		spawn_point = filtered_waypoints[2].transform # Select random point from filtered waypoint list #TODO Initialization Scheme Design
+		spawn_point.location.z = spawn_point.location.z + 1 # To avoid collision during spawn
 		self.ego_vehicle, ego_vehicle_ID = self.carla_handler.spawn_vehicle(spawn_point=spawn_point)
 
 		time.sleep(3)
@@ -208,7 +208,7 @@ class CarlaManager:
 
 		# TODO : Can wrap this as a function member of the class. //Done  
 		# Ego vehicle	
-		vehicle_ego = self.getVehicleState(self.ego_vehicle);
+		vehicle_ego = self.getVehicleState(self.ego_vehicle)
 		
 		# Front vehicle	
 		if(front_vehicle == None):
@@ -217,7 +217,7 @@ class CarlaManager:
 			vehicle_front = self.getVehicleState(front_vehicle)
 		
 		# Rear vehicle
-		if(rear_vehicle = None):
+		if(rear_vehicle == None):
 			vehicle_rear = vehicle_ego
 		else:	
 			vehicle_rear = self.getVehicleState(rear_vehicle)
