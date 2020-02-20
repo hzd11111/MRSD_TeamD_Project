@@ -23,6 +23,7 @@ import agents.navigation.controller
 import rospy
 import copy
 import numpy as np
+import math
 
 sys.path.remove('/opt/ros/kinetic/lib/python2.7/dist-packages')
 from carla_handler import CarlaHandler
@@ -69,14 +70,14 @@ class CarlaManager:
 		vehicle = VehicleState()
 		vehicle.vehicle_location.x = actor.get_transform().location.x
 		vehicle.vehicle_location.y = actor.get_transform().location.y
-		vehicle.vehicle_location.theta = actor.get_transform().rotation.yaw * np.pi / 180#CHECK : Changed this to radians. 
+		vehicle.vehicle_location.theta = math.radians(actor.get_transform().rotation.yaw) #* np.pi / 180#CHECK : Changed this to radians. 
 		vehicle.vehicle_speed = np.sqrt(actor.get_velocity().x**2 + actor.get_velocity().y**2 + actor.get_velocity().z**2) 
 		vehicle.length = 5
 		vehicle.width = 2
 
 		return vehicle
 
-	def getLanePoints(self, waypoints, flip=False):
+	def getLanePoints(self, waypoints, flip=False, printWaypoint=False):
 
 		lane_cur = Lane()
 		lane_points = []
@@ -84,11 +85,24 @@ class CarlaManager:
 			lane_point = LanePoint()
 			lane_point.pose.y = waypoint.transform.location.y
 			lane_point.pose.x = waypoint.transform.location.x
-			lane_point.pose.theta = waypoint.transform.rotation.yaw * np.pi / 180# CHECK : Changed this to radians.
+			lane_point.pose.theta = waypoint.transform.rotation.yaw 
+
+			##############################
+			
+			if(i == len(waypoints)-1):
+				continue
+			trans = waypoints[i+1].transform
+			#yaw_in_rad = math.radians(trans.rotation.yaw)
+			yaw_in_rad = math.radians(np.arctan2(-waypoint.transform.location.y + trans.location.y,-waypoint.transform.location.x + trans.location.x))
+			#print(trans, waypoint.transform.location, yaw_in_rad,"###################################")
+			
+			
+			###############################
 			if(flip == True):
-				lane_point.pose.theta += np.pi
+				lane_point.pose.theta += 180
 				#lane_point.pose.theta = lane_point.pose.theta % (2*np.pi)
 			lane_point.width = 3 # TODO
+			lane_point.pose.theta = yaw_in_rad#math.radians(lane_point.pose.theta)#*= np.pi / 180# CHECK : Changed this to radians.
 			lane_points.append(lane_point)
 		lane_cur.lane = lane_points
 
@@ -160,7 +174,8 @@ class CarlaManager:
 		current_lane_waypoints, left_lane_waypoints, right_lane_waypoints, front_vehicle, rear_vehicle, actors_in_current_lane, actors_in_left_lane, actors_in_right_lane = state_information
 
 		# Current Lane
-		lane_cur = self.getLanePoints(current_lane_waypoints)
+		lane_cur = self.getLanePoints(current_lane_waypoints, printWaypoint=True)
+		#self.carla_handler.draw_arrow(current_lane_waypoints)
 		
 		# Left Lane
 		lane_left = self.getLanePoints(left_lane_waypoints, flip=False) ##TODO Check this. Reversed 
@@ -274,7 +289,7 @@ class CarlaManager:
 		spawn_point.location.z = spawn_point.location.z + 1 # To avoid collision during spawn
 		self.ego_vehicle, ego_vehicle_ID = self.carla_handler.spawn_vehicle(spawn_point=spawn_point)
 
-		self.vehicle_controller = GRASPPIDController(self.ego_vehicle, args_lateral = {'K_P': 0.01, 'K_D': 0.0, 'K_I': 0}, args_longitudinal = {'K_P': 0.5, 'K_D': 0.0, 'K_I': 0.0})
+		self.vehicle_controller = GRASPPIDController(self.ego_vehicle, args_lateral = {'K_P': 0.1, 'K_D': 0.0, 'K_I': 0}, args_longitudinal = {'K_P': 0.5, 'K_D': 0.0, 'K_I': 0.0})
 
 		time.sleep(3)
 		rate = rospy.Rate(2000)
@@ -293,8 +308,9 @@ class CarlaManager:
 		# Current Lane
 		lane_cur = self.getLanePoints(current_lane_waypoints)
 		
+		
 		# Left Lane
-		lane_left = self.getLanePoints(left_lane_waypoints, flip=True)
+		lane_left = self.getLanePoints(left_lane_waypoints, flip=False)
 		#self.carla_handler.draw_arrow(left_lane_waypoints)
 		
 		# Right Lane

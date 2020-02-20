@@ -186,7 +186,7 @@ class PoseTemp:
 	#	self.theta = self.wrapToPi(ros_pose.theta)
 
 	def wrapToPi(self, theta):
-		return (theta + math.pi) % (2. * math.pi) - math.pi
+		return (theta + 3*math.pi) % (2. * math.pi) - math.pi
 
 	def distance(self, pose):
 		return math.sqrt((self.x - pose.x) **2. + (self.y - pose.y) ** 2.)
@@ -226,6 +226,11 @@ class PoseSpeedTemp(PoseTemp):
 	#	self.speed = speed
 	#	PoseTemp.__init__(self,pose)
 	def addToPose(self, pose):
+		print("###########")
+		print('Local Pose:')
+		print(self.x, self.y)
+		print('Added to')
+		print(pose.x, pose.y, pose.theta)
 		new_pose = PoseSpeedTemp()
 		#new_pose.x = self.x + pose.x * math.cos(self.theta) - pose.y * math.sin(self.theta)
 		#new_pose.y = self.y + pose.x * math.sin(self.theta) + pose.y * math.cos(self.theta)
@@ -233,6 +238,10 @@ class PoseSpeedTemp(PoseTemp):
 		new_pose.y = pose.y + self.x * math.sin(pose.theta) + self.y * math.cos(pose.theta)
 		new_pose.theta = self.wrapToPi(self.theta + pose.theta)
 		new_pose.speed = self.speed
+
+		print('Global Pose')
+		print(new_pose.x, new_pose.y, new_pose.theta)
+		print("############3")
 		return new_pose
 
 class TrajGenerator:
@@ -291,6 +300,8 @@ class TrajGenerator:
 	def cubicSplineGen(self, cur_lane_width, next_lane_width, v_cur):
 		if v_cur < 10:
 			v_cur = 10
+		v_cur = v_cur * 1000 / 3600
+		
 		# determine external parameters
 		w = (cur_lane_width + next_lane_width)/2.
 		l = self.traj_parameters['lane_change_length']
@@ -318,11 +329,11 @@ class TrajGenerator:
 		for i in range(total_loop_count):
 			t = i * time_disc
 			x_value = ax*(t**3.)+bx*(t**2.)+cx*t+dx
-			y_value = ay*(t**3.)+by*(t**2.)+cy*t+dy
+			y_value = (ay*(t**3.)+by*(t**2.)+cy*t+dy)
 			x_deriv = 3.*ax*(t**2.)+2.*bx*t+cx
-			y_deriv = 3.*ay*(t**2.)+2.*by*t+cy
+			y_deriv = (3.*ay*(t**2.)+2.*by*t+cy)
 			theta = math.atan2(y_deriv,x_deriv)
-			speed = math.sqrt(y_deriv**.2+x_deriv**.2)
+			speed = math.sqrt(y_deriv**2.+x_deriv**2.) * 3.6
 			pose = PoseSpeedTemp()
 			pose.speed = speed
 			pose.x = x_value
@@ -354,9 +365,10 @@ class TrajGenerator:
 					way_pose.isInfrontOf(cur_vehicle_pose):
 					break	
 			closest_pose = PoseTemp(closest_pose)
-			closest_pose.theta = cur_vehicle_pose.theta
+			# closest_pose.theta = cur_vehicle_pose.theta
 			
-			print("Closest Pose:",closest_pose.x, closest_pose.y)
+			print("Closest Pose:",closest_pose.x, closest_pose.y, closest_pose.theta)
+			
 			
 
 			# offset the trajectory with the closest pose
@@ -389,7 +401,7 @@ class TrajGenerator:
 			self.reset()
 			new_path_plan.reset_sim = 1
 			return new_path_plan	
-		
+		self.path_pointer = -1
 		new_path_plan.tracking_pose.x = self.generated_path[self.path_pointer].x
 		new_path_plan.tracking_pose.y = self.generated_path[self.path_pointer].y
 		new_path_plan.tracking_pose.theta = self.generated_path[self.path_pointer].theta

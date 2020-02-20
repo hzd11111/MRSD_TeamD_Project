@@ -29,7 +29,7 @@ carla_handler_1 = CarlaHandler(client)
 ################################################################################################################################
 
 ### Example code to draw waypoints
-carla_handler_1.draw_waypoints(carla_handler_1.get_waypoints(), road_id=12)
+carla_handler_1.draw_waypoints(carla_handler_1.get_waypoints(), road_id=22)
 
 
 ################################################################################################################################
@@ -54,6 +54,7 @@ spawn_point = filtered_waypoints[100].transform
 
 # Increase Z to avoid collisions during spawn
 spawn_point.location.z = spawn_point.location.z + 2
+#spawn_point.rotation.yaw += 4
 
 # Spawn vehicle. (Remember to Keep track of ID for future use)
 ego_vehicle, ego_vehicle_ID = carla_handler_1.spawn_vehicle(spawn_point=spawn_point)
@@ -142,23 +143,40 @@ print("Closest waypoint in the right lane:", right_lane_nearest_waypoint, "\n")
 ### Example code to find vehicle in front and vehicle behind the ego vehicle
 
 ## Spawn some test vehicles.
-# spawn_point = filtered_waypoints[150].transform
-# spawn_point.location.z = spawn_point.location.z + 2
-# vehicle_front, vehicle_front_id = carla_handler_1.spawn_vehicle(spawn_point=spawn_point)
+spawn_point = filtered_waypoints[150].transform
+spawn_point.location.z = spawn_point.location.z + 0.75
+vehicle_front, vehicle_front_id = carla_handler_1.spawn_vehicle(spawn_point=spawn_point)
 
-# spawn_point = filtered_waypoints[200].transform
-# spawn_point.location.z = spawn_point.location.z + 2
-# vehicle_front_2, vehicle_front_2_id = carla_handler_1.spawn_vehicle(spawn_point=spawn_point)
+spawn_point = filtered_waypoints[200].transform
+spawn_point.location.z = spawn_point.location.z + 0.75
+vehicle_front_2, vehicle_front_2_id = carla_handler_1.spawn_vehicle(spawn_point=spawn_point)
 
-# spawn_point = filtered_waypoints[50].transform
-# spawn_point.location.z = spawn_point.location.z + 2
-# vehicle_back, vehicle_back_id = carla_handler_1.spawn_vehicle(spawn_point=spawn_point)
+spawn_point = filtered_waypoints[50].transform
+spawn_point.location.z = spawn_point.location.z + 0.75
+vehicle_back, vehicle_back_id = carla_handler_1.spawn_vehicle(spawn_point=spawn_point)
 
-# spawn_point = filtered_waypoints[0].transform
-# spawn_point.location.z = spawn_point.location.z + 2
-# vehicle_back_2, vehicle_back_2_id = carla_handler_1.spawn_vehicle(spawn_point=spawn_point)
+spawn_point = filtered_waypoints[0].transform
+spawn_point.location.z = spawn_point.location.z + 0.75
+vehicle_back_2, vehicle_back_2_id = carla_handler_1.spawn_vehicle(spawn_point=spawn_point)
 
-time.sleep(3)
+spawn_point = filtered_waypoints[75].transform
+spawn_point.location.z = spawn_point.location.z + 0.75
+spawn_point.rotation.yaw += 180
+vehicle_front, vehicle_front_id = carla_handler_1.spawn_vehicle(spawn_point=spawn_point)
+
+spawn_point = filtered_waypoints[175].transform
+spawn_point.location.z = spawn_point.location.z + 0.75
+spawn_point.rotation.yaw += 180
+vehicle_front_2, vehicle_front_2_id = carla_handler_1.spawn_vehicle(spawn_point=spawn_point)
+
+spawn_point = filtered_waypoints[25].transform
+spawn_point.location.z = spawn_point.location.z + 0.75
+spawn_point.rotation.yaw += 180
+vehicle_back, vehicle_back_id = carla_handler_1.spawn_vehicle(spawn_point=spawn_point)
+
+
+#time.sleep(3)
+#ego_vehicle.apply_control(carla.VehicleControl(throttle=1.0, steer=0.0))
 
 # Get rotation matrix from : ego vehicle location and rotation vectors (i.e ego vehicle transform)
 # ego_vehicle_to_world_transform = ego_vehicle.get_transform()
@@ -179,26 +197,46 @@ while(True):
 
 		if(actor.id != ego_vehicle.id):
 
+			tmp_transform = actor.get_transform()
+			tmp_bounding_box = actor.bounding_box
+			tmp_bounding_box.location += tmp_transform.location
+
 			actor_nearest_waypoint = carla_handler_1.world_map.get_waypoint(actor.get_location(), project_to_road=True)
-			print(actor_nearest_waypoint.road_id, current_road_ID)
+			#carla_handler_1.world.debug.draw_box(tmp_bounding_box, tmp_transform.rotation, life_time=0.5)
+			
 			if(actor_nearest_waypoint.road_id == current_road_ID):
 				
-				if(actor_nearest_waypoint.lane_id == current_lane_ID):
+				if(actor_nearest_waypoint.lane_id == nearest_waypoint.lane_id):
 					actors_in_current_lane.append(actor.id)
 					tmp_vehicle = actor
 					tmp_transform = tmp_vehicle.get_transform()
 					tmp_bounding_box = tmp_vehicle.bounding_box
 					tmp_bounding_box.location += tmp_transform.location
-					carla_handler_1.world.debug.draw_box(tmp_bounding_box, tmp_transform.rotation, life_time=0.05)
+					#carla_handler_1.world.debug.draw_box(tmp_bounding_box, tmp_transform.rotation, life_time=0.05)
 					curr_actor_location_in_ego_vehicle_frame = carla_handler_1.convert_global_transform_to_actor_frame(actor=ego_vehicle, transform=actor.get_transform())
-					if(curr_actor_location_in_ego_vehicle_frame[0][0] > 0.0):
+					if(curr_actor_location_in_ego_vehicle_frame[0][0] >= 0.0):
 						
 						tmp_transform = actor.get_transform()
 						tmp_bounding_box = actor.bounding_box
 						tmp_bounding_box.location += tmp_transform.location
-						carla_handler_1.world.debug.draw_box(tmp_bounding_box, tmp_transform.rotation, life_time=0.5)
+						carla_handler_1.world.debug.draw_box(tmp_bounding_box, tmp_transform.rotation, life_time=1, color=carla.Color(255,0,255))
+					else:
+
+						tmp_transform = actor.get_transform()
+						tmp_bounding_box = actor.bounding_box
+						tmp_bounding_box.location += tmp_transform.location
+						carla_handler_1.world.debug.draw_box(tmp_bounding_box, tmp_transform.rotation, life_time=1, color=carla.Color(0,255,255))
+
+
+
+
 				else:
+					
 					actors_in_other_lane.append(actor.id)
+					tmp_transform = actor.get_transform()
+					tmp_bounding_box = actor.bounding_box
+					tmp_bounding_box.location += tmp_transform.location
+					carla_handler_1.world.debug.draw_box(tmp_bounding_box, tmp_transform.rotation, life_time=1)
 					# Draw bounding boxes
 
 	time.sleep(2)
