@@ -8,4 +8,4 @@ setup_args = generate_distutils_setup(
     package_dir={'': 'scripts'},
 )
 
-setup(**setup_args)
+setup(**setup_args, requires=['matplotlib', 'numpy', 'PIL', 'torch', 'torchvision', 'gym'])
