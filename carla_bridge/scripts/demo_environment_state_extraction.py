@@ -218,8 +218,6 @@ class CarlaManager:
 		# publish environment state
 		self.env_msg = env_state
 		self.env_pub.publish(env_state)
-		np.save('/home/mayank/Mayank/test_env_message2.npy', env_state, allow_pickle=True)
-		time.sleep(5)
 		#rate.sleep()#ToDo: Delete this line	
 		####
 		self.lock.release()
