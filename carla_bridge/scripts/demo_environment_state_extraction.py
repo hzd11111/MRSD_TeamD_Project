@@ -150,8 +150,8 @@ class CarlaManager:
 			try:
 				self.carla_handler.world.tick()
 				flag = 1
-				print("Passed Tick....................................................................................")
 			except:
+				print("Missed Tick....................................................................................")
 				continue
 			
 		#self.carla_handler.world.wait_for_tick()
@@ -208,6 +208,7 @@ class CarlaManager:
 		env_state.max_num_vehicles = 2
 		env_state.speed_limit = 40
 		env_state.id = self.id
+
 		#print("Publishing Id:",self.id)
 		self.id_waiting = self.id
 		self.id += 1
@@ -263,10 +264,10 @@ class CarlaManager:
 		self.carla_handler = CarlaHandler(client)
 	
 		## Update World Information
-		# settings = self.carla_handler.world.get_settings()
-		# settings.synchronous_mode = True
-		# settings.fixed_delta_seconds = 0.2
-		# self.carla_handler.world.apply_settings(settings)
+		settings = self.carla_handler.world.get_settings()
+		settings.synchronous_mode = True
+		settings.fixed_delta_seconds = 0.2
+		self.carla_handler.world.apply_settings(settings)
 
 
 
@@ -278,7 +279,7 @@ class CarlaManager:
 		spawn_point.location.z = spawn_point.location.z + 1 # To avoid collision during spawn
 		self.ego_vehicle, ego_vehicle_ID = self.carla_handler.spawn_vehicle(spawn_point=spawn_point)
 
-		self.vehicle_controller = GRASPPIDController(self.ego_vehicle, args_lateral = {'K_P': 0.1, 'K_D': 0.0, 'K_I': 0}, args_longitudinal = {'K_P': 0.5, 'K_D': 0.0, 'K_I': 0.0})
+		self.vehicle_controller = GRASPPIDController(self.ego_vehicle, args_lateral = {'K_P': 0.05, 'K_D': 0.0, 'K_I': 0}, args_longitudinal = {'K_P': 0.5, 'K_D': 0.0, 'K_I': 0.0})
 
 		time.sleep(3)
 		rate = rospy.Rate(2000)
@@ -307,7 +308,7 @@ class CarlaManager:
 
 		# TODO : Can wrap this as a function member of the class. //Done  
 		# Ego vehicle	
-		vehicle_ego = self.getVehicleState(self.ego_vehicle);
+		vehicle_ego = self.getVehicleState(self.ego_vehicle)
 		
 		# Front vehicle	
 		if(front_vehicle == None):
