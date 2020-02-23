@@ -86,7 +86,7 @@ class CarlaManager:
 			lane_point.pose.x = waypoint.transform.location.x
 			lane_point.pose.theta = waypoint.transform.rotation.yaw * np.pi / 180# CHECK : Changed this to radians.
 			if(flip == True):
-				lane_point.pose.theta += np.pi
+				lane_point.pose.theta += 0#np.pi
 				#lane_point.pose.theta = lane_point.pose.theta % (2*np.pi)
 			lane_point.width = 3 # TODO
 			lane_points.append(lane_point)
@@ -142,14 +142,18 @@ class CarlaManager:
 
 		tracking_loc = carla.Location(x=tracking_pose.x, y=tracking_pose.y, z=self.ego_vehicle.get_location().z)
 		self.carla_handler.world.debug.draw_string(tracking_loc, 'O', draw_shadow=False,
-			                               color=carla.Color(r=255, g=0, b=0), life_time=2,
+			                               color=carla.Color(r=255, g=0, b=0), life_time=20,
 			                               persistent_lines=True)
 		
-		try:
-			self.carla_handler.world.tick()
-		except:
-			print("Missed Tick....................................................................................")
-		
+		flag = 0
+		while(flag == 0):
+			try:
+				self.carla_handler.world.tick()
+				flag = 1
+				print("Passed Tick....................................................................................")
+			except:
+				continue
+			
 		#self.carla_handler.world.wait_for_tick()
 		# ToDo: make CARLA step for one frame and reset if necessary
 
@@ -214,6 +218,8 @@ class CarlaManager:
 		# publish environment state
 		self.env_msg = env_state
 		self.env_pub.publish(env_state)
+		np.save('/home/mayank/Mayank/test_env_message2.npy', env_state, allow_pickle=True)
+		time.sleep(5)
 		#rate.sleep()#ToDo: Delete this line	
 		####
 		self.lock.release()
@@ -274,7 +280,7 @@ class CarlaManager:
 		spawn_point.location.z = spawn_point.location.z + 1 # To avoid collision during spawn
 		self.ego_vehicle, ego_vehicle_ID = self.carla_handler.spawn_vehicle(spawn_point=spawn_point)
 
-		self.vehicle_controller = GRASPPIDController(self.ego_vehicle, args_lateral = {'K_P': 0.01, 'K_D': 0.0, 'K_I': 0}, args_longitudinal = {'K_P': 0.5, 'K_D': 0.0, 'K_I': 0.0})
+		self.vehicle_controller = GRASPPIDController(self.ego_vehicle, args_lateral = {'K_P': 0.1, 'K_D': 0.0, 'K_I': 0}, args_longitudinal = {'K_P': 0.5, 'K_D': 0.0, 'K_I': 0.0})
 
 		time.sleep(3)
 		rate = rospy.Rate(2000)

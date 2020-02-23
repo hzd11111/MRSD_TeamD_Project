@@ -193,8 +193,8 @@ class PoseTemp:
 
 	def add(self, pose):
 		new_pose = PoseTemp()
-		new_pose.x = self.x + pose.x * math.cos(self.theta) - pose.y * math.sin(self.theta)
-		new_pose.y = self.y + pose.x * math.sin(self.theta) + pose.y * math.cos(self.theta)
+		new_pose.x = self.x + pose.x * math.cos(self.theta) + pose.y * math.sin(self.theta)
+		new_pose.y = self.y - pose.x * math.sin(self.theta) + pose.y * math.cos(self.theta)
 		new_pose.theta = self.wrapToPi(self.theta + pose.theta)
 		return new_pose
 	
@@ -205,7 +205,7 @@ class PoseTemp:
 		return new_vec
 
 	def vecFromTheta(self):
-		return VecTemp(math.cos(self.theta), math.sin(self.theta))
+		return VecTemp(math.cos(self.theta),-math.sin(self.theta))
 
 	def isInfrontOf(self, pose):
 		diff_vec = pose.vecTo(self)
@@ -227,8 +227,8 @@ class PoseSpeedTemp(PoseTemp):
 	#	PoseTemp.__init__(self,pose)
 	def addToPose(self, pose):
 		new_pose = PoseSpeedTemp()
-		new_pose.x = self.x + pose.x * math.cos(self.theta) - pose.y * math.sin(self.theta)
-		new_pose.y = self.y + pose.x * math.sin(self.theta) + pose.y * math.cos(self.theta)
+		new_pose.x = pose.x + self.x * math.cos(pose.theta) + self.y * math.sin(pose.theta)
+		new_pose.y = pose.y - self.x * math.sin(pose.theta) + self.y * math.cos(pose.theta)
 		new_pose.theta = self.wrapToPi(self.theta + pose.theta)
 		new_pose.speed = self.speed
 		return new_pose
@@ -316,11 +316,11 @@ class TrajGenerator:
 		for i in range(total_loop_count):
 			t = i * time_disc
 			x_value = ax*(t**3.)+bx*(t**2.)+cx*t+dx
-			y_value = ay*(t**3.)+by*(t**2.)+cy*t+dy
+			y_value = -(ay*(t**3.)+by*(t**2.)+cy*t+dy)
 			x_deriv = 3.*ax*(t**2.)+2.*bx*t+cx
-			y_deriv = 3.*ay*(t**2.)+2.*by*t+cy
-			theta = math.atan2(y_deriv,x_deriv)
-			speed = math.sqrt(y_deriv**.2+x_deriv**.2)
+			y_deriv = -(3.*ay*(t**2.)+2.*by*t+cy)
+			theta = math.atan2(-y_deriv,x_deriv)
+			speed = math.sqrt(y_deriv**2.+x_deriv**2.)
 			pose = PoseSpeedTemp()
 			pose.speed = speed
 			pose.x = x_value
