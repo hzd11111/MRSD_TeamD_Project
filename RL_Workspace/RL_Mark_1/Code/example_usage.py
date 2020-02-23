@@ -7,7 +7,6 @@ import time
 import pygame
 
 import gym
-
 import gym_racer
 from gym_racer.envs.utils import getMyLogger
 
@@ -105,7 +104,7 @@ def test_interactive_env(args):
     fps = args.fps
     num_frames = args.num_frames
 
-    racer_env = gym.make("racer-v0", render_mode="human")
+    racer_env = gym.make("racer-v1", render_mode="human")
 
     # clock for interactive play
     clock = pygame.time.Clock()
@@ -202,7 +201,7 @@ def test_automatic_env(args):
     sensor_array_params["viewfield_step"] = 8
 
     racer_env = gym.make(
-        "racer-v0",
+        "racer-v1",
         sensor_array_type=sat,
         render_mode=mode,
         sensor_array_params=sensor_array_params,
