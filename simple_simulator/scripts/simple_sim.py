@@ -22,6 +22,8 @@ LANE_MARKER_TOPIC_NAME = 'lane_marker'
 EGO_MARKER_TOPIC_NAME = 'ego_vehicle_marker'
 VEHICLE_MARKER_TOPIC_NAME = "vehicle_markers"
 
+NUM_NEXT_LANE_VEHICLES = 5
+LANE_DISCRETIZATION  = 0.1
 
 class LaneSim:
     def __init__(self, starting_x, starting_y, starting_theta, length, width):
@@ -30,16 +32,33 @@ class LaneSim:
         self.starting_theta = starting_theta
         self.length = length
         self.width = width
+        self.ros_lane = False
+        self.lock = threading.Lock()
+
+    def convert2ROS(self):
+        self.lock.acquire()
+        if self.ros_lane == False:
+            self.ros_lane = Lane()
+            for lane_len in np.arange(0,self.length,LANE_DISCRETIZATION):
+                lane_pt = LanePoint()
+                lane_pt.pose.x = self.starting_x + lane_len * np.cos(self.starting_theta)
+                lane_pt.pose.y = -(self.starting_y - lane_len * np.sin(self.starting_theta))
+                lane_pt.pose.theta = self.starting_theta
+                lane_pt.width = self.width
+                self.ros_lane.lane.append(lane_pt)
+        self.lock.release()
+        return self.ros_lane
 
 
 class Vehicle:
-    def __init__(self, length, width):
+    def __init__(self, length, width, lane_num):
         self.length = length
         self.width = width
         self.x = 0
         self.y = 0
         self.theta = 0
         self.speed = 0
+        self.lane = lane_num
 
     def place(self, x, y, theta):
         self.x = x
@@ -53,6 +72,19 @@ class Vehicle:
     def setSpeed(self, speed):
         self.speed = speed
 
+    def convert2ROS(self):
+
+        def speed_conversion(sim_speed):
+            return sim_speed * 3.6
+
+        vehicle_state = VehicleState()
+        vehicle_state.vehicle_location.x = self.x
+        vehicle_state.vehicle_location.y = self.y
+        vehicle_state.vehicle_location.theta = self.theta
+        vehicle_state.length = self.length
+        vehicle_state.width = self.width
+        vehicle_state.vehicle_speed = speed_conversion(self.speed)
+
 
 class SimpleSimulator:
     def __init__(self, time_step):
@@ -61,6 +93,8 @@ class SimpleSimulator:
         self.lanes = []
         self.cur_lane = 0
         self.time_step = time_step
+        self.timestamp = 0
+        self.first_run = 1
 
         self.env_msg = None
         self.lane_marker = None
@@ -122,20 +156,142 @@ class SimpleSimulator:
 
         self.lock.release()
 
+    def vehicleAxisProjection(self, veh, axis):
+        x_dim = veh.length/2.
+        y_dim = veh.width/2.
+
+        # local corners
+        local_corners = []
+        local_corners.append(np.array([x_dim, y_dim]))
+        local_corners.append(np.array([x_dim, -y_dim]))
+        local_corners.append(np.array([-x_dim, y_dim]))
+        local_corners.append(np.array([-x_dim, -y_dim]))
+
+        # global corners
+        global_corners = []
+        for local in local_corners:
+            global_x = veh.x + local[0] * np.cos(veh.theta) + local[1] * np.sin(veh.theta)
+            global_y = veh.y - local[0] * np.sin(veh.theta) + local[1] * np.cos(veh.theta)
+            global_corners.append(np.array(global_x, global_y))
+
+        # projection
+        proj_val = []
+        for c in global_corners:
+            proj_val.append(np.dot(c, axis))
+
+        # return the min and max values
+        return np.array([min(proj_val), max(proj_val)])
+
+
+    def projNoOverlap(self, veh1_pair, veh2_pair):
+        return veh1_pair[0] > veh2_pair[1] or veh1_pair[1] < veh2_pair[0]
+
+    def vehAxis(self, veh):
+        norm_axis = []
+        norm_axis.append(np.array(np.cos(veh.theta), -np.sin(veh.theta)))
+        norm_axis.append(np.array(np.sin(veh.theta), np.cos(veh.theta)))
+        return norm_axis
+
+    def vehicleToVehicleCollision(self, veh1, veh2):
+        # normal axis
+        norm_axis = []
+        norm_axis.extend(self.vehAxis(veh1))
+        norm_axis.extend(self.vehAxis(veh2))
+
+        # collision check for each axis
+        for ax in norm_axis:
+            veh1_proj = self.vehicleAxisProjection(veh1, ax)
+            veh2_proj = self.vehicleAxisProjection(veh2, ax)
+            if self.projNoOverlap(veh1_proj, veh2_proj):
+                return False
+        return True
+
+    def collisionCheck(self):
+        for veh in self.vehicles:
+            if self.vehicleToVehicleCollision(self.controlling_vehicle, veh):
+                return True
+
+
     def updateMessages(self):
         self.lock.acquire()
 
-        # lanes
+        publish_msg = EnvironmentState()
 
-        # next lane vehicles
+        # current lane
+        publish_msg.current_lane = self.lanes[self.cur_lane]
+
+        # next lane
+        next_lane = self.cur_lane - 1
+        if next_lane >= 0:
+            publish_msg.next_lane = self.lanes[next_lane]
+
+        # vehicles
+        closest_next_lane_vehicles = []
+        front_veh = False
+        back_veh = False
+
+        def sort_veh(veh_tup):
+            return veh_tup[1]
+
+        veh_dir_vec = np.array(np.cos(self.controlling_vehicle.theta), -np.sin(self.controlling_vehicle.theta))
+        for veh in self.vehicles:
+            veh_dist = np.linalg.norm(np.array(veh.x - self.controlling_vehicle.x, veh.y - self.controlling_vehicle.y))
+
+            if veh.lane == next_lane:
+                # next lane vehicles
+                if len(closest_next_lane_vehicles) < NUM_NEXT_LANE_VEHICLES:
+                    closest_next_lane_vehicles.append(tuple((veh, veh_dist)))
+                    closest_next_lane_vehicles.sort(key = sort_veh)
+                elif veh_dist < closest_next_lane_vehicles[-1][1]:
+                    closest_next_lane_vehicles[-1] = tuple((veh, veh_dist))
+                    closest_next_lane_vehicles.sort(key = sort_veh)
+            if veh.lane == self.cur_lane:
+                x_diff = veh.x - self.controlling_vehicle.x
+                y_diff = veh.y - self.controlling_vehicle.y
+                pos_diff = np.array(x_diff, y_diff)
+                proj = np.dot(veh_dir_vec, pos_diff)
+
+                if proj > 0:  # front vehicle
+                    if front_veh:
+                        if front_veh[1] > veh_dist:
+                            front_veh = tuple((veh, veh_dist))
+                    else:
+                        front_veh = tuple((veh, veh_dist))
+                else:         # back vehicle
+                    if back_veh:
+                        if back_veh[1] > veh_dist:
+                            back_veh = tuple((veh, veh_dist))
+                    else:
+                        back_veh = tuple((veh, veh_dist))
+
+        # next lane vehicle documentation
+        for veh_tup in closest_next_lane_vehicles:
+            publish_msg.adjacent_lane_vehicles.append(veh_tup[0].convert2ROS())
 
         # front vehicle
+        if front_veh:
+            publish_msg.front_vehicle_state = front_veh[0].convert2ROS()
 
         # back vehicle
+        if back_veh:
+            publish_msg.back_vehicle_state = back_veh[0].convert2ROS()
 
         # ego vehicle
+        publish_msg.cur_vehicle_state = self.controlling_vehicle.convert2ROS()
+
+        # max # vehicles
+        publish_msg.max_num_vehicles = NUM_NEXT_LANE_VEHICLES
+
+        # speed limit
+        publish_msg.speed_limit = 20
 
         # reward info
+        reward_info = RewardInfo()
+        reward_info.time_elapsed = self.timestamp
+        reward_info.new_run = self.first_run
+        reward_info.collision = self.collisionCheck()
+        publish_msg.reward = reward_info
+
         self.lock.release()
 
     def updateMarkers(self):
@@ -205,14 +361,17 @@ class SimpleSimulator:
     def renderScene(self):
         for v in self.vehicles:
             v.step(self.time_step)
+        self.timestamp += self.time_step
         self.controlling_vehicle.step(self.time_step)
         self.updateMessages()
         self.updateMarkers()
+        self.first_run = 0
 
     def resetScene(self, num_vehicles=[30, 0], num_lanes=2, lane_width_m=[3, 3], lane_length_m=500, \
                    max_vehicle_gaps_vehicle_len=5, min_vehicle_gaps_vehicle_len=0.5, \
                    vehicle_width=2, vehicle_length=4, starting_lane=-1, initial_speed=10):
-
+        self.timestamp = 0
+        self.first_run = 1
         if (starting_lane < 0):
             self.cur_lane = num_lanes - 1
         else:
@@ -233,7 +392,7 @@ class SimpleSimulator:
             # ToDo: place vehicles on the lanes
             for j in range(num_veh):
                 vehicle_gap = random.uniform(min_vehicle_gaps_vehicle_len, max_vehicle_gaps_vehicle_len)
-                self.vehicles.append(Vehicle(vehicle_length, vehicle_width))
+                self.vehicles.append(Vehicle(vehicle_length, vehicle_width, i))
                 self.vehicles[-1].place(prev_vehicle_head_pos + (vehicle_gap + 0.5) * vehicle_length,
                                         self.lanes[i].starting_y, self.lanes[i].starting_theta)
                 self.vehicles[-1].setSpeed(initial_speed)
@@ -241,7 +400,7 @@ class SimpleSimulator:
             max_vehicle_head_pos = max(max_vehicle_head_pos, prev_vehicle_head_pos)
 
         # current vehicle
-        self.controlling_vehicle = Vehicle(vehicle_length, vehicle_width)
+        self.controlling_vehicle = Vehicle(vehicle_length, vehicle_width, self.cur_lane)
         #cur_vehicle_x = random.uniform(vehicle_length, max_vehicle_head_pos)
         cur_vehicle_x = 3
         cur_vehicle_y = self.lanes[self.cur_lane].starting_y
