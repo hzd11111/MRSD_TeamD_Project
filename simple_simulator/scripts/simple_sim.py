@@ -2,6 +2,7 @@
 import numpy as np
 import rospy
 import random
+import time
 import threading
 
 from grasp_path_planner.msg import LanePoint
@@ -84,6 +85,7 @@ class Vehicle:
         vehicle_state.length = self.length
         vehicle_state.width = self.width
         vehicle_state.vehicle_speed = speed_conversion(self.speed)
+        return vehicle_state
 
 
 class SimpleSimulator:
@@ -116,6 +118,7 @@ class SimpleSimulator:
         # initialize node
         rospy.init_node(NODE_NAME, anonymous=True)
 
+        
         # initialize publisher
         self.env_pub = rospy.Publisher(SIM_TOPIC_NAME, EnvironmentState, queue_size=1000)
 
@@ -126,32 +129,40 @@ class SimpleSimulator:
         # initialize subscriber
         self.path_sub = rospy.Subscriber(PATH_PLAN_TOPIC_NAME, PathPlan, self.pathCallback)
 
+        time.sleep(2)
         # reset scene
         self.resetScene()
 
         # send the first message
-        self.updateMarkers()
         self.publishMessages()
+        self.id_waiting = self.id
+        self.id += 1
+        if self.id > 100000:
+            self.id = 0
 
     def pathCallback(self, msg):
         self.lock.acquire()
-
+        print("New path received with id:", msg.id)
         if not msg.id == self.id_waiting:
             self.lock.release()
             return
+        print("Continued......")
         tracking_pose = msg.tracking_pose
-        tracking_speed = msg.tracking_speed
+        tracking_speed = msg.tracking_speed/3.6
         reset_sim = msg.reset_sim
-
+        print("Self.id:", self.id)
+        
+        self.lock.release()
         if reset_sim:
             self.resetScene()
         else:
+            self.lock.acquire()
             self.controlling_vehicle.theta = np.arctan2(-(tracking_pose.y - self.controlling_vehicle.y),\
                                                         tracking_pose.x - self.controlling_vehicle.x)
             self.controlling_vehicle.setSpeed(tracking_speed)
+            self.lock.release()
             self.renderScene()
-            self.id_waiting = self.id
-
+        self.id_waiting = self.id
         self.id += 1
         if self.id > 100000:
             self.id = 0
@@ -169,7 +180,7 @@ class SimpleSimulator:
         self.lock.acquire()
 
         if self.env_msg:
-            self.env_pub.publish(self.env_msg)
+        	self.env_pub.publish(self.env_msg)
         if self.lane_marker:
             self.lane_pub.publish(self.lane_marker)
         if self.ego_marker:
@@ -233,20 +244,20 @@ class SimpleSimulator:
         for veh in self.vehicles:
             if self.vehicleToVehicleCollision(self.controlling_vehicle, veh):
                 return True
+        return False
 
 
     def updateMessages(self):
         self.lock.acquire()
-
         publish_msg = EnvironmentState()
 
         # current lane
-        publish_msg.current_lane = self.lanes[self.cur_lane]
+        publish_msg.current_lane = self.lanes[self.cur_lane].convert2ROS()
 
         # next lane
         next_lane = self.cur_lane - 1
         if next_lane >= 0:
-            publish_msg.next_lane = self.lanes[next_lane]
+            publish_msg.next_lane = self.lanes[next_lane].convert2ROS()
 
         # vehicles
         closest_next_lane_vehicles = []
@@ -293,11 +304,17 @@ class SimpleSimulator:
 
         # front vehicle
         if front_veh:
-            publish_msg.front_vehicle_state = front_veh[0].convert2ROS()
+            publish_msg.front_vehicle_state = front_veh[0].convert2ROS() 
+        else:
+        	# ToDo: no front vehicle
+        	publish_msg.front_vehicle_state = VehicleState()
 
         # back vehicle
         if back_veh:
             publish_msg.back_vehicle_state = back_veh[0].convert2ROS()
+        else:
+        	# ToDo: no back vehicle
+        	publish_msg.back_vehicle_state = VehicleState()
 
         # ego vehicle
         publish_msg.cur_vehicle_state = self.controlling_vehicle.convert2ROS()
@@ -314,6 +331,8 @@ class SimpleSimulator:
         reward_info.new_run = self.first_run
         reward_info.collision = self.collisionCheck()
         publish_msg.reward = reward_info
+        publish_msg.id = self.id
+        self.env_msg = publish_msg
 
         self.lock.release()
 
