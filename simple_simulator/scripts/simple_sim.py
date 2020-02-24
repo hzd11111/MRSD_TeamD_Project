@@ -134,7 +134,30 @@ class SimpleSimulator:
         self.publishMessages()
 
     def pathCallback(self, msg):
-        pass
+        self.lock.acquire()
+
+        if not msg.id == self.id_waiting:
+            self.lock.release()
+            return
+        tracking_pose = msg.tracking_pose
+        tracking_speed = msg.tracking_speed
+        reset_sim = msg.reset_sim
+
+        if reset_sim:
+            self.resetScene()
+        else:
+            self.controlling_vehicle.theta = np.arctan2(-(tracking_pose.y - self.controlling_vehicle.y),\
+                                                        tracking_pose.x - self.controlling_vehicle.x)
+            self.controlling_vehicle.setSpeed(tracking_speed)
+            self.renderScene()
+            self.id_waiting = self.id
+
+        self.id += 1
+        if self.id > 100000:
+            self.id = 0
+
+
+
 
     def spin(self):
         print("Start Ros Spin")
@@ -407,12 +430,14 @@ class SimpleSimulator:
         cur_vehicle_theta = self.lanes[self.cur_lane].starting_theta
         self.controlling_vehicle.place(cur_vehicle_x, cur_vehicle_y, cur_vehicle_theta)
         self.controlling_vehicle.setSpeed(initial_speed)
+        self.renderScene()
+
 
     def publishFunc(self):
         rate = rospy.Rate(10)
         while not rospy.is_shutdown():
             self.publishMessages()
-            self.renderScene()
+            #self.renderScene()
             rate.sleep()
 
 
