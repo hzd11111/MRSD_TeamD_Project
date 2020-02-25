@@ -263,15 +263,6 @@ class CarlaManager:
 
 		self.carla_handler = CarlaHandler(client)
 	
-		## Update World Information
-		settings = self.carla_handler.world.get_settings()
-		settings.synchronous_mode = True
-		settings.fixed_delta_seconds = 0.2
-		self.carla_handler.world.apply_settings(settings)
-
-
-
- 
  		
 		# Spawn ego vehicle on road 
 		filtered_waypoints = self.carla_handler.filter_waypoints(self.carla_handler.get_waypoints(1), road_id=12)
@@ -282,6 +273,14 @@ class CarlaManager:
 		self.vehicle_controller = GRASPPIDController(self.ego_vehicle, args_lateral = {'K_P': 0.05, 'K_D': 0.0, 'K_I': 0}, args_longitudinal = {'K_P': 0.5, 'K_D': 0.0, 'K_I': 0.0})
 
 		time.sleep(3)
+
+		## Update World Information
+		settings = self.carla_handler.world.get_settings()
+		settings.synchronous_mode = True
+		settings.fixed_delta_seconds = 0.2
+		self.carla_handler.world.apply_settings(settings)
+
+
 		rate = rospy.Rate(2000)
 		#rate.sleep()#ToDo: Delete this line	
 
