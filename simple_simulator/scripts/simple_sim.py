@@ -332,6 +332,8 @@ class SimpleSimulator:
         reward_info.collision = self.collisionCheck()
         publish_msg.reward = reward_info
         publish_msg.id = self.id
+        
+
         self.env_msg = publish_msg
 
         self.lock.release()
@@ -414,6 +416,9 @@ class SimpleSimulator:
                    vehicle_width=2, vehicle_length=4, starting_lane=-1, initial_speed=10):
         self.timestamp = 0
         self.first_run = 1
+        self.vehicles = []
+        self.controlling_vehicle = None
+        self.lanes = []
         if (starting_lane < 0):
             self.cur_lane = num_lanes - 1
         else:

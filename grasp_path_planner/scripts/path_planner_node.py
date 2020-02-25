@@ -374,6 +374,7 @@ class TrajGenerator:
 		new_path_plan = PathPlan()
 		# determine if lane switch is completed
 		if self.path_pointer >= len(self.generated_path):
+			print("Reset Called ,......................................")
 			# reset the trajectory
 			self.reset()
 			new_path_plan.reset_sim = 1
@@ -453,6 +454,7 @@ class PathPlannerManager:
 			self.newest_sim_data = False
 
 			# publish the path
+
 			self.pub_path.publish(traj)
 			self.prev_traj = traj
 			print "Publishing Traj:",traj.id

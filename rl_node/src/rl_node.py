@@ -85,7 +85,7 @@ class RLManager:
 		
 		# dummy msg ToDo: Delete these when rl is done
 		rl_decision = RLCommand()
-		if data.id < 150:
+		if data.id < 20:
 			rl_decision.change_lane = 0
 			rl_decision.constant_speed = 1
 			rl_decision.accelerate = 0
