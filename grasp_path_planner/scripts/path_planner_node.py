@@ -287,6 +287,7 @@ class TrajGenerator:
 		return new_path_plan
 
 	def cubicSplineGen(self, cur_lane_width, next_lane_width, v_cur):
+		v_cur = v_cur/3.6
 		if v_cur < 10:
 			v_cur = 10
 		# determine external parameters
@@ -322,7 +323,7 @@ class TrajGenerator:
 			theta = math.atan2(-y_deriv,x_deriv)
 			speed = math.sqrt(y_deriv**2.+x_deriv**2.)
 			pose = PoseSpeedTemp()
-			pose.speed = speed
+			pose.speed = speed*3.6
 			pose.x = x_value
 			pose.y = y_value
 			pose.theta = theta
@@ -372,6 +373,8 @@ class TrajGenerator:
 		
 			
 		new_path_plan = PathPlan()
+		print("Total Path Length", len(self.generated_path))
+		brak
 		# determine if lane switch is completed
 		if self.path_pointer >= len(self.generated_path):
 			print("Reset Called ,......................................")
@@ -388,7 +391,7 @@ class TrajGenerator:
 		return new_path_plan		
 
 TRAJ_PARAM = {'look_up_distance' : 0 ,\
-		'lane_change_length' : 30,\
+		'lane_change_length' : 10,\
 		'lane_change_time_constant' : 1.05,\
 		'lane_change_time_disc' : 0.05,\
 		'accelerate_amt' : 3,\

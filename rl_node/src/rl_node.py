@@ -1,4 +1,4 @@
-#!/usr/bin/env python2.7
+#!/usr/bin/env python
 # Software License Agreement (BSD License)
 #
 # Copyright (c) 2008, Willow Garage, Inc.
@@ -36,10 +36,14 @@
 ## Simple talker demo that published std_msgs/Strings messages
 ## to the 'chatter' topic
 
+import sys
 import rospy
 import copy
 import threading
 import torch
+import torch.nn as nn
+import torch.nn.functional as F
+import numpy as np
 
 from std_msgs.msg import String
 from grasp_path_planner.msg import LanePoint
@@ -77,7 +81,7 @@ class neural_network(nn.Module):
         return out
     
     def load_checkpoint(self, path):
-		self.network.load_state_dict(torch.load(path))
+        self.network.load_state_dict(torch.load(path))
 
     def save_checkpoint(self, path):
         torch.save(self.network.state_dict(), path)
@@ -100,15 +104,15 @@ class RLManager:
 			self.lock.release()
 			return
 
-		env_state = make_state_vector(data)
+		env_state = self.make_state_vector(data)
 		env_state = np.array(env_state)
 		# computation with rl_agent
-		rl_decision = make_decision(env_state, data.id)	
+		rl_decision = self.make_decision(env_state, data.id)	
 		self.previous_id = data.id
 		# publish message
 		self.pub_rl.publish(rl_decision)
 		self.rl_decision = rl_decision
-		print "Published:",rl_decision.id
+		print("Published:",rl_decision.id)
 		self.lock.release()
 
 	def initialize(self):
@@ -166,9 +170,10 @@ class RLManager:
 		'''
 		env_state is an array of a fixed length
 		'''
-		action_vals = self.offline_network(env_state)
-		max_val, arg_val = torch.max(action_vals,1)
+		# action_vals = self.offline_network(env_state)
+		# max_val, arg_val = torch.max(action_vals,1)
 		rl_command = RLCommand()
+		arg_val = 0
 		if arg_val is 0:
 			rl_command.accelerate = 1
 		elif arg_val is 1:
@@ -177,8 +182,6 @@ class RLManager:
 			rl_command.change_lane = 1
 		elif arg_val is 3:
 			rl_command.constant_speed = 1
-		if is_terminate():
-			rl_command.reset_run = 1
 		rl_command.id = id
 		return rl_command
 
@@ -192,10 +195,10 @@ class RLManager:
 		pass
 
 if __name__ == '__main__':
-    try:
-        rl_manager = RLManager()
-	rl_manager.initialize()
-	pub_thread = threading.Thread(target=rl_manager.publishFunc)
-	rl_manager.spin()
-    except rospy.ROSInterruptException:
-        pass
+	try:
+		rl_manager = RLManager()
+		rl_manager.initialize()
+		pub_thread = threading.Thread(target=rl_manager.publishFunc)
+		rl_manager.spin()
+	except rospy.ROSInterruptException:
+		pass
