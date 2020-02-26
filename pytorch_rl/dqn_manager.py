@@ -14,7 +14,7 @@ class DQNManager:
     def __init__(self, batch_size, gamma, \
                  eps_start, eps_end, eps_decay, target_update,\
                  input_height, input_width,\
-                 capacity, n_actions, device):
+                 capacity, n_actions, device, *args):
         self.batch_size = batch_size
         self.gamma = gamma
         self.eps_start = eps_start
@@ -32,14 +32,19 @@ class DQNManager:
         self.optimizer = None
 
     def initialize(self):
-        self.policy_net = deep_q_network.DQN(self.input_height, self.input_width, self.n_actions).to(self.device)
-        self.target_net = deep_q_network.DQN(self.input_height, self.input_width, self.n_actions).to(self.device)
+        if(self.input_height not 0):
+            self.policy_net = deep_q_network.DQN_Conv(self.input_height, self.input_width, self.n_actions).to(self.device)
+            self.target_net = deep_q_network.DQN_Conv(self.input_height, self.input_width, self.n_actions).to(self.device)
+        else:
+            # if not a convolutional network
+            self.policy_net = deep_q_network.DQN_Linear(self.input_width, self.n_actions).to(self.device)
+            self.target_net = deep_q_network.DQN_Linear(self.input_width, self.n_actions, requires_grad=False).to(self.device)
         self.target_net.load_state_dict(self.policy_net.state_dict())
         self.target_net.eval()
         self.optimizer = optim.RMSprop(self.policy_net.parameters())
         self.memory = replay_memory.ReplayMemory(self.capacity)
 
-    def selectActoin(self, state, steps_done):
+    def selectAction(self, state, steps_done):
 
         # greedy eps algorithm
         sample = random.random()
@@ -109,15 +114,16 @@ class DQNManager:
 
     def rewardCalculation(self, state_info):
         # ToDo: Reward Function
+        if state_info.reward.collision:
+            return -1
         return 1
 
-    def saveModel(self):
+    def saveModel(self, path):
         # ToDo: save both networks
-        pass
-
-    def loadModel(self):
-        # ToDo: Load both networks
-        pass
+        torch.save(self.target_net.state_dict(), path)
+        
+    def loadModel(self, path):
+        self.target_net.load_state_dict(torch.load(path))
 
     def updateTargetNetwork(self):
         self.target_net.load_state_dict(self.policy_net.state_dict())
