@@ -37,6 +37,7 @@
 ## to the 'chatter' topic
 
 import sys
+sys.path.append("/home/arcot/GRASP/src")
 import rospy
 import copy
 import threading
@@ -44,7 +45,7 @@ import torch
 import torch.nn as nn
 import torch.nn.functional as F
 import numpy as np
-
+print(sys.path)
 from std_msgs.msg import String
 from grasp_path_planner.msg import LanePoint
 from grasp_path_planner.msg import Lane
@@ -53,40 +54,28 @@ from grasp_path_planner.msg import RewardInfo
 from grasp_path_planner.msg import EnvironmentState
 from grasp_path_planner.msg import RLCommand
 
+import dqn_manager
+
 NODE_NAME = 'rl_node'
 RL_TOPIC_NAME = 'rl_decision'
 ENVIRONMENT_TOPIC_NAME = 'environment_state'
 
-class neural_network(nn.Module):
-    def __init__(self, input_size=16, output_size=4, requires_grad = True):
-        super().__init__()
-        # create a neural network
-        self.network = nn.Sequential(
-            nn.Linear(input_size, 30),
-            nn.ReLU(),
-            nn.Linear(30, 15),
-            nn.ReLU(),
-            nn.Linear(15, output_size),
-            nn.Sigmoid()
-        )
-        self.loss_fn = F.mse_loss
-        self.optimiser = torch.optim.Adam(self.network.parameters())
-
-        if not requires_grad:
-            for parameter in self.network.parameters():
-                parameter.requires_grad = False
-
-    def forward(self, X):
-        out = self.network(X)
-        return out
-    
-    def load_checkpoint(self, path):
-        self.network.load_state_dict(torch.load(path))
-
-    def save_checkpoint(self, path):
-        torch.save(self.network.state_dict(), path)
-
-
+# DQN Settings
+##############################################
+settings = {
+	"BATCH_SIZE" : 64,
+	"GAMMA" : 0.99,
+	"EPS_START" : 0.9,
+	"EPS_END" : 0.05,
+	"EPS_DECAY" : 200,
+	"TARGET_UPDATE" : 10,
+	"INPUT_HEIGHT" : 0,
+	"INPUT_WIDTH" : 25,
+	"CAPACITY" : 10000,
+	"N_ACTIONS": 4,
+	"DEVICE" : "cpu"
+}
+##############################################
 class RLManager:
 	def __init__(self):
 		self.pub_rl = None
@@ -95,8 +84,8 @@ class RLManager:
 		self.lock = threading.Lock()
 		self.rl_decision = False
 		self.previous_id = -1
-		self.network = neural_network()
-		self.offline_network = neural_network()
+		self.manager = dqn_manager.DQNManager(*settings.values())
+		self.manager.initialize()
 
 	def simCallback(self, data):
 		self.lock.acquire()
@@ -155,11 +144,21 @@ class RLManager:
 		# adjacent vehicle state
 			# position
 			# velocity
-		for i, veh_state in enumerate(data.adjacent_lane_vehicles):
-			if i <= 5:
+		i = 0
+		for _, veh_state in enumerate(data.adjacent_lane_vehicles):
+			if i < 5:
 				append_vehicle_state(env_state, veh_state)
 			else:
 				break
+			i+=1
+		dummy = VehicleState()
+		dummy.vehicle_location.x = 10000
+		dummy.vehicle_location.y = 10000
+		dummy.vehicle_location.theta = 10000
+		dummy.vehicle_speed = 0
+		while i<5:
+			append_vehicle_state(env_state, dummy)
+			i+=1
 		return env_state
 		
 	def spin(self):
@@ -172,8 +171,13 @@ class RLManager:
 		'''
 		# action_vals = self.offline_network(env_state)
 		# max_val, arg_val = torch.max(action_vals,1)
+		state_tensor = torch.Tensor(env_state).to(settings["DEVICE"])
+		arg_val = self.manager.target_net(state_tensor).view(-1,4).max(1)[1].view(1,1).item()
+		print(arg_val)
+		# print(arg_val)
+		# arg_val = 1
 		rl_command = RLCommand()
-		arg_val = 0
+		# arg_val = 0
 		if arg_val is 0:
 			rl_command.accelerate = 1
 		elif arg_val is 1:
@@ -185,14 +189,10 @@ class RLManager:
 		rl_command.id = id
 		return rl_command
 
-	def is_terminate():
+	def is_terminate(self, env_state):
+		if env_state.reward.collision:
+			return True
 		return False
-		
-	def get_reward(self):
-		pass
-
-	def train(self):
-		pass
 
 if __name__ == '__main__':
 	try:
