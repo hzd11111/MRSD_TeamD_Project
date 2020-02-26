@@ -173,7 +173,9 @@ class RLManager:
 		# action_vals = self.offline_network(env_state)
 		# max_val, arg_val = torch.max(action_vals,1)
 		rl_command = RLCommand()
-		arg_val = 0
+		arg_val = 3
+		if id == 30:
+			arg_val = 2
 		if arg_val is 0:
 			rl_command.accelerate = 1
 		elif arg_val is 1:

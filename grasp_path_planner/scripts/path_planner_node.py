@@ -193,8 +193,8 @@ class PoseTemp:
 
 	def add(self, pose):
 		new_pose = PoseTemp()
-		new_pose.x = self.x + pose.x * math.cos(self.theta) + pose.y * math.sin(self.theta)
-		new_pose.y = self.y - pose.x * math.sin(self.theta) + pose.y * math.cos(self.theta)
+		new_pose.x = self.x + pose.x * math.cos(self.theta) - pose.y * math.sin(self.theta)
+		new_pose.y = self.y + pose.x * math.sin(self.theta) + pose.y * math.cos(self.theta)
 		new_pose.theta = self.wrapToPi(self.theta + pose.theta)
 		return new_pose
 	
@@ -205,7 +205,7 @@ class PoseTemp:
 		return new_vec
 
 	def vecFromTheta(self):
-		return VecTemp(math.cos(self.theta),-math.sin(self.theta))
+		return VecTemp(math.cos(self.theta),math.sin(self.theta))
 
 	def isInfrontOf(self, pose):
 		diff_vec = pose.vecTo(self)
@@ -227,14 +227,15 @@ class PoseSpeedTemp(PoseTemp):
 	#	PoseTemp.__init__(self,pose)
 	def addToPose(self, pose):
 		new_pose = PoseSpeedTemp()
-		new_pose.x = pose.x + self.x * math.cos(pose.theta) + self.y * math.sin(pose.theta)
-		new_pose.y = pose.y - self.x * math.sin(pose.theta) + self.y * math.cos(pose.theta)
+		new_pose.x = pose.x + self.x * math.cos(pose.theta) - self.y * math.sin(pose.theta)
+		new_pose.y = pose.y + self.x * math.sin(pose.theta) + self.y * math.cos(pose.theta)
 		new_pose.theta = self.wrapToPi(self.theta + pose.theta)
 		new_pose.speed = self.speed
 		return new_pose
 
 class TrajGenerator:
 	SAME_POSE_THRESHOLD = 1
+	SAME_POSE_LOWER_THRESHOLD = 0.02
 	def __init__(self, traj_parameters):
 		self.traj_parameters = traj_parameters
 		self.reset()
@@ -276,7 +277,8 @@ class TrajGenerator:
 			closest_pose = lane_waypoint
 			way_pose = PoseTemp(lane_waypoint.pose)
 			if way_pose.distance(cur_vehicle_pose) < TrajGenerator.SAME_POSE_THRESHOLD and\
-				way_pose.isInfrontOf(cur_vehicle_pose):
+				way_pose.isInfrontOf(cur_vehicle_pose) and \
+					way_pose.distance(cur_vehicle_pose) > TrajGenerator.SAME_POSE_LOWER_THRESHOLD:
 				break	
 
 		new_path_plan = PathPlan()
@@ -320,7 +322,7 @@ class TrajGenerator:
 			y_value = -(ay*(t**3.)+by*(t**2.)+cy*t+dy)
 			x_deriv = 3.*ax*(t**2.)+2.*bx*t+cx
 			y_deriv = -(3.*ay*(t**2.)+2.*by*t+cy)
-			theta = math.atan2(-y_deriv,x_deriv)
+			theta = math.atan2(y_deriv,x_deriv)
 			speed = math.sqrt(y_deriv**2.+x_deriv**2.)
 			pose = PoseSpeedTemp()
 			pose.speed = speed*3.6
@@ -350,7 +352,8 @@ class TrajGenerator:
 				closest_pose = lane_waypoint.pose
 				way_pose = PoseTemp(lane_waypoint.pose)
 				if way_pose.distance(cur_vehicle_pose) < TrajGenerator.SAME_POSE_THRESHOLD and\
-					way_pose.isInfrontOf(cur_vehicle_pose):
+					way_pose.isInfrontOf(cur_vehicle_pose) and \
+					way_pose.distance(cur_vehicle_pose) > TrajGenerator.SAME_POSE_LOWER_THRESHOLD:
 					break	
 			closest_pose = PoseTemp(closest_pose)
 
@@ -361,20 +364,21 @@ class TrajGenerator:
 			# change lane switching status	
 			self.lane_switching = True
 
+			self.path_pointer = 0
+
 		# find the next tracking point
 		while (self.path_pointer < len(self.generated_path)):
 			# traj pose
 			pose_speed = self.generated_path[self.path_pointer]
 
-			if pose_speed.isInfrontOf(cur_vehicle_pose):
+			if pose_speed.isInfrontOf(cur_vehicle_pose) and \
+					pose_speed.distance(cur_vehicle_pose) > TrajGenerator.SAME_POSE_LOWER_THRESHOLD:
 				break
 
 			self.path_pointer += 1
 		
-			
 		new_path_plan = PathPlan()
 		print("Total Path Length", len(self.generated_path))
-		brak
 		# determine if lane switch is completed
 		if self.path_pointer >= len(self.generated_path):
 			print("Reset Called ,......................................")
@@ -391,7 +395,7 @@ class TrajGenerator:
 		return new_path_plan		
 
 TRAJ_PARAM = {'look_up_distance' : 0 ,\
-		'lane_change_length' : 10,\
+		'lane_change_length' : 30,\
 		'lane_change_time_constant' : 1.05,\
 		'lane_change_time_disc' : 0.05,\
 		'accelerate_amt' : 3,\
@@ -429,6 +433,8 @@ class PathPlannerManager:
 		self.lock.acquire()
 		print("Simulation ID Received:",data.id)
 		self.backlog_manager.newSimMessage(copy.copy(data))
+		print("Path Planner Received Vehicle Pose")
+		print(data.cur_vehicle_state)
 		print("Simulation ID Added:",data.id)
 		# get the sim data if sim missing
 		if not self.newest_sim_data:
