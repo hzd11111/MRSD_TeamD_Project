@@ -1,4 +1,4 @@
-#!/usr/bin/env python
+#!/usr/bin/env python2.7
 import numpy as np
 import rospy
 import random
@@ -13,6 +13,7 @@ from grasp_path_planner.msg import EnvironmentState
 from grasp_path_planner.msg import PathPlan
 
 from geometry_msgs.msg import PointStamped
+from geometry_msgs.msg import Pose2D
 from visualization_msgs.msg import MarkerArray
 from visualization_msgs.msg import Marker
 
@@ -22,6 +23,8 @@ PATH_PLAN_TOPIC_NAME = 'path_plan'
 LANE_MARKER_TOPIC_NAME = 'lane_marker'
 EGO_MARKER_TOPIC_NAME = 'ego_vehicle_marker'
 VEHICLE_MARKER_TOPIC_NAME = "vehicle_markers"
+TRACKING_POSE_TOPIC_NAME = "vehicle_tracking_pose"
+COLLISION_TOPIC_NAME = "collision_marker"
 
 NUM_NEXT_LANE_VEHICLES = 5
 LANE_DISCRETIZATION  = 0.1
@@ -43,7 +46,7 @@ class LaneSim:
             for lane_len in np.arange(0,self.length,LANE_DISCRETIZATION):
                 lane_pt = LanePoint()
                 lane_pt.pose.x = self.starting_x + lane_len * np.cos(self.starting_theta)
-                lane_pt.pose.y = -(self.starting_y - lane_len * np.sin(self.starting_theta))
+                lane_pt.pose.y = self.starting_y + lane_len * np.sin(self.starting_theta)
                 lane_pt.pose.theta = self.starting_theta
                 lane_pt.width = self.width
                 self.ros_lane.lane.append(lane_pt)
@@ -68,7 +71,7 @@ class Vehicle:
 
     def step(self, duration):
         self.x += self.speed * np.cos(self.theta) * duration
-        self.y -= self.speed * np.sin(self.theta) * duration
+        self.y += self.speed * np.sin(self.theta) * duration
 
     def setSpeed(self, speed):
         self.speed = speed
@@ -97,11 +100,14 @@ class SimpleSimulator:
         self.time_step = time_step
         self.timestamp = 0
         self.first_run = 1
+        self.tracking_pose = None
 
         self.env_msg = None
         self.lane_marker = None
         self.ego_marker = None
         self.vehicle_marker = None
+        self.tracking_pose_marker = None
+        self.collision_marker = None
 
         self.lock = threading.Lock()
         self.env_pub = None
@@ -109,6 +115,8 @@ class SimpleSimulator:
         self.ego_pub = None
         self.vehicle_pub = None
         self.path_sub = None
+        self.tracking_pub = None
+        self.collision_pub = None
 
         # id
         self.id = 0
@@ -125,6 +133,8 @@ class SimpleSimulator:
         self.lane_pub = rospy.Publisher(LANE_MARKER_TOPIC_NAME, MarkerArray, queue_size=1000)
         self.ego_pub = rospy.Publisher(EGO_MARKER_TOPIC_NAME, Marker, queue_size=1000)
         self.vehicle_pub = rospy.Publisher(VEHICLE_MARKER_TOPIC_NAME, MarkerArray, queue_size=1000)
+        self.tracking_pub = rospy.Publisher(TRACKING_POSE_TOPIC_NAME, Marker, queue_size=1000)
+        self.collision_pub = rospy.Publisher(COLLISION_TOPIC_NAME, Marker, queue_size = 1000)
 
         # initialize subscriber
         self.path_sub = rospy.Subscriber(PATH_PLAN_TOPIC_NAME, PathPlan, self.pathCallback)
@@ -157,8 +167,13 @@ class SimpleSimulator:
             self.resetScene()
         else:
             self.lock.acquire()
-            self.controlling_vehicle.theta = np.arctan2(-(tracking_pose.y - self.controlling_vehicle.y),\
+            self.controlling_vehicle.theta = np.arctan2((tracking_pose.y - self.controlling_vehicle.y),\
                                                         tracking_pose.x - self.controlling_vehicle.x)
+            self.tracking_pose = msg.tracking_pose
+            #if msg.id > 4:
+            #    self.controlling_vehicle.theta = tracking_pose.theta
+            #    self.controlling_vehicle.x = tracking_pose.x
+            #    self.controlling_vehicle.y = tracking_pose.y
             self.controlling_vehicle.setSpeed(tracking_speed)
             self.lock.release()
             self.renderScene()
@@ -166,9 +181,6 @@ class SimpleSimulator:
         self.id += 1
         if self.id > 100000:
             self.id = 0
-
-
-
 
     def spin(self):
         print("Start Ros Spin")
@@ -187,6 +199,10 @@ class SimpleSimulator:
             self.ego_pub.publish(self.ego_marker)
         if self.vehicle_marker:
             self.vehicle_pub.publish(self.vehicle_marker)
+        if self.tracking_pose_marker:
+            self.tracking_pub.publish(self.tracking_pose_marker)
+        if self.collision_marker:
+            self.collision_pub.publish(self.collision_marker)
 
         self.lock.release()
 
@@ -204,15 +220,14 @@ class SimpleSimulator:
         # global corners
         global_corners = []
         for local in local_corners:
-            global_x = veh.x + local[0] * np.cos(veh.theta) + local[1] * np.sin(veh.theta)
-            global_y = veh.y - local[0] * np.sin(veh.theta) + local[1] * np.cos(veh.theta)
-            global_corners.append(np.array(global_x, global_y))
+            global_x = veh.x + local[0] * np.cos(veh.theta) - local[1] * np.sin(veh.theta)
+            global_y = veh.y + local[0] * np.sin(veh.theta) + local[1] * np.cos(veh.theta)
+            global_corners.append(np.array([global_x, global_y]))
 
         # projection
         proj_val = []
         for c in global_corners:
             proj_val.append(np.dot(c, axis))
-
         # return the min and max values
         return np.array([min(proj_val), max(proj_val)])
 
@@ -222,8 +237,8 @@ class SimpleSimulator:
 
     def vehAxis(self, veh):
         norm_axis = []
-        norm_axis.append(np.array(np.cos(veh.theta), -np.sin(veh.theta)))
-        norm_axis.append(np.array(np.sin(veh.theta), np.cos(veh.theta)))
+        norm_axis.append(np.array([np.cos(veh.theta), -np.sin(veh.theta)]))
+        norm_axis.append(np.array([np.sin(veh.theta), np.cos(veh.theta)]))
         return norm_axis
 
     def vehicleToVehicleCollision(self, veh1, veh2):
@@ -318,6 +333,9 @@ class SimpleSimulator:
 
         # ego vehicle
         publish_msg.cur_vehicle_state = self.controlling_vehicle.convert2ROS()
+        #print("Simple Sim: Current Vehicle State")
+        #print(self.controlling_vehicle.x)
+        #print(self.controlling_vehicle.y)
 
         # max # vehicles
         publish_msg.max_num_vehicles = NUM_NEXT_LANE_VEHICLES
@@ -341,6 +359,47 @@ class SimpleSimulator:
     def updateMarkers(self):
         self.lock.acquire()
         marker_id = 0
+
+        # collision marker
+        collision_occured = self.collisionCheck()
+        self.collision_marker = Marker()
+        self.collision_marker.header.frame_id = "map"
+        self.collision_marker.type = self.collision_marker.SPHERE
+        self.collision_marker.action = self.collision_marker.ADD
+        self.collision_marker.scale.x = 3
+        self.collision_marker.scale.y = 3
+        self.collision_marker.scale.z = 3
+        self.collision_marker.pose.position.x = 0
+        self.collision_marker.pose.position.y = 3
+        self.collision_marker.pose.position.z = 0
+        self.collision_marker.pose.orientation.w = 1.0
+        if collision_occured:
+            self.collision_marker.color.r = 1.0
+        else:
+            self.collision_marker.color.g = 1.0
+        self.collision_marker.color.a = 1.0
+        self.collision_marker.id = marker_id
+        marker_id += 1
+
+        # tracking pose
+        if self.tracking_pose:
+            radius = 2
+            self.tracking_pose_marker = Marker()
+            self.tracking_pose_marker.header.frame_id = "map"
+            self.tracking_pose_marker.type = self.tracking_pose_marker.SPHERE
+            self.tracking_pose_marker.action = self.tracking_pose_marker.ADD
+            self.tracking_pose_marker.scale.x = radius
+            self.tracking_pose_marker.scale.y = radius
+            self.tracking_pose_marker.scale.z = radius
+            self.tracking_pose_marker.pose.position.x = self.tracking_pose.x
+            self.tracking_pose_marker.pose.position.y = -self.tracking_pose.y
+            self.tracking_pose_marker.pose.position.z = 3
+            self.tracking_pose_marker.pose.orientation.w = 1.0
+            self.tracking_pose_marker.color.b = 1.0
+            self.tracking_pose_marker.color.a = 1.0
+            self.tracking_pose_marker.id = marker_id
+        marker_id += 1
+
         # vehicles
         self.vehicle_marker = MarkerArray()
         for v in self.vehicles:
@@ -370,6 +429,9 @@ class SimpleSimulator:
         self.ego_marker.scale.y = self.controlling_vehicle.width
         self.ego_marker.scale.z = 1.5
         self.ego_marker.pose.orientation.w = 1.0 # ToDo: add in orientation
+        vehicle_right_hand_theta = -self.controlling_vehicle.theta
+        self.ego_marker.pose.orientation.w = np.cos(vehicle_right_hand_theta)
+        self.ego_marker.pose.orientation.z = np.sin(vehicle_right_hand_theta)
         self.ego_marker.pose.position.x = self.controlling_vehicle.x
         self.ego_marker.pose.position.y = -self.controlling_vehicle.y
         self.ego_marker.pose.position.z = 0.75
@@ -382,7 +444,7 @@ class SimpleSimulator:
         self.lane_marker = MarkerArray()
 
         for l in self.lanes:
-            for leng in range(0, l.length,5):
+            for leng in range(0, l.length,1):
                 marker = Marker()
                 marker.header.frame_id = "map"
                 marker.header.stamp = rospy.Time.now()
@@ -413,7 +475,7 @@ class SimpleSimulator:
 
     def resetScene(self, num_vehicles=[30, 0], num_lanes=2, lane_width_m=[3, 3], lane_length_m=500, \
                    max_vehicle_gaps_vehicle_len=5, min_vehicle_gaps_vehicle_len=0.5, \
-                   vehicle_width=2, vehicle_length=4, starting_lane=-1, initial_speed=10):
+                   vehicle_width=2, vehicle_length=4, starting_lane=-1, initial_speed=8):
         self.timestamp = 0
         self.first_run = 1
         self.vehicles = []
@@ -449,7 +511,7 @@ class SimpleSimulator:
         # current vehicle
         self.controlling_vehicle = Vehicle(vehicle_length, vehicle_width, self.cur_lane)
         #cur_vehicle_x = random.uniform(vehicle_length, max_vehicle_head_pos)
-        cur_vehicle_x = 3
+        cur_vehicle_x = 10
         cur_vehicle_y = self.lanes[self.cur_lane].starting_y
         cur_vehicle_theta = self.lanes[self.cur_lane].starting_theta
         self.controlling_vehicle.place(cur_vehicle_x, cur_vehicle_y, cur_vehicle_theta)
@@ -467,7 +529,7 @@ class SimpleSimulator:
 
 if __name__ == '__main__':
     try:
-        simple_sim = SimpleSimulator(0.05)
+        simple_sim = SimpleSimulator(0.01)
         simple_sim.initialize()
         pub_thread = threading.Thread(target=simple_sim.publishFunc)
         pub_thread.start()
