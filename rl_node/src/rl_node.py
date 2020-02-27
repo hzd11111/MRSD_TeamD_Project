@@ -46,6 +46,7 @@ import torch.nn as nn
 import torch.nn.functional as F
 import numpy as np
 print(sys.path)
+print(sys.version_info)
 from std_msgs.msg import String
 from grasp_path_planner.msg import LanePoint
 from grasp_path_planner.msg import Lane
@@ -86,6 +87,8 @@ class RLManager:
 		self.previous_id = -1
 		self.manager = dqn_manager.DQNManager(*settings.values())
 		self.manager.initialize()
+		self.previous_state = None
+		self.previous_action = None
 
 	def simCallback(self, data):
 		self.lock.acquire()
@@ -97,7 +100,15 @@ class RLManager:
 		env_state = np.array(env_state)
 		# computation with rl_agent
 		rl_decision = self.make_decision(env_state, data.id)	
+		# create a record
+		if self.previous_action is not None and self.previous_state is not None:
+			reward = self.manager.rewardCalculation(data)
+			reward = torch.tensor([reward]).to(settings["DEVICE"])
+			env_tensor = torch.tensor(env_state).float().view(1,-1).to(settings["DEVICE"])
+			self.manager.memory.push(self.previous_state,self.previous_action,env_tensor,reward)
+			self.manager.optimize_model()
 		self.previous_id = data.id
+		self.previous_state = torch.tensor(env_state).float().view(1,-1).to(settings["DEVICE"])
 		# publish message
 		self.pub_rl.publish(rl_decision)
 		self.rl_decision = rl_decision
@@ -173,8 +184,7 @@ class RLManager:
 		# max_val, arg_val = torch.max(action_vals,1)
 		state_tensor = torch.Tensor(env_state).to(settings["DEVICE"])
 		arg_val = self.manager.target_net(state_tensor).view(-1,4).max(1)[1].view(1,1).item()
-		print(arg_val)
-		# print(arg_val)
+		self.previous_action = torch.tensor([[arg_val]]).long().to(settings["DEVICE"])
 		# arg_val = 1
 		rl_command = RLCommand()
 		# arg_val = 0
@@ -194,6 +204,9 @@ class RLManager:
 			return True
 		return False
 
+	def train(self, env_state):
+		self.manager.optimize_model()
+		return
 if __name__ == '__main__':
 	try:
 		rl_manager = RLManager()

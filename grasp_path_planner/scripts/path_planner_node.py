@@ -374,7 +374,6 @@ class TrajGenerator:
 			
 		new_path_plan = PathPlan()
 		print("Total Path Length", len(self.generated_path))
-		brak
 		# determine if lane switch is completed
 		if self.path_pointer >= len(self.generated_path):
 			print("Reset Called ,......................................")

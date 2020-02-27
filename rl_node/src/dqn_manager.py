@@ -33,8 +33,8 @@ class DQNManager:
 
     def initialize(self):
         if self.input_height is not 0:
-            self.policy_net = deep_q_network.DQN_Conv(self.input_height, self.input_width, self.n_actions).to(self.device)
-            self.target_net = deep_q_network.DQN_Conv(self.input_height, self.input_width, self.n_actions).to(self.device)
+            self.policy_net = deep_q_network.DQN_Conv(self.input_height, self.input_width, self.n_actions).double().to(self.device)
+            self.target_net = deep_q_network.DQN_Conv(self.input_height, self.input_width, self.n_actions).double().to(self.device)
         else:
             # if not a convolutional network
             self.policy_net = deep_q_network.DQN_Linear(self.input_width, self.n_actions).to(self.device)
@@ -64,7 +64,6 @@ class DQNManager:
         if len(self.memory) < self.batch_size:
             return
         transitions = self.memory.sample(self.batch_size)
-
         # Transpose the batch (see https://stackoverflow.com/a/19343/3343043 for
         # detailed explanation). This converts batch-array of Transitions
         # to Transition of batch-arrays.
@@ -74,11 +73,11 @@ class DQNManager:
         # (a final state would've been the one after which simulation ended)
         non_final_mask = torch.tensor(tuple(map(lambda s: s is not None,
                                               batch.next_state)), device=self.device, dtype=torch.bool)
-        non_final_next_states = torch.cat([s for s in batch.next_state
-                                                    if s is not None])
+        non_final_next_states = torch.cat([s.view(1,-1) for s in batch.next_state
+                                                    if s is not None], dim=0)
         state_batch = torch.cat(batch.state)
         action_batch = torch.cat(batch.action)
-        reward_batch = torch.cat(batch.reward)
+        reward_batch = torch.cat(batch.reward).float()
 
         # Compute Q(s_t, a) - the model computes Q(s_t), then we select the
         # columns of actions taken. These are the actions which would've been taken
