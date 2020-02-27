@@ -32,9 +32,9 @@ class DQNManager:
         self.optimizer = None
 
     def initialize(self):
-        if(self.input_height not 0):
-            self.policy_net = deep_q_network.DQN_Conv(self.input_height, self.input_width, self.n_actions).to(self.device)
-            self.target_net = deep_q_network.DQN_Conv(self.input_height, self.input_width, self.n_actions).to(self.device)
+        if self.input_height is not 0:
+            self.policy_net = deep_q_network.DQN_Conv(self.input_height, self.input_width, self.n_actions).double().to(self.device)
+            self.target_net = deep_q_network.DQN_Conv(self.input_height, self.input_width, self.n_actions).double().to(self.device)
         else:
             # if not a convolutional network
             self.policy_net = deep_q_network.DQN_Linear(self.input_width, self.n_actions).to(self.device)
@@ -56,7 +56,7 @@ class DQNManager:
                 # t.max(1) will return largest column value of each row.
                 # second column on max result is index of where max element was
                 # found, so we pick action with the larger expected reward.
-                return self.policy_net(state).max(1)[1].view(1, 1)
+                return self.policy_net(state).view(-1,self.n_actions).max(1)[1].view(1, 1)
         else:
             return torch.tensor([[random.randrange(self.n_actions)]], device=self.device, dtype=torch.long)
 
@@ -73,11 +73,12 @@ class DQNManager:
         # (a final state would've been the one after which simulation ended)
         non_final_mask = torch.tensor(tuple(map(lambda s: s is not None,
                                               batch.next_state)), device=self.device, dtype=torch.bool)
-        non_final_next_states = torch.cat([s for s in batch.next_state
-                                                    if s is not None])
+        non_final_next_states = torch.cat([s.view(1,-1) for s in batch.next_state
+                                                    if s is not None], dim=0)
         state_batch = torch.cat(batch.state)
         action_batch = torch.cat(batch.action)
-        reward_batch = torch.cat(batch.reward)
+        reward_batch = torch.cat(batch.reward).float()
+
         # Compute Q(s_t, a) - the model computes Q(s_t), then we select the
         # columns of actions taken. These are the actions which would've been taken
         # for each batch state according to policy_net
@@ -89,7 +90,7 @@ class DQNManager:
         # This is merged based on the mask, such that we'll have either the expected
         # state value or 0 in case the state was final.
         next_state_values = torch.zeros(self.batch_size, device=self.device)
-        next_state_values[non_final_mask] = self.target_net(non_final_next_states).max(1)[0].detach()
+        next_state_values[non_final_mask] = self.target_net(non_final_next_states).view(-1,self.n_actions).max(1)[0].detach()
         # Compute the expected Q values
         expected_state_action_values = (next_state_values * self.gamma) + reward_batch
 
