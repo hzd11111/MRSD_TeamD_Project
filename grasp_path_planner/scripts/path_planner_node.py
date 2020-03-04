@@ -283,11 +283,11 @@ class TrajGenerator:
 		new_path_plan.tracking_pose = closest_pose.pose
 		new_path_plan.reset_sim = rl_data.reset_run
 		#new_path_plan.tracking_speed = cur_vehicle_speed
-		new_path_plan.tracking_speed = 20
+		new_path_plan.tracking_speed = 60
 		return new_path_plan
 
 	def cubicSplineGen(self, cur_lane_width, next_lane_width, v_cur):
-		v_cur = v_cur/3.6
+		v_cur = v_cur
 		if v_cur < 10:
 			v_cur = 10
 		# determine external parameters
@@ -373,8 +373,6 @@ class TrajGenerator:
 		
 			
 		new_path_plan = PathPlan()
-		print("Total Path Length", len(self.generated_path))
-		brak
 		# determine if lane switch is completed
 		if self.path_pointer >= len(self.generated_path):
 			print("Reset Called ,......................................")
@@ -391,7 +389,7 @@ class TrajGenerator:
 		return new_path_plan		
 
 TRAJ_PARAM = {'look_up_distance' : 0 ,\
-		'lane_change_length' : 10,\
+		'lane_change_length' : 30,\
 		'lane_change_time_constant' : 1.05,\
 		'lane_change_time_disc' : 0.05,\
 		'accelerate_amt' : 3,\

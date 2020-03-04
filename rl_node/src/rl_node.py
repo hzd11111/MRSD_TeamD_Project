@@ -1,4 +1,4 @@
-#!/usr/bin/env python
+#!/usr/bin/env python2.7
 # Software License Agreement (BSD License)
 #
 # Copyright (c) 2008, Willow Garage, Inc.
@@ -36,14 +36,9 @@
 ## Simple talker demo that published std_msgs/Strings messages
 ## to the 'chatter' topic
 
-import sys
 import rospy
 import copy
 import threading
-import torch
-import torch.nn as nn
-import torch.nn.functional as F
-import numpy as np
 
 from std_msgs.msg import String
 from grasp_path_planner.msg import LanePoint
@@ -57,36 +52,6 @@ NODE_NAME = 'rl_node'
 RL_TOPIC_NAME = 'rl_decision'
 ENVIRONMENT_TOPIC_NAME = 'environment_state'
 
-class neural_network(nn.Module):
-    def __init__(self, input_size=16, output_size=4, requires_grad = True):
-        super().__init__()
-        # create a neural network
-        self.network = nn.Sequential(
-            nn.Linear(input_size, 30),
-            nn.ReLU(),
-            nn.Linear(30, 15),
-            nn.ReLU(),
-            nn.Linear(15, output_size),
-            nn.Sigmoid()
-        )
-        self.loss_fn = F.mse_loss
-        self.optimiser = torch.optim.Adam(self.network.parameters())
-
-        if not requires_grad:
-            for parameter in self.network.parameters():
-                parameter.requires_grad = False
-
-    def forward(self, X):
-        out = self.network(X)
-        return out
-    
-    def load_checkpoint(self, path):
-        self.network.load_state_dict(torch.load(path))
-
-    def save_checkpoint(self, path):
-        torch.save(self.network.state_dict(), path)
-
-
 class RLManager:
 	def __init__(self):
 		self.pub_rl = None
@@ -95,32 +60,62 @@ class RLManager:
 		self.lock = threading.Lock()
 		self.rl_decision = False
 		self.previous_id = -1
-		self.network = neural_network()
-		self.offline_network = neural_network()
-
 	def simCallback(self, data):
 		self.lock.acquire()
 		if data.id == self.previous_id:
 			self.lock.release()
 			return
+		# sample code for data loading ToDo: Delete
+		current_vehicle = data.cur_vehicle_state
+		adjacent_lane_vehicles = data.adjacent_lane_vehicles
+		current_lane = data.current_lane
+		
+		cur_vehicle_location = current_vehicle.vehicle_location
+		cur_vehicle_speed = current_vehicle.vehicle_speed
+		
+		print('New Environment State')
+		print('Current Vehicle Speed', cur_vehicle_speed)
+		
+		for vehicle in adjacent_lane_vehicles:
+			# load them the same as current_vehicle
+			speed = vehicle.vehicle_speed
 
-		env_state = self.make_state_vector(data)
-		env_state = np.array(env_state)
 		# computation with rl_agent
-		rl_decision = self.make_decision(env_state, data.id)	
+	
+		
+		# dummy msg ToDo: Delete these when rl is done
+		rl_decision = RLCommand()
+		if True:#data.id < 150:
+			rl_decision.change_lane = 0
+			rl_decision.constant_speed = 1
+			rl_decision.accelerate = 0
+			rl_decision.decelerate = 0
+			rl_decision.reset_run = 0
+			rl_decision.id = data.id		
+		else:
+			rl_decision.change_lane = 1
+			rl_decision.constant_speed = 0
+			rl_decision.accelerate = 0
+			rl_decision.decelerate = 0
+			rl_decision.reset_run = 0
+			rl_decision.id = data.id		
+			
 		self.previous_id = data.id
 		# publish message
 		self.pub_rl.publish(rl_decision)
 		self.rl_decision = rl_decision
-		print("Published:",rl_decision.id)
+		print "Published:",rl_decision.id
+		
 		self.lock.release()
 
 	def initialize(self):
+		
 		#initialize node
 		rospy.init_node(NODE_NAME, anonymous=True)
+
 		# initialize subscriber
-		self.env_sub = rospy.Subscriber(ENVIRONMENT_TOPIC_NAME, 
-							EnvironmentState, self.simCallback)
+		self.env_sub = rospy.Subscriber(ENVIRONMENT_TOPIC_NAME, EnvironmentState, self.simCallback)
+
 		# initialize pulbisher
 		self.pub_rl = rospy.Publisher(RL_TOPIC_NAME, RLCommand, queue_size = 10)
 		# initlialize rl class
@@ -134,71 +129,15 @@ class RLManager:
 			self.lock.release()
 			rate.sleep()
 
-	def make_state_vector(self, data):
-		'''
-		create a state vector from the message recieved
-		'''
-		env_state = []
-		def append_vehicle_state(env_state, vehicle_state):
-			env_state.append(vehicle_state.vehicle_location.x)
-			env_state.append(vehicle_state.vehicle_location.y)
-			env_state.append(vehicle_state.vehicle_location.theta)
-			env_state.append(vehicle_state.vehicle_speed)
-			return
-		# items needed
-		# current vehicle velocity
-		env_state.append(data.cur_vehicle_state.vehicle_speed)
-		# rear vehicle state
-			# position
-			# velocity
-		append_vehicle_state(env_state, data.back_vehicle_state)
-		# adjacent vehicle state
-			# position
-			# velocity
-		for i, veh_state in enumerate(data.adjacent_lane_vehicles):
-			if i <= 5:
-				append_vehicle_state(env_state, veh_state)
-			else:
-				break
-		return env_state
-		
 	def spin(self):
 		# spin
 		rospy.spin()
 
-	def make_decision(self, env_state, id):
-		'''
-		env_state is an array of a fixed length
-		'''
-		# action_vals = self.offline_network(env_state)
-		# max_val, arg_val = torch.max(action_vals,1)
-		rl_command = RLCommand()
-		arg_val = 0
-		if arg_val is 0:
-			rl_command.accelerate = 1
-		elif arg_val is 1:
-			rl_command.decelerate = 1
-		elif arg_val is 2:
-			rl_command.change_lane = 1
-		elif arg_val is 3:
-			rl_command.constant_speed = 1
-		rl_command.id = id
-		return rl_command
-
-	def is_terminate():
-		return False
-		
-	def get_reward(self):
-		pass
-
-	def train(self):
-		pass
-
 if __name__ == '__main__':
-	try:
-		rl_manager = RLManager()
-		rl_manager.initialize()
-		pub_thread = threading.Thread(target=rl_manager.publishFunc)
-		rl_manager.spin()
-	except rospy.ROSInterruptException:
-		pass
+    try:
+        rl_manager = RLManager()
+	rl_manager.initialize()
+	pub_thread = threading.Thread(target=rl_manager.publishFunc)
+	rl_manager.spin()
+    except rospy.ROSInterruptException:
+        pass

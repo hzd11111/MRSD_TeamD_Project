@@ -23,18 +23,26 @@ class CarlaHandler:
 
 	def __init__(self, client):
 
-		self.client = client  # TODO: Is this needed?
+		self.client = client
 		self.world = client.get_world()
 		self.world_map = self.world.get_map()
 		self.all_waypoints = self.get_waypoints()
 		self.blueprint_library = self.world.get_blueprint_library()
 		self.actor_dict = {}
+		settings = self.world.get_settings()
+		settings.synchronous_mode = True
+		settings.fixed_delta_seconds = 0.05
+		self.world.apply_settings(settings)
 
 		print("Handler Initialized!\n")
 
 	def __del__(self):
 		self.destroy_actors()
+		settings = self.world.get_settings()
+		settings.synchronous_mode = False
+		self.world.apply_settings(settings)
 		print("Handler destroyed..\n")
+
 
 	def destroy_actors(self):
 		for actor in self.world.get_actors():
@@ -97,9 +105,9 @@ class CarlaHandler:
 			if(i == len(waypoints)-1):
 				continue
 			trans = waypoints[i+1].transform
-			#yaw_in_rad = math.radians(trans.rotation.yaw)
+
 			yaw_in_rad = math.radians(np.arctan(waypoint.transform.location.y - trans.location.y)/(waypoint.transform.location.x - trans.location.x)) 
-			#pitch_in_rad = math.radians(trans.rotation.pitch)
+			
 			p1 = carla.Location(
 			x=trans.location.x + math.cos(yaw_in_rad),
 			y=trans.location.y + math.sin(yaw_in_rad),
@@ -189,8 +197,6 @@ class CarlaHandler:
 				# For all actors that are not ego vehicle
 				if(actor.id != ego_vehicle.id):
 
-
-
 					# Find nearest waypoint on the map
 					actor_nearest_waypoint = self.world_map.get_waypoint(actor.get_location(), project_to_road=True)
 
@@ -219,6 +225,12 @@ class CarlaHandler:
 							actors_in_right_lane.append(actor)
 
 			return current_lane_waypoints, left_lane_waypoints, right_lane_waypoints, front_vehicle, rear_vehicle, actors_in_current_lane, actors_in_left_lane, actors_in_right_lane
+
+
+
+
+
+
 
 
 			

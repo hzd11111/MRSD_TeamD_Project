@@ -10,12 +10,16 @@ __version__ = "0.1"
 #####################################################################################
 
 import threading
+import os
 import time
 import subprocess
 import sys
 import sys
+from argparse import RawTextHelpFormatter
 sys.path.insert(0, "/home/mayank/Mayank/MRSD_TeamD_Project")
 sys.path.insert(0, "/home/mayank/Carla/carla/PythonAPI/carla/")
+
+os.environ["ROOT_SCENARIO_RUNNER"] = "/home/mayank/Mayank/SRunner"
 
 
 import carla
@@ -23,12 +27,16 @@ import agents.navigation.controller
 import rospy
 import copy
 import numpy as np
+import argparse
+VERSION = 0.6
 
 sys.path.remove('/opt/ros/kinetic/lib/python2.7/dist-packages')
 from carla_handler import CarlaHandler
 sys.path.insert(0, "/home/mayank/Mayank/GRASP_ws/src/MRSD_TeamD_Project/carla_bridge/scripts")
 from grasp_controller import GRASPPIDController
 sys.path.insert(0, '/opt/ros/kinetic/lib/python2.7/dist-packages')
+
+sys.path.insert(0, '/home/mayank/Mayank/SRunner')
 
 from std_msgs.msg import String
 from grasp_path_planner.msg import LanePoint
@@ -39,6 +47,11 @@ from grasp_path_planner.msg import RewardInfo
 from grasp_path_planner.msg import EnvironmentState
 from grasp_path_planner.msg import PathPlan
 
+from scenario_runner import ScenarioRunner
+
+
+
+
 
 #####################################################################################
 
@@ -47,7 +60,7 @@ SIM_TOPIC_NAME = 'environment_state'
 PATH_PLAN_TOPIC_NAME = 'path_plan'
 
 class CarlaManager:
-	def __init__(self):
+	def __init__(self, SCENARIORUNNER, SCENARIOMANAGER):
 		self.env_pub = None
 		self.path_sub = None
 		#id
@@ -58,8 +71,25 @@ class CarlaManager:
 		self.carla_handler = None
 		self.ego_vehicle = None
 		self.vehicle_controller = None
+
+		self.SCENARIORUNNER = SCENARIORUNNER
+		self.SCENARIOMANAGER = SCENARIOMANAGER
+
 		self.lock = threading.Lock()
 		self.env_msg = False
+  
+	def __del__(self):
+     
+		for actor in self.client.get_world().get_actors().filter('vehicle.*'): 
+				actor.destroy()
+		print("All actors destroyed..\n") 
+
+
+	def resetEnv(self):
+
+		del self.carla_handler
+		self.SCENARIORUNNER._cleanup(True)
+		self.initialize()
 
 	def getVehicleState(self, actor):
 
@@ -76,7 +106,7 @@ class CarlaManager:
 
 		return vehicle
 
-	def getLanePoints(self, waypoints, flip=False):
+	def getLanePoints(self, waypoints, width, flip=False):
 
 		lane_cur = Lane()
 		lane_points = []
@@ -88,7 +118,7 @@ class CarlaManager:
 			if(flip == True):
 				lane_point.pose.theta += 0#np.pi
 				#lane_point.pose.theta = lane_point.pose.theta % (2*np.pi)
-			lane_point.width = 3 # TODO
+			lane_point.width = width # TODO
 			lane_points.append(lane_point)
 		lane_cur.lane = lane_points
 
@@ -102,43 +132,26 @@ class CarlaManager:
 		tracking_pose = copy.copy(data.tracking_pose)
 		tracking_speed = copy.copy(data.tracking_speed)
 		reset_sim = copy.copy(data.reset_sim)
+
+		print("Reset Sim:", reset_sim)
+		if(reset_sim == 1):
+			env_state = EnvironmentState()
+			env_state.id = self.id
+
+			self.id_waiting = self.id
+			self.id += 1
+			if self.id > 100000:
+				self.id = 0
+			self.env_msg = env_state
+			self.env_pub.publish(env_state)
+			self.lock.release()
+			self.resetEnv()
 		
 		if not data.id == self.id_waiting:
 			self.lock.release()
 			return
-		# print("New Path Plan")
-		# print("Tracking Pose:",tracking_pose.x,",",tracking_pose.y,",",tracking_pose.theta)
-		# print("Tracking Speed:", tracking_speed)
-		# print("Reset Sim:", reset_sim)
-
-
-		# current_location = carla.Location()
-		# current_rotation = carla.Rotation()
-
-		# current_location.x = tracking_pose.x
-		# current_location.y = tracking_pose.y
-		# current_location
-		# current_rotation.yaw = tracking_pose.theta
-
-		# required_transform = carla.Transform()
-		# required_transform.location = current_location
-		# required_transform.rotation = current_rotation
-
-
-		# # required_waypoint = Waypoint()
-		# # required_waypoint.transform = required_transform
-
-		# end_waypoint = self.carla_handler.world_map.get_waypoint(current_location)
-
-		# ToDo: load the path data
-
-		# ToDo: call the controller to follow the path
-
-		#nearest_waypoint = self.carla_handler.world_map.get_waypoint(self.ego_vehicle.get_location(), project_to_road=True)
-		#nearest_waypoint.transform = required_transform
 		
 		self.ego_vehicle.apply_control(self.vehicle_controller.run_step(tracking_speed, tracking_pose))
-		# print("Control Called")
 
 		tracking_loc = carla.Location(x=tracking_pose.x, y=tracking_pose.y, z=self.ego_vehicle.get_location().z)
 		self.carla_handler.world.debug.draw_string(tracking_loc, 'O', draw_shadow=False,
@@ -154,8 +167,6 @@ class CarlaManager:
 				print("Missed Tick....................................................................................")
 				continue
 			
-		#self.carla_handler.world.wait_for_tick()
-		# ToDo: make CARLA step for one frame and reset if necessary
 
 		# ToDo: extract environment data from CARLA
 		########################################################################################3
@@ -163,26 +174,24 @@ class CarlaManager:
 		state_information = self.carla_handler.get_state_information(self.ego_vehicle)
 		current_lane_waypoints, left_lane_waypoints, right_lane_waypoints, front_vehicle, rear_vehicle, actors_in_current_lane, actors_in_left_lane, actors_in_right_lane = state_information
 
+		#point1 = current_lane_waypoints[0].transform.location
+		#point2 = left_lane_waypoints[0].transform.location
+		#width = np.sqrt((point1.x-point2.x)**2 + (point1.y-point2.y)**2)
+		width = 2
 		# Current Lane
-		lane_cur = self.getLanePoints(current_lane_waypoints)
+		lane_cur = self.getLanePoints(current_lane_waypoints, width)
 		
 		# Left Lane
-		lane_left = self.getLanePoints(left_lane_waypoints, flip=False) ##TODO Check this. Reversed 
+		lane_left = self.getLanePoints(left_lane_waypoints[::-1], width, flip=False) ##TODO Check this. Reversed
 
-		
-		
+
 		# Right Lane
-		lane_right = self.getLanePoints(right_lane_waypoints)
+		lane_right = self.getLanePoints(right_lane_waypoints, width)
 		
 
 		# TODO : Can wrap this as a function member of the class. //Done  
 		# Ego vehicle	
 		vehicle_ego = self.getVehicleState(self.ego_vehicle)
-
-		#print("Location:", vehicle_ego.vehicle_location.x, vehicle_ego.vehicle_location.y)
-
-
-		#print("Time End-3:", time.time())
 		
 		# Front vehicle	
 		if(front_vehicle == None):
@@ -206,7 +215,7 @@ class CarlaManager:
 		env_state.next_lane = lane_left
 		env_state.adjacent_lane_vehicles = [self.getVehicleState(actor) for actor in actors_in_left_lane] #TODO : Only considering left lane for now. Need to make this more general 
 		env_state.max_num_vehicles = 2
-		env_state.speed_limit = 40
+		env_state.speed_limit = 35
 		env_state.id = self.id
 
 		#print("Publishing Id:",self.id)
@@ -242,6 +251,9 @@ class CarlaManager:
 		
 		# initlize subscriber
 		self.path_sub = rospy.Subscriber(PATH_PLAN_TOPIC_NAME, PathPlan, self.pathCallback)
+  
+		print("EGO VEHICLES:", self.SCENARIORUNNER.ego_vehicles)
+  
 
 		################################## Initialize environment in CARLA #################################################
 		##
@@ -255,31 +267,28 @@ class CarlaManager:
 
 		# Start Client. Make sure Carla server is running before starting.
 
-		client = carla.Client('localhost', 2000)
-		client.set_timeout(2.0)
+		self.client = carla.Client('localhost', 2000)
+		self.client.set_timeout(2.0)
 		print("Connection to CARLA server established!")
 
 		# Create a CarlaHandler object. CarlaHandler provides some cutom built APIs for the Carla Server.
 
-		self.carla_handler = CarlaHandler(client)
-	
- 		
-		# Spawn ego vehicle on road 
-		filtered_waypoints = self.carla_handler.filter_waypoints(self.carla_handler.get_waypoints(1), road_id=12)
-		spawn_point = filtered_waypoints[4].transform # Select random point from filtered waypoint list #TODO Initialization Scheme Design
-		spawn_point.location.z = spawn_point.location.z + 1 # To avoid collision during spawn
-		self.ego_vehicle, ego_vehicle_ID = self.carla_handler.spawn_vehicle(spawn_point=spawn_point)
+		self.carla_handler = CarlaHandler(self.client)
 
-		self.vehicle_controller = GRASPPIDController(self.ego_vehicle, args_lateral = {'K_P': 0.05, 'K_D': 0.0, 'K_I': 0}, args_longitudinal = {'K_P': 0.5, 'K_D': 0.0, 'K_I': 0.0})
+		# Connect Ego Vehicle 
+		self.ego_vehicle = self.SCENARIORUNNER.ego_vehicles[0]
+		self.ego_vehicle_ID = self.ego_vehicle.id
+		
+		#filtered_waypoints = self.carla_handler.filter_waypoints(self.carla_handler.get_waypoints(1), road_id=)
+		#spawn_point = filtered_waypoints[4].transform # Select random point from filtered waypoint list #TODO Initialization Scheme Design
+		#spawn_point.location.z = spawn_point.location.z + 1 # To avoid collision during spawn
+		#self.ego_vehicle, ego_vehicle_ID = self.carla_handler.spawn_vehicle(spawn_point=spawn_point)
+		#state_information = self.carla_handler.get_state_information(self.ego_vehicle)
 
-		time.sleep(3)
 
-		## Update World Information
-		settings = self.carla_handler.world.get_settings()
-		settings.synchronous_mode = True
-		settings.fixed_delta_seconds = 0.2
-		self.carla_handler.world.apply_settings(settings)
+		self.vehicle_controller = GRASPPIDController(self.ego_vehicle, args_lateral = {'K_P': 0.015, 'K_D': 0.00, 'K_I': 0.03}, args_longitudinal = {'K_P': 0.3, 'K_D': 0.1, 'K_I': 0.05})
 
+		# time.sleep(2)
 
 		rate = rospy.Rate(2000)
 		#rate.sleep()#ToDo: Delete this line	
@@ -294,15 +303,20 @@ class CarlaManager:
 		
 
 		#print("Spawn road ID:", self.carla_handler.world_map.get_waypoint(ego_vehicle.get_location(), project_to_road=True).road_id)
+
+		point1 = current_lane_waypoints[0].transform.location
+		point2 = left_lane_waypoints[0].transform.location
+		width = np.sqrt((point1.x-point2.x)**2 + (point1.y-point2.y)**2)
+
 		# Current Lane
-		lane_cur = self.getLanePoints(current_lane_waypoints)
+		lane_cur = self.getLanePoints(current_lane_waypoints, width)
 		
 		# Left Lane
-		lane_left = self.getLanePoints(left_lane_waypoints, flip=True)
+		lane_left = self.getLanePoints(left_lane_waypoints[::-1], width, flip=True)
 		#self.carla_handler.draw_arrow(left_lane_waypoints)
 		
 		# Right Lane
-		lane_right = self.getLanePoints(right_lane_waypoints)
+		lane_right = self.getLanePoints(right_lane_waypoints, width)
 		
 
 		# TODO : Can wrap this as a function member of the class. //Done  
@@ -321,7 +335,6 @@ class CarlaManager:
 		else:	
 			vehicle_rear = self.getVehicleState(rear_vehicle)
 
-			
 		# sample enviroment state
 		env_state = EnvironmentState()
 		env_state.cur_vehicle_state = vehicle_ego
@@ -333,6 +346,7 @@ class CarlaManager:
 		env_state.max_num_vehicles = 2
 		env_state.speed_limit = 40
 		env_state.id = self.id
+
 		#print("Publishing Id:",self.id)
 		self.id_waiting = self.id
 		self.id += 1
@@ -354,15 +368,113 @@ class CarlaManager:
 		print("Start Ros Spin")	
 		# spin
 		rospy.spin()
-	
+
+
 if __name__ == '__main__':
-	try:
-		carla_manager = CarlaManager()
-		carla_manager.initialize()
-		pub_thread = threading.Thread(target=carla_manager.publishFunc)
-		carla_manager.spin()
-	except rospy.ROSInterruptException:
-		pass
+
+    DESCRIPTION = ("CARLA Scenario Runner: Setup, Run and Evaluate scenarios using CARLA\n"
+                   "Current version: " + str(VERSION))
+
+    PARSER = argparse.ArgumentParser(description=DESCRIPTION,
+                                     formatter_class=RawTextHelpFormatter)
+    PARSER.add_argument('--epoches', default=0, help='Number of epoch executions')
+    PARSER.add_argument('--host', default='127.0.0.1',
+                        help='IP of the host server (default: localhost)')
+    PARSER.add_argument('--port', default='2000',
+                        help='TCP port to listen to (default: 2000)')
+    PARSER.add_argument('--debug', action="store_true", help='Run with debug output')
+    PARSER.add_argument('--output', action="store_true", help='Provide results on stdout')
+    PARSER.add_argument('--file', action="store_true", help='Write results into a txt file')
+    PARSER.add_argument('--junit', action="store_true", help='Write results into a junit file')
+    PARSER.add_argument('--outputDir', default='', help='Directory for output files (default: this directory)')
+    PARSER.add_argument('--waitForEgo', action="store_true", help='Connect the scenario to an existing ego vehicle')
+    PARSER.add_argument('--configFile', default='', help='Provide an additional scenario configuration file (*.xml)')
+    PARSER.add_argument('--additionalScenario', default='', help='Provide additional scenario implementations (*.py)')
+    PARSER.add_argument('--reloadWorld', action="store_true", default=False, help='Reload the CARLA world before starting a scenario (default=True)')
+    # pylint: disable=line-too-long
+    PARSER.add_argument(
+        '--scenario',  default='OtherLeadingVehicle_3',  help='Name of the scenario to be executed. Use the preposition \'group:\' to run all scenarios of one class, e.g. ControlLoss or FollowLeadingVehicle')
+    PARSER.add_argument('--randomize', action="store_true", help='Scenario parameters are randomized')
+    PARSER.add_argument('--repetitions', default=1, help='Number of scenario executions')
+    PARSER.add_argument('--list', action="store_true", help='List all supported scenarios and exit')
+    PARSER.add_argument(
+        '--agent', help="Agent used to execute the scenario (optional). Currently only compatible with route-based scenarios.")
+    PARSER.add_argument('--agentConfig', type=str, help="Path to Agent's configuration file", default="")
+    PARSER.add_argument('--openscenario', help='Provide an OpenSCENARIO definition')
+    PARSER.add_argument(
+        '--route', help='Run a route as a scenario, similar to the CARLA AD challenge (input: (route_file,scenario_file,[number of route]))', nargs='+', type=str)
+    PARSER.add_argument('--challenge', action="store_true", help='Run in challenge mode')
+    PARSER.add_argument('--record', action="store_true",
+                        help='Use CARLA recording feature to create a recording of the scenario')
+    PARSER.add_argument('-v', '--version', action='version', version='%(prog)s ' + str(VERSION))
+    PARSER.add_argument('name', default='temp', help='ROS Param')
+    PARSER.add_argument('log', default='temp', help='ROS Param')
+    ARGUMENTS = PARSER.parse_args()
+    # pylint: enable=line-too-long
+
+    if ARGUMENTS.list:
+        print("Currently the following scenarios are supported:")
+        print(*ScenarioConfigurationParser.get_list_of_scenarios(ARGUMENTS.configFile), sep='\n')
+        sys.exit(0)
+
+    if not ARGUMENTS.scenario and not ARGUMENTS.openscenario and not ARGUMENTS.route:
+        print("Please specify either a scenario or use the route mode\n\n")
+        PARSER.print_help(sys.stdout)
+        sys.exit(0)
+
+    if (ARGUMENTS.route and ARGUMENTS.openscenario) or (ARGUMENTS.route and ARGUMENTS.scenario):
+        print("The route mode cannot be used together with a scenario (incl. OpenSCENARIO)'\n\n")
+        PARSER.print_help(sys.stdout)
+        sys.exit(0)
+
+    if ARGUMENTS.agent and (ARGUMENTS.openscenario or ARGUMENTS.scenario):
+        print("Agents are currently only compatible with route scenarios'\n\n")
+        PARSER.print_help(sys.stdout)
+        sys.exit(0)
+
+    if ARGUMENTS.challenge and (ARGUMENTS.openscenario or ARGUMENTS.scenario):
+        print("The challenge mode can only be used with route-based scenarios'\n\n")
+        PARSER.print_help(sys.stdout)
+        sys.exit(0)
+
+    if ARGUMENTS.route:
+        ARGUMENTS.reloadWorld = True
+
+	#TODO
+    ARGUMENTS.reloadWorld = False
+    #ARGUMENTS.reloadWorld = True
+    print("Scenario:", ARGUMENTS.scenario)
+    
+    SCENARIORUNNER = None
+    SCENARIOMANAGER = []
+    try:
+
+        SCENARIORUNNER = ScenarioRunner(ARGUMENTS)
+        SCENARIORUNNER.run_thread(ARGUMENTS, SCENARIOMANAGER)
+        #SCENARIOMANAGER[0].stop_scenario()
+        # while True:       
+        #    time.sleep(3)
+        #    print("checkpoint")
+        # print("bye")
+        time.sleep(5)
+        print("running?:=", SCENARIOMANAGER[0].scenario)
+        
+
+        carla_manager = CarlaManager(SCENARIORUNNER, SCENARIOMANAGER)
+        carla_manager.initialize()
+        pub_thread = threading.Thread(target=carla_manager.publishFunc)
+        carla_manager.spin()
+
+    except rospy.ROSInterruptException:
+        print("Closing....")
+        carla_manager.resetEnv()
+        pass
+
+    finally:
+        if SCENARIORUNNER is not None:
+            del SCENARIORUNNER
+
+
 	
  
 
