@@ -1,4 +1,4 @@
-#!/usr/bin/env python
+#!/usr/bin/env python3
 # Software License Agreement (BSD License)
 #
 # Copyright (c) 2008, Willow Garage, Inc.
@@ -95,7 +95,8 @@ class RLManager:
 		if data.id == self.previous_id:
 			self.lock.release()
 			return
-
+		print("HIIIIIIIIIIIIIIII")
+		print(sys.version_info)
 		env_state = self.make_state_vector(data)
 		env_state = np.array(env_state)
 		# computation with rl_agent
@@ -106,6 +107,8 @@ class RLManager:
 			reward = torch.tensor([reward]).to(settings["DEVICE"])
 			env_tensor = torch.tensor(env_state).float().view(1,-1).to(settings["DEVICE"])
 			self.manager.memory.push(self.previous_state,self.previous_action,env_tensor,reward)
+			print("HIIIIIIIIIIIIIIII")
+			print(sys.version_info)
 			self.manager.optimize_model()
 		self.previous_id = data.id
 		self.previous_state = torch.tensor(env_state).float().view(1,-1).to(settings["DEVICE"])
@@ -130,6 +133,7 @@ class RLManager:
 		while not rospy.is_shutdown():
 			self.lock.acquire()
 			if self.rl_decision:
+				print("here!")
 				self.pub_rl.publish(self.rl_decision)
 			self.lock.release()
 			rate.sleep()

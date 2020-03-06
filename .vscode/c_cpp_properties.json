@@ -1,0 +1,25 @@
+{
+    "configurations": [
+        {
+            "browse": {
+                "databaseFilename": "",
+                "limitSymbolsToIncludedHeaders": true
+            },
+            "includePath": [
+                "/home/arcot/GRASP/devel/include/**",
+                "/opt/ros/melodic/include/**",
+                "/home/arcot/chatbot_catkin_ws/devel/include/**",
+                "/home/arcot/chatbot_catkin_ws/src/arithmetic_node/include/**",
+                "/home/arcot/GRASP/src/rl_node/include/**",
+                "/home/arcot/GRASP/src/sb_rl_node/include/**",
+                "/usr/include/**"
+            ],
+            "name": "ROS",
+            "intelliSenseMode": "gcc-x64",
+            "compilerPath": "/usr/bin/clang",
+            "cStandard": "c11",
+            "cppStandard": "c++17"
+        }
+    ],
+    "version": 4
+}

@@ -1,5 +1,5 @@
 cmake_minimum_required(VERSION 2.8.3)
-project(rl_node)
+project(sb_rl_node)
 
 ## Compile as C++11, supported in ROS Kinetic and newer
 # add_compile_options(-std=c++11)
@@ -168,7 +168,7 @@ include_directories(
 # See http://ros.org/doc/api/catkin/html/adv_user_guide/variables.html
 
 catkin_install_python(PROGRAMS
-  src/rl_node.py
+  src/sb_rl_node.py
   DESTINATION ${CATKIN_PACKAGE_BIN_DESTINATION}
 )
 

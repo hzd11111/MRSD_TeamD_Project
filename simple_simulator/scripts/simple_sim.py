@@ -125,8 +125,6 @@ class SimpleSimulator:
     def initialize(self):
         # initialize node
         rospy.init_node(NODE_NAME, anonymous=True)
-
-        
         # initialize publisher
         self.env_pub = rospy.Publisher(SIM_TOPIC_NAME, EnvironmentState, queue_size=1000)
 

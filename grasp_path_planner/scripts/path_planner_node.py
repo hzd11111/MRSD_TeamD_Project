@@ -28,6 +28,7 @@ class RLDecision(Enum):
 
 class RLDataProcessor:
 	def __init__(self, rl_data):
+		print("New RL data created ", rl_data.id," ",rl_data.reset_run)
 		const_speed = rl_data.constant_speed
 		acc = rl_data.accelerate
 		dec = rl_data.decelerate
@@ -390,8 +391,10 @@ class TrajGenerator:
 		new_path_plan.tracking_pose.x = self.generated_path[self.path_pointer].x
 		new_path_plan.tracking_pose.y = self.generated_path[self.path_pointer].y
 		new_path_plan.tracking_pose.theta = self.generated_path[self.path_pointer].theta
-		new_path_plan.reset_sim = 0
+		new_path_plan.reset_sim = rl_data.reset_run
 		new_path_plan.tracking_speed = self.generated_path[self.path_pointer].speed
+		if new_path_plan.reset_sim:
+			self.reset()
 		return new_path_plan		
 
 TRAJ_PARAM = {'look_up_distance' : 0 ,\
@@ -466,7 +469,7 @@ class PathPlannerManager:
 
 			self.pub_path.publish(traj)
 			self.prev_traj = traj
-			print "Publishing Traj:",traj.id
+			print "Publishing Traj:",traj.id, traj.reset_sim
 	
 	def publishFunc(self):
 		rate = rospy.Rate(10)
@@ -500,6 +503,7 @@ if __name__ == '__main__':
 		path_planner_main = PathPlannerManager()
 		path_planner_main.initialize()
 		pub_thread = threading.Thread(target=path_planner_main.publishFunc)
+		pub_thread.start()
 		path_planner_main.spin()
 	except rospy.ROSInterruptException:
 		pass

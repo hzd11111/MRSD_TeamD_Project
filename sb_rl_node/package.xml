@@ -1,6 +1,6 @@
 <?xml version="1.0"?>
 <package format="2">
-  <name>rl_node</name>
+  <name>sb_rl_node</name>
   <version>0.0.0</version>
   <description>The rl_node package</description>
 
