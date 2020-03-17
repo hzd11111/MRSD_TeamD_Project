@@ -60,11 +60,12 @@ from stable_baselines import DQN,PPO2
 from stable_baselines.common.vec_env import DummyVecEnv
 from stable_baselines.deepq.policies import MlpPolicy
 # import tensorflow.python.util.deprecation as deprecation
-import os
+import os,logging
 from stable_baselines.common.env_checker import check_env
 from stable_baselines.common.cmd_util import make_vec_env
 
 # deprecation._PRINT_DEPRECATION_WARNINGS = False
+logging.disable(logging.WARNING)
 os.environ['TF_CPP_MIN_LOG_LEVEL'] = '3'
 
 NODE_NAME = 'sb_rl_node'
@@ -135,6 +136,7 @@ class RLManager:
         self.terminal_option_data=None
         self.reward=0
         self.k1=1
+        self.cur_action=None
 
     def is_terminal_option(self, data):
         return False
@@ -161,6 +163,7 @@ class RLManager:
         start=np.array([10.08,4])
         if np.allclose(cur,start):
             return True
+
     def simCallback(self, data):
         self.lock.acquire()
         # Check if new message
@@ -173,9 +176,15 @@ class RLManager:
         self.cur_state=data
         self.cur_id=data.id
         # check if current option is terminated or collision
-        if self.is_terminal_option(data) or data.reward.collision or self.is_new_episode(data): 
+        if self.is_terminal_option(data) or data.reward.collision: 
             print("Option ",self.is_terminal_option(data))
             print("Collision ",data.reward.collision)
+            if self.sb_lock.locked():
+                self.sb_lock.release()
+
+        if self.is_new_episode(data) and \
+                self.cur_action is not None and \
+                    self.cur_action.reset_run is True:
             print("New Episode ",self.is_new_episode(data))
             if self.sb_lock.locked():
                 self.sb_lock.release()
@@ -205,7 +214,7 @@ class RLManager:
         i=0
         env_state = []
         env_state.append(data.cur_vehicle_state.vehicle_speed)
-        append_vehicle_state(env_state, data.back_vehicle_state)
+        self.append_vehicle_state(env_state, data.back_vehicle_state)
         for _, veh_state in enumerate(data.adjacent_lane_vehicles):
             if i < 5:
                 self.append_vehicle_state(env_state, veh_state)
@@ -224,12 +233,14 @@ class RLManager:
 
     def make_rl_message(self, action, id, is_reset=False):
         rl_command=RLCommand()
-        if id is LANE_CHANGE:
+        if action is LANE_CHANGE:
             rl_command.change_lane=1
         else:
             rl_command.constant_speed=1
         if is_reset:
             rl_command.reset_run=True
+        rl_command.id = id
+        self.cur_action=rl_command
         return rl_command
 
     def convert_to_local(self, veh_state, x,y):
