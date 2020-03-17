@@ -54,224 +54,211 @@ from grasp_path_planner.msg import VehicleState
 from grasp_path_planner.msg import RewardInfo
 from grasp_path_planner.msg import EnvironmentState
 from grasp_path_planner.msg import RLCommand
+import gym
+from gym import spaces
+from stable_baselines import DQN,PPO2
+from stable_baselines.common.vec_env import DummyVecEnv
+from stable_baselines.deepq.policies import MlpPolicy
+# import tensorflow.python.util.deprecation as deprecation
+import os
+from stable_baselines.common.env_checker import check_env
+from stable_baselines.common.cmd_util import make_vec_env
+
+# deprecation._PRINT_DEPRECATION_WARNINGS = False
+os.environ['TF_CPP_MIN_LOG_LEVEL'] = '3'
 
 NODE_NAME = 'sb_rl_node'
 RL_TOPIC_NAME = 'rl_decision'
 ENVIRONMENT_TOPIC_NAME = 'environment_state'
+N_DISCRETE_ACTIONS = 2
+LANE_CHANGE = 1
+CONSTANT_SPEED = 0
+
+class CustomEnv(gym.Env):
+    """Custom Environment that follows gym interface"""
+
+    metadata = {'render.modes': ['human']}
+
+    def __init__(self, rl_manager):
+        super(CustomEnv, self).__init__()
+        # Define action and observation space
+        # They must be gym.spaces objects
+        # Example when using discrete actions:
+        self.action_space = spaces.Discrete(N_DISCRETE_ACTIONS)
+        self.observation_space = spaces.Box(low = -1000, high=1000, shape = (25,1))
+        self.rl_manager = rl_manager
+
+    def step(self, action):
+        # reset reward to zero
+        self.rl_manager.reward=0
+        while rl_manager.cur_state is None:
+            print("Waiting")
+        rl_command = rl_manager.make_rl_message(action, rl_manager.cur_state.id, False)
+        # acquire lock
+        rl_manager.sb_lock.acquire()
+        rl_manager.pub_rl.publish(rl_command)
+        # wait till option finishes
+        rl_manager.sb_lock.acquire()
+        reward=rl_manager.reward
+        cur_state=rl_manager.cur_state
+        # done=rl_manager.is_terminate_episode
+        rl_manager.lock.acquire()
+        done=cur_state.reward.collision
+        rl_manager.lock.release()
+        # return observation, reward, done, info
+        return cur_state, reward, done, None
+
+    def reset(self):
+        id=None
+        while rl_manager.cur_state is None:
+            print("Waiting")
+        id=rl_manager.cur_state.id
+        rl_manager.sb_lock.acquire()
+        rl_manager.make_rl_message(id,CONSTANT_SPEED,True)
+        rl_manager.sb_lock.acquire()
+        return rl_manager.make_state_vector(rl_manager.cur_state)
+        # return observation  # reward, done, info can't be included
+
+    def render(self, mode='human'):
+        pass
+
+    def close (self):
+        pass
+
 
 class RLManager:
-	def __init__(self):
-		self.pub_rl = None
-		self.env_sub = None
-		self.rl_agent = None
-		self.lock = threading.Lock()
-		self.rl_decision = None
-		self.previous_id = -1
-		self.previous_state = None
-		self.previous_action = None
-		self.previous_decision = None
-		self.lane_term_th = 0.1
-	# RR
-	def simCallback(self, data):
-		self.lock.acquire()
-		print("location is ", data.cur_vehicle_state.vehicle_location.x, 
-				data.cur_vehicle_state.vehicle_location.y)
-		if data.id == self.previous_id:
-			print("IDs are equal")
-			self.lock.release()
-			return
+    def __init__(self):
+        self.sb_lock=threading.Lock()
+        self.lock=threading.Lock()
+        self.cur_id=None
+        self.cur_state=None
+        self.terminal_option_data=None
+        self.reward=0
+        self.k1=1
 
-		env_state = self.make_state_vector(data)
-		env_state = np.array(env_state)
-		if data.reward.collision:
-			self.rl_decision = None
-			rl_decision = RLCommand()
-			rl_decision.constant_speed = 1
-			rl_decision.reset_run = True
-			rl_decision.id = data.id
-			self.pub_rl.publish(rl_decision)
-			print("Published:",rl_decision.id)
-			print("Collision Detected")
-			self.lock.release()
-			return
-		# check if a decision was made
-		if self.rl_decision is not None:
-			print("previous decision exists")
-			# check if the decision has been executed
-			if self.is_terminate_option(data):
-				# take a new decision
-				print("Termination Condition Reached")
-				print("Making a new decision")
-				rl_decision = self.make_decision(env_state, data.id)
-				self.rl_decision = rl_decision
-				self.pub_rl.publish(rl_decision)
-				print("Published:",rl_decision.id)
-			else:
-				# wait for the current decision to finish execution
-				print(self.rl_decision)
-				self.rl_decision.id = data.id
-				self.pub_rl.publish(self.rl_decision)
-				print("Republishing same decision ", data.id)
-				print("Published:",self.rl_decision.id)
-		# computation with rl_agent
-		else:
-			# make a new decision
-			print("Making a new decision")
-			rl_decision = self.make_decision(env_state, data.id)
-			self.rl_decision = rl_decision
-			self.pub_rl.publish(rl_decision)
-			print("Published:",rl_decision.id)	
-		'''
-		RR
-		# create a record
-		if self.previous_action is not None and self.previous_state is not None:
-			reward = self.manager.rewardCalculation(data)
-			reward = torch.tensor([reward]).to(settings["DEVICE"])
-			env_tensor = torch.tensor(env_state).float().view(1,-1).to(settings["DEVICE"])
-			self.manager.memory.push(self.previous_state,self.previous_action,env_tensor,reward)
-			self.manager.optimize_model()
-		self.previous_id = data.id
-		self.previous_state = torch.tensor(env_state).float().view(1,-1).to(settings["DEVICE"])
-		# publish message
-		# RR
-		'''
-		'''
-		self.pub_rl.publish(rl_decision)
-		self.rl_decision = rl_decision
-		print("Published:",rl_decision.id)
-		'''
-		self.lock.release()
+    def is_terminal_option(self, data):
+        return False
 
-	def initialize(self):
-		#initialize node
-		rospy.init_node(NODE_NAME, anonymous=True)
-		# initialize subscriber
-		self.env_sub = rospy.Subscriber(ENVIRONMENT_TOPIC_NAME, 
-							EnvironmentState, self.simCallback)
-		# initialize pulbisher
-		self.pub_rl = rospy.Publisher(RL_TOPIC_NAME, RLCommand, queue_size = 10)
-		# initlialize rl class
-	
-	def publishFunc(self):
-		rate = rospy.Rate(10)
-		while not rospy.is_shutdown():
-			self.lock.acquire()
-			# RR
-			if self.rl_decision:
-				self.pub_rl.publish(self.rl_decision)
-			self.lock.release()
-			rate.sleep()
-	
-	def append_vehicle_state(self, data, env_state, vehicle_state, dummy=False):
-		if dummy:
-			env_state.append(10000)
-			env_state.append(10000)
-			env_state.append(0)
-			env_state.append(0)
-		else:
-			x,y = self.convert_to_local(data.cur_vehicle_state, 
-					vehicle_state.vehicle_location.x,
-					vehicle_state.vehicle_location.y)
-			env_state.append(x)
-			env_state.append(y)
-			env_state.append(vehicle_state.vehicle_location.theta)
-			env_state.append(vehicle_state.vehicle_speed)
-		return
+    def calculate_lane_change_reward(self, data):
+        # TODO: Generalise for curved roads
+        diff_1=data.next_lane.lane[0].pose.y-data.cur_vehicle_state.vehicle_location.y
+        diff_2=data.next_lane.lane[0].pose.y-data.current_lane.lane[0].pose.y
+        return abs(diff_1/diff_2)
 
-	def make_state_vector(self, data):
-		'''
-		create a state vector from the message recieved
-		'''
-		env_state = []
-		# items needed
-		# current vehicle velocity
-		env_state.append(data.cur_vehicle_state.vehicle_speed)
-		# rear vehicle state:position,velocity
-		self.append_vehicle_state(data, env_state, data.back_vehicle_state)
-		# adjacent vehicle state:position,velocity
-		i = 0
-		for _, veh_state in enumerate(data.adjacent_lane_vehicles):
-			if i < 5:
-				self.append_vehicle_state(data, env_state, veh_state)
-			else:
-				break
-			i+=1
+    def calculate_ego_reward(self, data):
+        return 0
 
-		while i<5:
-			self.append_vehicle_state(None, None, dummy=True)
-			i+=1
-		return env_state
-		
-	def spin(self):
-		# spin
-		rospy.spin()
-	# RR
-	def make_decision(self, env_state, id):
-		'''
-		env_state is an array of a fixed length
-		'''
-		# action_vals = self.offline_network(env_state)
-		# max_val, arg_val = torch.max(action_vals,1)
-		'''
-		RR
-		state_tensor = torch.Tensor(env_state).to(settings["DEVICE"])
-		arg_val = self.manager.target_net(state_tensor).view(-1,4).max(1)[1].view(1,1).item()
-		self.previous_action = torch.tensor([[arg_val]]).long().to(settings["DEVICE"])
-		'''
-		# arg_val = 1
-		rl_command = RLCommand()
-		arg_val = 2
-		if arg_val is 0:
-			rl_command.accelerate = 1
-		elif arg_val is 1:
-			rl_command.decelerate = 1
-		elif arg_val is 2:
-			rl_command.change_lane = 1
-		elif arg_val is 3:
-			rl_command.constant_speed = 1
-		rl_command.id = id
-		return rl_command
+    def update_reward(self, data):
+        r_ego = self.calculate_ego_reward(data)
+        r_lane_change = self.calculate_lane_change_reward(data)
+        self.reward+=r_ego
+        self.reward+=r_lane_change
 
-	def is_terminate_episode(self, env_state):
-		if env_state.reward.collision:
-			return True
-		return False
+    def is_new_episode(self,data):
+        x=data.cur_vehicle_state.vehicle_location.x
+        y=data.cur_vehicle_state.vehicle_location.y
+        cur=np.array([x,y])
+        start=np.array([10.08,4])
+        if np.allclose(cur,start):
+            return True
+    def simCallback(self, data):
+        self.lock.acquire()
+        # Check if new message
+        if data.id==self.cur_id:
+            self.lock.release()
+            return
+        # update reward
+        self.update_reward(data)
+        # set current state
+        self.cur_state=data
+        self.cur_id=data.id
+        # check if current option is terminated or collision
+        if self.is_terminal_option(data) or data.reward.collision or self.is_new_episode(data): 
+            print("Option ",self.is_terminal_option(data))
+            print("Collision ",data.reward.collision)
+            print("New Episode ",self.is_new_episode(data))
+            if self.sb_lock.locked():
+                self.sb_lock.release()
+        self.lock.release()
 
-	def is_terminate_option(self, env_state):
-		'''
-		termination conditions for each option
-		'''
-		_,y = self.convert_to_local(env_state.cur_vehicle_state, 
-					env_state.next_lane.lane[0].pose.x, 
-					env_state.next_lane.lane[0].pose.y)
-		print("Lateral Distance is ", np.abs(env_state.cur_vehicle_state.vehicle_location.y-y))
-		if np.abs(env_state.cur_vehicle_state.vehicle_location.y-y)<self.lane_term_th:
-			return True
-		return False	
+    def initialize(self):
+        #initialize node
+        rospy.init_node(NODE_NAME, anonymous=True)
+        self.env_sub = rospy.Subscriber(ENVIRONMENT_TOPIC_NAME, 
+                            EnvironmentState, self.simCallback)
+        self.pub_rl = rospy.Publisher(RL_TOPIC_NAME, RLCommand, queue_size = 10)
 
-	def convert_to_local(self, veh_state, x,y):
-		H = np.zeros((3,3))
-		H[-1,-1] = 1
-		H[0,-1] = veh_state.vehicle_location.x
-		H[1,-1] = veh_state.vehicle_location.y
-		H[0,0] = np.cos(veh_state.vehicle_location.theta)
-		H[0,1] = np.sin(veh_state.vehicle_location.theta)
-		H[1,0] = -np.sin(veh_state.vehicle_location.theta)
-		H[1,1] = np.cos(veh_state.vehicle_location.theta)
-		res = np.matmul(H, np.array([x,y,1]))
-		return res[0], res[1]
-	'''
-	RR
-	def train(self, env_state):
-		self.manager.optimize_model()
-		return
-	'''
+    def spin(self):
+        rospy.spin()
+
+    def append_vehicle_state(self, env_state, vehicle_state):
+        env_state.append(vehicle_state.vehicle_location.x)
+        env_state.append(vehicle_state.vehicle_location.y)
+        env_state.append(vehicle_state.vehicle_location.theta)
+        env_state.append(vehicle_state.vehicle_speed)
+        return
+
+    def make_state_vector(self, data):
+        '''
+        create a state vector from the message recieved
+        '''
+        i=0
+        env_state = []
+        env_state.append(data.cur_vehicle_state.vehicle_speed)
+        append_vehicle_state(env_state, data.back_vehicle_state)
+        for _, veh_state in enumerate(data.adjacent_lane_vehicles):
+            if i < 5:
+                self.append_vehicle_state(env_state, veh_state)
+            else:
+                break
+            i+=1
+        dummy = VehicleState()
+        dummy.vehicle_location.x = 10000
+        dummy.vehicle_location.y = 10000
+        dummy.vehicle_location.theta = 10000
+        dummy.vehicle_speed = 0
+        while i<5:
+            self.append_vehicle_state(env_state, dummy)
+            i+=1
+        return env_state
+
+    def make_rl_message(self, action, id, is_reset=False):
+        rl_command=RLCommand()
+        if id is LANE_CHANGE:
+            rl_command.change_lane=1
+        else:
+            rl_command.constant_speed=1
+        if is_reset:
+            rl_command.reset_run=True
+        return rl_command
+
+    def convert_to_local(self, veh_state, x,y):
+        H = np.eye(3)
+        H[-1,-1] = 1
+        H[0,-1] = -veh_state.vehicle_location.x
+        H[1,-1] = -veh_state.vehicle_location.y
+        H[0,0] = np.cos(-veh_state.vehicle_location.theta)
+        H[0,1] = np.sin(-veh_state.vehicle_location.theta)
+        H[1,0] = -np.sin(-veh_state.vehicle_location.theta)
+        H[1,1] = np.cos(-veh_state.vehicle_location.theta)
+        res = np.matmul(H, np.array([x,y,1]).reshape(3,1))
+        return res[0,0], res[1,0]
+
+
+def sb_model_train(rl_manager):
+    env=CustomEnv(rl_manager)
+    env=make_vec_env(lambda:env, n_envs=1)
+    model = DQN(MlpPolicy, env, verbose=1, tensorboard_log='./Logs/')
+    model.learn(total_timesteps=35000)
+    return
+
 if __name__ == '__main__':
-	try:
-		rl_manager = RLManager()
-		rl_manager.initialize()
-		pub_thread = threading.Thread(target=rl_manager.publishFunc)
-		pub_thread.start()
-		rl_manager.spin()
-	except rospy.ROSInterruptException:
-		pass
+    try:
+        rl_manager = RLManager()
+        rl_manager.initialize()
+        sb_model_thread = threading.Thread(target=sb_model_train, args=(rl_manager,))
+        sb_model_thread.start()
+        rl_manager.spin()
+
+    except rospy.ROSInterruptException:
+        pass

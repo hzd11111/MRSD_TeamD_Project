@@ -71,8 +71,6 @@ class DQNManager:
 
         # Compute a mask of non-final states and concatenate the batch elements
         # (a final state would've been the one after which simulation ended)
-        print("HIIIIIIIIIIIIIIII")
-        print(sys.version_info)
         non_final_mask = torch.tensor(tuple(map(lambda s: s is not None,
                                               batch.next_state)), device=self.device, dtype=torch.bool)
         non_final_next_states = torch.cat([s.view(1,-1) for s in batch.next_state
