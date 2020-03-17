@@ -38,6 +38,13 @@
 
 import sys
 sys.path.append("/home/arcot/GRASP/src")
+# to remove tensorflow warnings
+import warnings
+warnings.filterwarnings("ignore")
+import os,logging
+logging.disable(logging.WARNING)
+os.environ['TF_CPP_MIN_LOG_LEVEL'] = '2'
+
 import rospy
 import copy
 import threading
@@ -45,8 +52,6 @@ import torch
 import torch.nn as nn
 import torch.nn.functional as F
 import numpy as np
-print(sys.path)
-print(sys.version_info)
 from std_msgs.msg import String
 from grasp_path_planner.msg import LanePoint
 from grasp_path_planner.msg import Lane
@@ -60,13 +65,11 @@ from stable_baselines import DQN,PPO2
 from stable_baselines.common.vec_env import DummyVecEnv
 from stable_baselines.deepq.policies import MlpPolicy
 # import tensorflow.python.util.deprecation as deprecation
-import os,logging
 from stable_baselines.common.env_checker import check_env
 from stable_baselines.common.cmd_util import make_vec_env
 
 # deprecation._PRINT_DEPRECATION_WARNINGS = False
-logging.disable(logging.WARNING)
-os.environ['TF_CPP_MIN_LOG_LEVEL'] = '3'
+
 
 NODE_NAME = 'sb_rl_node'
 RL_TOPIC_NAME = 'rl_decision'
