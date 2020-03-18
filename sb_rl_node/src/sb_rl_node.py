@@ -61,12 +61,15 @@ from grasp_path_planner.msg import EnvironmentState
 from grasp_path_planner.msg import RLCommand
 import gym
 from gym import spaces
+sys.path.remove('/opt/ros/kinetic/lib/python2.7/dist-packages')
+
 from stable_baselines import DQN,PPO2
 from stable_baselines.common.vec_env import DummyVecEnv
 from stable_baselines.deepq.policies import MlpPolicy
 # import tensorflow.python.util.deprecation as deprecation
 from stable_baselines.common.env_checker import check_env
 from stable_baselines.common.cmd_util import make_vec_env
+
 
 # deprecation._PRINT_DEPRECATION_WARNINGS = False
 
@@ -89,7 +92,7 @@ class CustomEnv(gym.Env):
         # They must be gym.spaces objects
         # Example when using discrete actions:
         self.action_space = spaces.Discrete(N_DISCRETE_ACTIONS)
-        self.observation_space = spaces.Box(low = -1000, high=1000, shape = (25,))
+        self.observation_space = spaces.Box(low = -1000, high=1000, shape = (1,25))
         self.rl_manager = rl_manager
 
     def step(self, action):
@@ -116,8 +119,7 @@ class CustomEnv(gym.Env):
             done=cur_state.reward.collision
         rl_manager.lock.release()
         # return observation, reward, done, info
-        print(cur_state_vec, reward, done)
-        return cur_state_vec, reward, done, {}
+        return rl_manager.make_state_vector(cur_state), reward, done, None
 
     def reset(self):
         id=None
@@ -192,6 +194,12 @@ class RLManager:
 
     def simCallback(self, data):
         self.lock.acquire()
+        # Check if new message
+        if data.id==self.cur_id:
+            if(self.sb_lock.locked()):
+                self.sb_lock.release()
+            self.lock.release()
+            return
         # update reward
         self.update_reward(data)
         # check if collision
