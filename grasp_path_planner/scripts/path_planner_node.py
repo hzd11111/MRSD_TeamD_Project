@@ -283,7 +283,7 @@ class TrajGenerator:
 		new_path_plan.tracking_pose = closest_pose.pose
 		new_path_plan.reset_sim = rl_data.reset_run
 		#new_path_plan.tracking_speed = cur_vehicle_speed
-		new_path_plan.tracking_speed = 60
+		new_path_plan.tracking_speed = 30
 		return new_path_plan
 
 	def cubicSplineGen(self, cur_lane_width, next_lane_width, v_cur):
