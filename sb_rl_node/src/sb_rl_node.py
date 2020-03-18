@@ -84,7 +84,7 @@ CONSTANT_SPEED = 0
 class CustomEnv(gym.Env):
     """Custom Environment that follows gym interface"""
 
-    metadata = {'render.modes': ['console']}
+    metadata = {'render.modes': ['human']}
 
     def __init__(self, rl_manager):
         super(CustomEnv, self).__init__()
@@ -99,24 +99,18 @@ class CustomEnv(gym.Env):
         # reset reward to zero
         self.rl_manager.reward=0
         while rl_manager.cur_state is None:
-            print("Waiting in step")
-            pass
+            print("Waiting")
         rl_command = rl_manager.make_rl_message(action, rl_manager.cur_state.id, False)
         # acquire lock
         rl_manager.sb_lock.acquire()
         rl_manager.pub_rl.publish(rl_command)
         # wait till option finishes
         rl_manager.sb_lock.acquire()
-        print("Action executed",action)
-        rl_manager.sb_lock.release()
         reward=rl_manager.reward
         cur_state=rl_manager.cur_state
-        cur_state_vec=np.array(rl_manager.make_state_vector(cur_state)).astype(np.float32)
+        # done=rl_manager.is_terminate_episode
         rl_manager.lock.acquire()
-        if action==LANE_CHANGE:
-            done=True
-        else:    
-            done=cur_state.reward.collision
+        done=cur_state.reward.collision
         rl_manager.lock.release()
         # return observation, reward, done, info
         return rl_manager.make_state_vector(cur_state), reward, done, None
@@ -124,18 +118,15 @@ class CustomEnv(gym.Env):
     def reset(self):
         id=None
         while rl_manager.cur_state is None:
-            # print("Waiting in reset")
-            pass
+            print("Waiting")
         id=rl_manager.cur_state.id
         rl_manager.sb_lock.acquire()
         rl_manager.make_rl_message(id,CONSTANT_SPEED,True)
         rl_manager.sb_lock.acquire()
-        print("Reset executed")
-        rl_manager.sb_lock.release()
-        return np.array(rl_manager.make_state_vector(rl_manager.cur_state)).astype(np.float32)
+        return rl_manager.make_state_vector(rl_manager.cur_state)
         # return observation  # reward, done, info can't be included
 
-    def render(self, mode='console'):
+    def render(self, mode='human'):
         pass
 
     def close (self):
@@ -146,28 +137,15 @@ class RLManager:
     def __init__(self):
         self.sb_lock=threading.Lock()
         self.lock=threading.Lock()
-        self.action_lock=threading.Lock()
         self.cur_id=None
         self.cur_state=None
         self.terminal_option_data=None
         self.reward=0
         self.k1=1
         self.cur_action=None
-        self.lane_term_th=1e-2
-        self.pub_rl=None
-        self.env_sub=None
 
-    def is_terminal_option(self, data,action):
-        if action==CONSTANT_SPEED:
-            # print("Constant speed termination")
-            return True
-        else:
-            lateral_dist=np.abs(data.cur_vehicle_state.vehicle_location.y- \
-                                    data.next_lane.lane[0].pose.y)
-            print("Lateral Dist",lateral_dist)
-            if lateral_dist<self.lane_term_th:
-                return True
-            return False
+    def is_terminal_option(self, data):
+        return False
 
     def calculate_lane_change_reward(self, data):
         # TODO: Generalise for curved roads
@@ -202,45 +180,22 @@ class RLManager:
             return
         # update reward
         self.update_reward(data)
-        # check if collision
-        if data.reward.collision:              
-            # print("Collision ",data.reward.collision)
-            # print(self.cur_action)
-            if self.sb_lock.locked():
-                self.sb_lock.release()
-        else:
-            # copy current command
-            self.action_lock.acquire()
-            ongoing_action=self.cur_action
-            self.action_lock.release()
-            # decisions to make
-            if ongoing_action is not None:
-                # identify current action
-                if ongoing_action.constant_speed:
-                    action=CONSTANT_SPEED
-                else:
-                    action=LANE_CHANGE
-                # take decisions
-                if ongoing_action.reset_run:
-                    if self.is_new_episode(data):
-                        print("New Episode ",self.is_new_episode(data))
-                        if self.sb_lock.locked():
-                            self.sb_lock.release()
-                elif self.is_terminal_option(data,action):
-                    print("Option ",self.is_terminal_option(data,action))
-                    if self.sb_lock.locked():
-                        self.sb_lock.release()
-                else:
-                    self.action_lock.acquire()
-                    self.cur_action.id = data.id
-                    self.pub_rl.publish(self.cur_action)
-                    print("Republishing same decision ", data.id)
-                    print("Published:")
-                    print(self.cur_action)
-                    self.action_lock.release()
         # set current state
         self.cur_state=data
         self.cur_id=data.id
+        # check if current option is terminated or collision
+        if self.is_terminal_option(data) or data.reward.collision: 
+            print("Option ",self.is_terminal_option(data))
+            print("Collision ",data.reward.collision)
+            if self.sb_lock.locked():
+                self.sb_lock.release()
+
+        if self.is_new_episode(data) and \
+                self.cur_action is not None and \
+                    self.cur_action.reset_run is True:
+            print("New Episode ",self.is_new_episode(data))
+            if self.sb_lock.locked():
+                self.sb_lock.release()
         self.lock.release()
 
     def initialize(self):
@@ -293,9 +248,7 @@ class RLManager:
         if is_reset:
             rl_command.reset_run=True
         rl_command.id = id
-        self.action_lock.acquire()
         self.cur_action=rl_command
-        self.action_lock.release()
         return rl_command
 
     def convert_to_local(self, veh_state, x,y):
@@ -309,45 +262,21 @@ class RLManager:
         H[1,1] = np.cos(-veh_state.vehicle_location.theta)
         res = np.matmul(H, np.array([x,y,1]).reshape(3,1))
         return res[0,0], res[1,0]
-    
-    def publishFunc(self):
-        rate = rospy.Rate(10)
-        while not rospy.is_shutdown():
-            self.lock.acquire()
-            if self.cur_action:
-                self.pub_rl.publish(self.cur_action)
-            self.lock.release()
-            rate.sleep()
 
 
 def sb_model_train(rl_manager):
     env=CustomEnv(rl_manager)
-    print("Checking environment")
-    check_env(env)
-    # while(True):
-    #     print("Here")
-    #     state,reward,done,_=env.step(LANE_CHANGE)
-    #     print("state", state)
-    #     print("reward", reward)
-    #     print("done",done)
-    #     if done:
-    #         env.reset()
-    # env=make_vec_env(lambda:env, n_envs=1)
-    # model = DQN(MlpPolicy, env, verbose=1, tensorboard_log='./Logs/')
-    # model.learn(total_timesteps=35000)
+    env=make_vec_env(lambda:env, n_envs=1)
+    model = DQN(MlpPolicy, env, verbose=1, tensorboard_log='./Logs/')
+    model.learn(total_timesteps=35000)
     return
 
 if __name__ == '__main__':
     try:
-        print("Start of main")
         rl_manager = RLManager()
-        env=CustomEnv(rl_manager)
         rl_manager.initialize()
-        # pub_thread = threading.Thread(target=rl_manager.publishFunc)
-        # pub_thread.start()
         sb_model_thread = threading.Thread(target=sb_model_train, args=(rl_manager,))
         sb_model_thread.start()
-        print("Started thread")
         rl_manager.spin()
 
     except rospy.ROSInterruptException:
