@@ -30,6 +30,7 @@ class DQNManager:
         self.policy_net = None
         self.target_net = None
         self.optimizer = None
+        self.steps_done = 0 #ToDo: Save and Load this Value
 
     def initialize(self):
         if self.input_height is not 0:
@@ -44,13 +45,13 @@ class DQNManager:
         self.optimizer = optim.RMSprop(self.policy_net.parameters())
         self.memory = replay_memory.ReplayMemory(self.capacity)
 
-    def selectAction(self, state, steps_done):
+    def selectAction(self, state):
 
         # greedy eps algorithm
         sample = random.random()
         eps_threshold = self.eps_end + (self.eps_start - self.eps_end) * \
-                        math.exp(-1. * steps_done / self.eps_decay)
-        steps_done += 1
+                        math.exp(-1. * self.steps_done / self.eps_decay)
+        self.steps_done += 1
         if sample > eps_threshold:
             with torch.no_grad():
                 # t.max(1) will return largest column value of each row.
@@ -109,7 +110,7 @@ class DQNManager:
 
     def exitCondition(self, state_info):
         # ToDo: Exit Condition
-        return False
+        return state_info.reward.collision
 
     def rewardCalculation(self, state_info):
         # ToDo: Reward Function

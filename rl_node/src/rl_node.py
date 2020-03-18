@@ -57,6 +57,7 @@ from grasp_path_planner.msg import RLCommand
 
 import dqn_manager
 
+QUEUE_SIZE = 1
 NODE_NAME = 'rl_node'
 RL_TOPIC_NAME = 'rl_decision'
 ENVIRONMENT_TOPIC_NAME = 'environment_state'
@@ -95,24 +96,31 @@ class RLManager:
 		if data.id == self.previous_id:
 			self.lock.release()
 			return
-
+		iter_start_time = rospy.Time.now()
+		print("RL Sim Msg Delay", (rospy.Time.now() - data.sent_time).nsecs * 1e-6)
 		env_state = self.make_state_vector(data)
 		env_state = np.array(env_state)
 		# computation with rl_agent
-		rl_decision = self.make_decision(env_state, data.id)	
+		rl_decision = self.make_decision(env_state, data.id)
+		rl_decision.reset_run = self.manager.exitCondition(data)
+		print("Decision Duration", (rospy.Time.now() - iter_start_time).nsecs * 1e-6)
+
 		# create a record
 		if self.previous_action is not None and self.previous_state is not None:
+			iter_start_time = rospy.Time.now()
 			reward = self.manager.rewardCalculation(data)
 			reward = torch.tensor([reward]).to(settings["DEVICE"])
 			env_tensor = torch.tensor(env_state).float().view(1,-1).to(settings["DEVICE"])
 			self.manager.memory.push(self.previous_state,self.previous_action,env_tensor,reward)
 			self.manager.optimize_model()
+			print("Model Optimization Duration", (rospy.Time.now() - iter_start_time).nsecs * 1e-6)
 		self.previous_id = data.id
 		self.previous_state = torch.tensor(env_state).float().view(1,-1).to(settings["DEVICE"])
 		# publish message
+		rl_decision.sent_time = rospy.Time.now()
 		self.pub_rl.publish(rl_decision)
 		self.rl_decision = rl_decision
-		print("Published:",rl_decision.id)
+		#print("Published:",rl_decision.id)
 		self.lock.release()
 
 	def initialize(self):
@@ -122,7 +130,7 @@ class RLManager:
 		self.env_sub = rospy.Subscriber(ENVIRONMENT_TOPIC_NAME, 
 							EnvironmentState, self.simCallback)
 		# initialize pulbisher
-		self.pub_rl = rospy.Publisher(RL_TOPIC_NAME, RLCommand, queue_size = 10)
+		self.pub_rl = rospy.Publisher(RL_TOPIC_NAME, RLCommand, queue_size = QUEUE_SIZE)
 		# initlialize rl class
 		
 	def publishFunc(self):
@@ -130,6 +138,7 @@ class RLManager:
 		while not rospy.is_shutdown():
 			self.lock.acquire()
 			if self.rl_decision:
+				self.rl_decision.sent_time = rospy.Time.now()
 				self.pub_rl.publish(self.rl_decision)
 			self.lock.release()
 			rate.sleep()
@@ -183,18 +192,19 @@ class RLManager:
 		# action_vals = self.offline_network(env_state)
 		# max_val, arg_val = torch.max(action_vals,1)
 		state_tensor = torch.Tensor(env_state).to(settings["DEVICE"])
-		arg_val = self.manager.target_net(state_tensor).view(-1,4).max(1)[1].view(1,1).item()
+		arg_val = self.manager.selectAction(state_tensor).item()
+		#arg_val = self.manager.target_net(state_tensor).view(-1,4).max(1)[1].view(1,1).item()
 		self.previous_action = torch.tensor([[arg_val]]).long().to(settings["DEVICE"])
 		# arg_val = 1
 		rl_command = RLCommand()
 		# arg_val = 0
-		if arg_val is 0:
+		if arg_val == 0:
 			rl_command.accelerate = 1
-		elif arg_val is 1:
+		elif arg_val == 1:
 			rl_command.decelerate = 1
-		elif arg_val is 2:
+		elif arg_val == 2:
 			rl_command.change_lane = 1
-		elif arg_val is 3:
+		elif arg_val == 3:
 			rl_command.constant_speed = 1
 		rl_command.id = id
 		return rl_command
@@ -212,6 +222,7 @@ if __name__ == '__main__':
 		rl_manager = RLManager()
 		rl_manager.initialize()
 		pub_thread = threading.Thread(target=rl_manager.publishFunc)
+		pub_thread.start()
 		rl_manager.spin()
 	except rospy.ROSInterruptException:
 		pass
