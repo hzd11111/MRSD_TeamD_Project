@@ -298,7 +298,7 @@ def sb_model_train(rl_manager):
     env=CustomEnv(rl_manager)
     env=make_vec_env(lambda:env, n_envs=1)
     model = DQN(MlpPolicy, env, verbose=1, tensorboard_log='./Logs/')
-    model.learn(total_timesteps=10)
+    model.learn(total_timesteps=50)
     model.save("DQN_Model_SimpleSim")
     return
 
