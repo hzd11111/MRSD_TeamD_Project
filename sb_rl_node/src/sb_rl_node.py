@@ -106,6 +106,9 @@ class CustomEnv(gym.Env):
         reward=rl_manager.reward
         cur_state=rl_manager.cur_state
         done=cur_state.reward.collision
+        # if lane change was the action then reset the sim as it was a success
+        if action==LANE_CHANGE:
+            done=True
         # rl_manager.lock.release()
         # return observation, reward, done, info
         return rl_manager.make_state_vector(cur_state), reward, done, {}
@@ -297,7 +300,7 @@ def sb_model_train(rl_manager):
     env=CustomEnv(rl_manager)
     env=make_vec_env(lambda:env, n_envs=1)
     model = DQN(MlpPolicy, env, verbose=1, tensorboard_log='./Logs/')
-    model.learn(total_timesteps=35000)
+    model.learn(total_timesteps=30)
     return
 
 if __name__ == '__main__':
