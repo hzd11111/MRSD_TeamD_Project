@@ -251,7 +251,8 @@ class RLManager:
 
     def make_rl_message(self, action, is_reset=False):
         self.reward=0
-        action=1
+        # Uncomment for debugging
+        # action=1
         rl_command=RLCommand()
         if action is LANE_CHANGE:
             rl_command.change_lane=1
