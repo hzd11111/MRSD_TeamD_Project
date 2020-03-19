@@ -43,11 +43,17 @@ class DQN_Linear(nn.Module):
         super().__init__()
         # create a neural network
         self.network = nn.Sequential(
-            nn.Linear(input_size, 30),
+            nn.Linear(input_size, 64),
             nn.ReLU(),
-            nn.Linear(30, 15),
-            nn.ReLU(),
-            nn.Linear(15, output_size),
+            #nn.Linear(64, 32),
+            #nn.ReLU(),
+            #nn.Linear(32, 16),
+            #nn.ReLU(),
+            #nn.Linear(16, 16),
+            #nn.ReLU(),
+            #nn.Linear(16, 8),
+            #nn.ReLU(),
+            nn.Linear(64, output_size),
             nn.Sigmoid()
         )
         self.loss_fn = F.mse_loss

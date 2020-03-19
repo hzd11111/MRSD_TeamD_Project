@@ -254,9 +254,14 @@ class TrajGenerator:
 		elif rl_data.rl_decision == RLDecision.CONSTANT_SPEED:
 			return self.constSpeedTraj(rl_data, sim_data)
 		elif rl_data.rl_decision == RLDecision.ACCELERATE:
-			return self.constSpeedTraj(rl_data, sim_data)
+			new_path_plan = self.constSpeedTraj(rl_data, sim_data)
+			new_path_plan.tracking_speed += self.traj_parameters["accelerate_amt"]
+			return new_path_plan
 		elif rl_data.rl_decision == RLDecision.DECELERATE:
-			return self.constSpeedTraj(rl_data, sim_data)
+			new_path_plan = self.constSpeedTraj(rl_data, sim_data)
+			new_path_plan.tracking_speed -= self.traj_parameters["decelerate_amt"]
+			new_path_plan.tracking_speed = max(0, new_path_plan.tracking_speed)
+			return new_path_plan
 		elif rl_data.rl_decision == RLDecision.SWITCH_LANE:
 			return self.laneChangeTraj(rl_data, sim_data)
 		else:
@@ -455,6 +460,7 @@ class PathPlannerManager:
 	def pathPlanCallback(self):
 		
 		if self.newest_rl_data and self.newest_sim_data:
+
 			iter_start_time = rospy.Time.now();
 			# generate the path
 			traj = self.traj_gen.trajPlan(self.newest_rl_data, self.newest_sim_data)

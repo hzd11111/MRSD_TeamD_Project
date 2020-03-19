@@ -157,6 +157,7 @@ class SimpleSimulator:
 
     def pathCallback(self, msg):
         self.lock.acquire()
+
         print("New path received with id:", msg.id)
         if not msg.id == self.id_waiting:
             self.lock.release()
@@ -492,7 +493,7 @@ class SimpleSimulator:
         self.updateMarkers()
         self.first_run = 0
 
-    def resetScene(self, num_vehicles=[10, 0], num_lanes=2, lane_width_m=[3, 3], lane_length_m=500, \
+    def resetScene(self, num_vehicles=[20, 0], num_lanes=2, lane_width_m=[3, 3], lane_length_m=500, \
                    max_vehicle_gaps_vehicle_len=5, min_vehicle_gaps_vehicle_len=0.5, \
                    vehicle_width=2, vehicle_length=4, starting_lane=-1, initial_speed=8):
         self.timestamp = 0
@@ -529,12 +530,12 @@ class SimpleSimulator:
 
         # current vehicle
         self.controlling_vehicle = Vehicle(vehicle_length, vehicle_width, self.cur_lane)
-        #cur_vehicle_x = random.uniform(vehicle_length, max_vehicle_head_pos)
-        cur_vehicle_x = 10
+        cur_vehicle_x = random.uniform(vehicle_length, max_vehicle_head_pos)
+        #cur_vehicle_x = 10
         cur_vehicle_y = self.lanes[self.cur_lane].starting_y
         cur_vehicle_theta = self.lanes[self.cur_lane].starting_theta
         self.controlling_vehicle.place(cur_vehicle_x, cur_vehicle_y, cur_vehicle_theta)
-        self.controlling_vehicle.setSpeed(initial_speed)
+        self.controlling_vehicle.setSpeed(initial_speed + random.uniform(-0.5 * initial_speed, 0.5 * initial_speed))
         self.renderScene()
 
 
