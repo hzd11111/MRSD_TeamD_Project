@@ -144,19 +144,13 @@ class RLManager:
         self.reward=0
         self.k1=1
         self.cur_action=None
-        self.is_cur_finished=False
         self.lane_term_th=1e-2
 
     def is_terminal_option(self, data):
-        if(self.cur_action.constant_speed):
-            return True
-        if(self.cur_action.change_lane):
-            lateral_dist=np.abs(data.cur_vehicle_state.vehicle_location.y- \
-                                    data.next_lane.lane[0].pose.y)
-            print("Lateral Dist",lateral_dist)
-            if lateral_dist<self.lane_term_th:
-                return True
-            return False
+        if self.cur_action.change_lane:
+            return data.reward.time_elapsed>1
+        else:
+            return data.reward.new_run
 
     def calculate_lane_change_reward(self, data):
         # TODO: Generalise for curved roads
@@ -174,16 +168,22 @@ class RLManager:
         self.reward+=r_lane_change
 
     def is_new_episode(self,data):
-        x=data.cur_vehicle_state.vehicle_location.x
-        y=data.cur_vehicle_state.vehicle_location.y
-        cur=np.array([x,y])
-        start=np.array([10.08,4])
-        if np.allclose(cur,start):
-            return True
+        return data.reward.new_run
+        # x=data.cur_vehicle_state.vehicle_location.x
+        # y=data.cur_vehicle_state.vehicle_location.y
+        # cur=np.array([x,y])
+        # start=np.array([10.08,4])
+        # if np.allclose(cur,start):
+        #     return True
+    
+    def is_terminate_episode(self, data):
+        print("Time elapsed is", data.reward.time_elapsed)
+        return data.reward.collision or data.reward.time_elapsed>10
 
     def simCallback(self, data):
         # Pause until an action is given to execute action to execute
         if not self.action_event.is_set():
+            print("Paused")
             return
         # entering critical section 
         # self.lock.acquire()
@@ -200,22 +200,20 @@ class RLManager:
         # set current state
         self.cur_state=data
         self.cur_id=data.id
-        # check if current option is terminated or collision
-        if self.is_terminal_option(data) or data.reward.collision: 
-            print("Option ",self.is_terminal_option(data))
-            print("Collision ",data.reward.collision)
-            self.is_cur_finished=True
-            if not self.sb_event.is_set():
-                self.sb_event.set()
-                self.action_event.clear()
-
-        elif self.is_new_episode(data) and \
+        if self.is_new_episode(data) and \
                 self.cur_action is not None and \
                     self.cur_action.reset_run is True:
             print("New Episode ",self.is_new_episode(data))
             if not self.sb_event.is_set():
                 self.sb_event.set()
                 self.action_event.clear()     
+        # check if current option is terminated or collision
+        elif self.is_terminal_option(data) or self.is_terminate_episode(data): 
+            print("Option ",self.is_terminal_option(data))
+            print("Collision ",data.reward.collision)
+            if not self.sb_event.is_set():
+                self.sb_event.set()
+                self.action_event.clear()
         else:
             self.cur_action.id=self.cur_id
             self.pub_rl.publish(self.cur_action)
@@ -269,7 +267,7 @@ class RLManager:
     def make_rl_message(self, action, is_reset=False):
         self.reward=0
         # Uncomment for debugging
-        # action=1
+        # action=0
         rl_command=RLCommand()
         if action == LANE_CHANGE:
             rl_command.change_lane=1
