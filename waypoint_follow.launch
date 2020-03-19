@@ -3,4 +3,5 @@
 	<!-- <node name = "sb_rl_node" pkg="rl_node" type="rl_node.py"/> -->
 	<!--node name = "demo_node" pkg="carla_bridge" type="demo_environment_state_extraction.py" output="screen"-->
 	<node name = "demo_node" pkg="simple_simulator" type="simple_sim.py" output="screen"/>
+    <node pkg="rviz" type="rviz" name="rviz"/>
 </launch>

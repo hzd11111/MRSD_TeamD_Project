@@ -57,6 +57,7 @@ from grasp_path_planner.msg import RewardInfo
 from grasp_path_planner.msg import EnvironmentState
 from grasp_path_planner.msg import RLCommand
 import gym
+import time
 from gym import spaces
 # sys.path.remove('/opt/ros/kinetic/lib/python2.7/dist-packages')
 
@@ -95,6 +96,8 @@ class CustomEnv(gym.Env):
 
     def step(self, action):
         # reset sb_event flag if previously set in previous action
+        print("SENDING ACTION",action)
+        time.sleep(1)
         self.rl_manager.sb_event.clear()
         rl_manager.make_rl_message(action, False)
         self.rl_manager.sb_event.wait()
@@ -109,6 +112,8 @@ class CustomEnv(gym.Env):
 
     def reset(self):
         # reset sb_event flag if previously set in previous action
+        print("SENDING RESET")
+        time.sleep(1)
         self.rl_manager.sb_event.clear()
         rl_manager.make_rl_message(CONSTANT_SPEED, True)
         self.rl_manager.sb_event.wait()
@@ -137,9 +142,18 @@ class RLManager:
         self.k1=1
         self.cur_action=None
         self.is_cur_finished=False
+        self.lane_term_th=1e-2
 
     def is_terminal_option(self, data):
-        return False
+        if(self.cur_action.constant_speed):
+            return True
+        if(self.cur_action.change_lane):
+            lateral_dist=np.abs(data.cur_vehicle_state.vehicle_location.y- \
+                                    data.next_lane.lane[0].pose.y)
+            print("Lateral Dist",lateral_dist)
+            if lateral_dist<self.lane_term_th:
+                return True
+            return False
 
     def calculate_lane_change_reward(self, data):
         # TODO: Generalise for curved roads
@@ -254,7 +268,7 @@ class RLManager:
         # Uncomment for debugging
         # action=1
         rl_command=RLCommand()
-        if action is LANE_CHANGE:
+        if action == LANE_CHANGE:
             rl_command.change_lane=1
         else:
             rl_command.constant_speed=1
