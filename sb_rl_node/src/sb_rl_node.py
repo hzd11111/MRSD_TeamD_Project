@@ -147,7 +147,7 @@ class RLManager:
         self.lane_term_th=1e-2
 
     def is_terminal_option(self, data):
-        if self.cur_action.change_lane:
+        if self.cur_action.constant_speed:
             return data.reward.time_elapsed>1
         else:
             return data.reward.new_run
@@ -209,7 +209,7 @@ class RLManager:
                 self.action_event.clear()     
         # check if current option is terminated or collision
         elif self.is_terminal_option(data) or self.is_terminate_episode(data): 
-            print("Option ",self.is_terminal_option(data))
+            print("Option ",self.is_terminal_option(data), data.reward.new_run)
             print("Collision ",data.reward.collision)
             if not self.sb_event.is_set():
                 self.sb_event.set()
@@ -267,7 +267,7 @@ class RLManager:
     def make_rl_message(self, action, is_reset=False):
         self.reward=0
         # Uncomment for debugging
-        # action=0
+        # action=1
         rl_command=RLCommand()
         if action == LANE_CHANGE:
             rl_command.change_lane=1
