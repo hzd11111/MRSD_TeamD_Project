@@ -48,9 +48,6 @@ os.environ['TF_CPP_MIN_LOG_LEVEL'] = '2'
 import rospy
 import copy
 import threading
-import torch
-import torch.nn as nn
-import torch.nn.functional as F
 import numpy as np
 from std_msgs.msg import String
 from grasp_path_planner.msg import LanePoint
@@ -61,7 +58,7 @@ from grasp_path_planner.msg import EnvironmentState
 from grasp_path_planner.msg import RLCommand
 import gym
 from gym import spaces
-sys.path.remove('/opt/ros/kinetic/lib/python2.7/dist-packages')
+# sys.path.remove('/opt/ros/kinetic/lib/python2.7/dist-packages')
 
 from stable_baselines import DQN,PPO2
 from stable_baselines.common.vec_env import DummyVecEnv
@@ -81,6 +78,7 @@ N_DISCRETE_ACTIONS = 2
 LANE_CHANGE = 1
 CONSTANT_SPEED = 0
 
+# make custom environment class to only read values. It should not directly change values in the other thread.
 class CustomEnv(gym.Env):
     """Custom Environment that follows gym interface"""
 
@@ -96,33 +94,27 @@ class CustomEnv(gym.Env):
         self.rl_manager = rl_manager
 
     def step(self, action):
-        # reset reward to zero
-        self.rl_manager.reward=0
-        while rl_manager.cur_state is None:
-            print("Waiting")
-        rl_command = rl_manager.make_rl_message(action, rl_manager.cur_state.id, False)
-        # acquire lock
-        rl_manager.sb_lock.acquire()
-        rl_manager.pub_rl.publish(rl_command)
-        # wait till option finishes
-        rl_manager.sb_lock.acquire()
+        # reset sb_event flag if previously set in previous action
+        self.rl_manager.sb_event.clear()
+        rl_manager.make_rl_message(action, False)
+        self.rl_manager.sb_event.wait()
+        # access values from the other thread
+        # rl_manager.lock.acquire()
         reward=rl_manager.reward
         cur_state=rl_manager.cur_state
-        # done=rl_manager.is_terminate_episode
-        rl_manager.lock.acquire()
         done=cur_state.reward.collision
-        rl_manager.lock.release()
+        # rl_manager.lock.release()
         # return observation, reward, done, info
-        return rl_manager.make_state_vector(cur_state), reward, done, None
+        return rl_manager.make_state_vector(cur_state), reward, done, {}
 
     def reset(self):
-        id=None
-        while rl_manager.cur_state is None:
-            print("Waiting")
-        id=rl_manager.cur_state.id
-        rl_manager.sb_lock.acquire()
-        rl_manager.make_rl_message(id,CONSTANT_SPEED,True)
-        rl_manager.sb_lock.acquire()
+        # reset sb_event flag if previously set in previous action
+        self.rl_manager.sb_event.clear()
+        rl_manager.make_rl_message(CONSTANT_SPEED, True)
+        self.rl_manager.sb_event.wait()
+        # rl_manager.lock.acquire()
+        cur_state=rl_manager.cur_state
+        # rl_manager.lock.release()
         return rl_manager.make_state_vector(rl_manager.cur_state)
         # return observation  # reward, done, info can't be included
 
@@ -135,14 +127,16 @@ class CustomEnv(gym.Env):
 
 class RLManager:
     def __init__(self):
-        self.sb_lock=threading.Lock()
+        self.sb_event=threading.Event()
+        self.action_event=threading.Event()
         self.lock=threading.Lock()
-        self.cur_id=None
+        self.cur_id=0
         self.cur_state=None
         self.terminal_option_data=None
         self.reward=0
         self.k1=1
         self.cur_action=None
+        self.is_cur_finished=False
 
     def is_terminal_option(self, data):
         return False
@@ -171,12 +165,18 @@ class RLManager:
             return True
 
     def simCallback(self, data):
-        self.lock.acquire()
+        # Pause until an action is given to execute action to execute
+        if not self.action_event.is_set():
+            return
+        # entering critical section 
+        # self.lock.acquire()
+        print("Entered SimCallback")
         # Check if new message
         if data.id==self.cur_id:
-            if(self.sb_lock.locked()):
-                self.sb_lock.release()
-            self.lock.release()
+            print("Got same message ", self.cur_action)
+            if self.cur_action is not None:
+                self.pub_rl.publish(self.cur_action)
+            # self.lock.release()
             return
         # update reward
         self.update_reward(data)
@@ -187,19 +187,29 @@ class RLManager:
         if self.is_terminal_option(data) or data.reward.collision: 
             print("Option ",self.is_terminal_option(data))
             print("Collision ",data.reward.collision)
-            if self.sb_lock.locked():
-                self.sb_lock.release()
+            self.is_cur_finished=True
+            if not self.sb_event.is_set():
+                self.sb_event.set()
+                self.action_event.clear()
 
-        if self.is_new_episode(data) and \
+        elif self.is_new_episode(data) and \
                 self.cur_action is not None and \
                     self.cur_action.reset_run is True:
             print("New Episode ",self.is_new_episode(data))
-            if self.sb_lock.locked():
-                self.sb_lock.release()
-        self.lock.release()
+            if not self.sb_event.is_set():
+                self.sb_event.set()
+                self.action_event.clear()     
+        else:
+            self.cur_action.id=self.cur_id
+            self.pub_rl.publish(self.cur_action)
+            print("Republishing",self.cur_action)
+        # self.lock.release()
+        # exiting critcal section
 
     def initialize(self):
         #initialize node
+        self.sb_event.clear()
+        self.action_event.clear()
         rospy.init_node(NODE_NAME, anonymous=True)
         self.env_sub = rospy.Subscriber(ENVIRONMENT_TOPIC_NAME, 
                             EnvironmentState, self.simCallback)
@@ -239,7 +249,9 @@ class RLManager:
             i+=1
         return env_state
 
-    def make_rl_message(self, action, id, is_reset=False):
+    def make_rl_message(self, action, is_reset=False):
+        self.reward=0
+        action=1
         rl_command=RLCommand()
         if action is LANE_CHANGE:
             rl_command.change_lane=1
@@ -247,8 +259,10 @@ class RLManager:
             rl_command.constant_speed=1
         if is_reset:
             rl_command.reset_run=True
-        rl_command.id = id
+        rl_command.id = self.cur_id
         self.cur_action=rl_command
+        self.pub_rl.publish(self.cur_action)
+        self.action_event.set()
         return rl_command
 
     def convert_to_local(self, veh_state, x,y):
