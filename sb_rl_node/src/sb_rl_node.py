@@ -59,7 +59,7 @@ from grasp_path_planner.msg import RLCommand
 import gym
 import time
 from gym import spaces
-# sys.path.remove('/opt/ros/kinetic/lib/python2.7/dist-packages')
+sys.path.remove('/opt/ros/kinetic/lib/python2.7/dist-packages')
 
 from stable_baselines import DQN,PPO2
 from stable_baselines.common.vec_env import DummyVecEnv
@@ -75,9 +75,11 @@ from stable_baselines.common.cmd_util import make_vec_env
 NODE_NAME = 'sb_rl_node'
 RL_TOPIC_NAME = 'rl_decision'
 ENVIRONMENT_TOPIC_NAME = 'environment_state'
-N_DISCRETE_ACTIONS = 2
+N_DISCRETE_ACTIONS = 4
 LANE_CHANGE = 1
 CONSTANT_SPEED = 0
+ACCELERATE = 2
+DECELERATE = 3
 
 # make custom environment class to only read values. It should not directly change values in the other thread.
 class CustomEnv(gym.Env):
@@ -120,6 +122,7 @@ class CustomEnv(gym.Env):
         rl_manager.make_rl_message(None, True)
         self.rl_manager.sb_event.wait()
         print("Returned to RESET")
+        self.rl_manager.previous_reward = None
         return rl_manager.make_state_vector(rl_manager.cur_state)
         # return observation  # reward, done, info can't be included
 
@@ -143,10 +146,17 @@ class RLManager:
         self.k1=1
         self.cur_action=None
         self.lane_term_th=1e-2
+        self.previous_reward=None
 
     def is_terminal_option(self, data):
-        if self.cur_action.constant_speed:
-            return data.reward.time_elapsed>1
+        if(self.previous_reward == None):
+            print("Option Time elapsed is", data.reward.time_elapsed)
+        else:
+            print("Option Time elapsed is", data.reward.time_elapsed - self.previous_reward.time_elapsed)
+        if self.cur_action.constant_speed or self.cur_action.accelerate or self.cur_action.decelerate:
+            if(self.previous_reward == None):
+                return data.reward.time_elapsed>1
+            return (data.reward.time_elapsed - self.previous_reward.time_elapsed)>1
         else:
             return data.reward.new_run
 
@@ -167,12 +177,14 @@ class RLManager:
                 self.reward=1
         else:
             self.reward=0
+            
+        self.previous_reward = data.reward
 
     def is_new_episode(self,data):
         return data.reward.new_run or data.reward.time_elapsed>20
     
     def is_terminate_episode(self, data):
-        print("Time elapsed is", data.reward.time_elapsed)
+        print("Episode Time elapsed is", data.reward.time_elapsed)
         return data.reward.collision or data.reward.time_elapsed>10
 
     def simCallback(self, data):
@@ -182,10 +194,10 @@ class RLManager:
             return
         # entering critical section 
         # self.lock.acquire()
-        print("Entered SimCallback")
+        # print("Entered SimCallback")
         # Check if new message
         if data.id==self.cur_id:
-            print("Got same message ", self.cur_action)
+            # print("Got same message ", self.cur_action)
             if self.cur_action is not None:
                 self.pub_rl.publish(self.cur_action)
             # self.lock.release()
@@ -200,14 +212,14 @@ class RLManager:
         if self.is_new_episode(data) and \
                 self.cur_action is not None and \
                     self.cur_action.reset_run is True:
-            print("New Episode ",self.is_new_episode(data))
+            # print("New Episode ",self.is_new_episode(data))
             if not self.sb_event.is_set():
                 self.sb_event.set()
                 self.action_event.clear()     
         # check if current option is terminated or collision
         elif self.is_terminal_option(data) or self.is_terminate_episode(data): 
-            print("Option ",self.is_terminal_option(data), data.reward.new_run)
-            print("Collision ",data.reward.collision)
+            # print("Option ",self.is_terminal_option(data), data.reward.new_run)
+            # print("Collision ",data.reward.collision)
             self.update_reward(data)
             if not self.sb_event.is_set():
                 self.sb_event.set()
@@ -215,7 +227,7 @@ class RLManager:
         else:
             self.cur_action.id=self.cur_id
             self.pub_rl.publish(self.cur_action)
-            print("Republishing",self.cur_action)
+            # print("Republishing",self.cur_action)
         # self.lock.release()
         # exiting critcal section
 
@@ -271,6 +283,11 @@ class RLManager:
             rl_command.change_lane=1
         elif action == CONSTANT_SPEED:
             rl_command.constant_speed=1
+        elif action == ACCELERATE:
+            rl_command.accelerate=1
+        elif action == DECELERATE:
+            rl_command.decelerate=1
+            
         if is_reset:
             rl_command.reset_run=True
         rl_command.id = self.cur_id
