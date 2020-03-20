@@ -97,32 +97,29 @@ class CustomEnv(gym.Env):
     def step(self, action):
         # reset sb_event flag if previously set in previous action
         print("SENDING ACTION",action)
-        time.sleep(1)
         self.rl_manager.sb_event.clear()
         rl_manager.make_rl_message(action, False)
         self.rl_manager.sb_event.wait()
         # access values from the other thread
         # rl_manager.lock.acquire()
         reward=rl_manager.reward
-        cur_state=rl_manager.cur_state
+        cur_state=rl_manager.previous_state
         done=cur_state.reward.collision
         # if lane change was the action then reset the sim as it was a success
         if action==LANE_CHANGE:
             done=True
         # rl_manager.lock.release()
         # return observation, reward, done, info
+        print(reward,done)
         return rl_manager.make_state_vector(cur_state), reward, done, {}
 
     def reset(self):
         # reset sb_event flag if previously set in previous action
         print("SENDING RESET")
-        time.sleep(1)
         self.rl_manager.sb_event.clear()
-        rl_manager.make_rl_message(CONSTANT_SPEED, True)
+        rl_manager.make_rl_message(None, True)
         self.rl_manager.sb_event.wait()
-        # rl_manager.lock.acquire()
-        cur_state=rl_manager.cur_state
-        # rl_manager.lock.release()
+        print("Returned to RESET")
         return rl_manager.make_state_vector(rl_manager.cur_state)
         # return observation  # reward, done, info can't be included
 
@@ -140,6 +137,7 @@ class RLManager:
         self.lock=threading.Lock()
         self.cur_id=0
         self.cur_state=None
+        self.previous_state=None
         self.terminal_option_data=None
         self.reward=0
         self.k1=1
@@ -162,19 +160,16 @@ class RLManager:
         return 0
 
     def update_reward(self, data):
-        r_ego = self.calculate_ego_reward(data)
-        r_lane_change = self.calculate_lane_change_reward(data)
-        self.reward+=r_ego
-        self.reward+=r_lane_change
+        if data.reward.collision:
+            self.reward=-1
+        elif self.cur_action.change_lane:
+            if data.reward.new_run and self.previous_state is not None:
+                self.reward=1
+        else:
+            self.reward=0
 
     def is_new_episode(self,data):
-        return data.reward.new_run
-        # x=data.cur_vehicle_state.vehicle_location.x
-        # y=data.cur_vehicle_state.vehicle_location.y
-        # cur=np.array([x,y])
-        # start=np.array([10.08,4])
-        # if np.allclose(cur,start):
-        #     return True
+        return data.reward.new_run or data.reward.time_elapsed>20
     
     def is_terminate_episode(self, data):
         print("Time elapsed is", data.reward.time_elapsed)
@@ -196,10 +191,12 @@ class RLManager:
             # self.lock.release()
             return
         # update reward
-        self.update_reward(data)
+        # self.update_reward(data)
         # set current state
+        self.previous_state=self.cur_state
         self.cur_state=data
         self.cur_id=data.id
+        # reset conditions check
         if self.is_new_episode(data) and \
                 self.cur_action is not None and \
                     self.cur_action.reset_run is True:
@@ -211,6 +208,7 @@ class RLManager:
         elif self.is_terminal_option(data) or self.is_terminate_episode(data): 
             print("Option ",self.is_terminal_option(data), data.reward.new_run)
             print("Collision ",data.reward.collision)
+            self.update_reward(data)
             if not self.sb_event.is_set():
                 self.sb_event.set()
                 self.action_event.clear()
@@ -255,9 +253,9 @@ class RLManager:
                 break
             i+=1
         dummy = VehicleState()
-        dummy.vehicle_location.x = 10000
-        dummy.vehicle_location.y = 10000
-        dummy.vehicle_location.theta = 10000
+        dummy.vehicle_location.x = 100
+        dummy.vehicle_location.y = 100
+        dummy.vehicle_location.theta = 0
         dummy.vehicle_speed = 0
         while i<5:
             self.append_vehicle_state(env_state, dummy)
@@ -271,7 +269,7 @@ class RLManager:
         rl_command=RLCommand()
         if action == LANE_CHANGE:
             rl_command.change_lane=1
-        else:
+        elif action == CONSTANT_SPEED:
             rl_command.constant_speed=1
         if is_reset:
             rl_command.reset_run=True
@@ -298,7 +296,7 @@ def sb_model_train(rl_manager):
     env=CustomEnv(rl_manager)
     env=make_vec_env(lambda:env, n_envs=1)
     model = DQN(MlpPolicy, env, verbose=1, tensorboard_log='./Logs/')
-    model.learn(total_timesteps=50)
+    model.learn(total_timesteps=500)
     model.save("DQN_Model_SimpleSim")
     return
 
