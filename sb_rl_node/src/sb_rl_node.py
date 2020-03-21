@@ -147,6 +147,8 @@ class RLManager:
         self.cur_action=None
         self.lane_term_th=1e-2
         self.previous_reward=None
+        self.episode_duration=10
+        self.option_duration=0.01
 
     def is_terminal_option(self, data):
         if(self.previous_reward == None):
@@ -181,11 +183,11 @@ class RLManager:
         self.previous_reward = data.reward
 
     def is_new_episode(self,data):
-        return data.reward.new_run or data.reward.time_elapsed>20
+        return data.reward.new_run or data.reward.time_elapsed>self.episode_duration
     
     def is_terminate_episode(self, data):
         print("Episode Time elapsed is", data.reward.time_elapsed)
-        return data.reward.collision or data.reward.time_elapsed>10
+        return data.reward.collision or data.reward.time_elapsed>self.episode_duration
 
     def simCallback(self, data):
         # Pause until an action is given to execute action to execute
