@@ -55,6 +55,12 @@ def main():
         type=int,
         help='max speed of vehicles (default: 30)')
     argparser.add_argument(
+        '-d', '--min-vehicles-distance',
+        metavar='D',
+        default=2.0,
+        type=float,
+        help='min distance between vehicles (default: 2.0)')
+    argparser.add_argument(
         '-w', '--number-of-walkers',
         metavar='W',
         default=50,
@@ -98,7 +104,7 @@ def main():
     try:
 
         traffic_manager = client.get_trafficmanager(args.tm_port)
-        traffic_manager.set_global_distance_to_leading_vehicle(2.0)
+        traffic_manager.set_global_distance_to_leading_vehicle(args.min_vehicles_distance)
         world = client.get_world()
 
         synchronous_master = False
