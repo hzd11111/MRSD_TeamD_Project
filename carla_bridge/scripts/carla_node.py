@@ -76,6 +76,7 @@ class CarlaManager:
         self.lane_cur = None
         self.lane_left = None
         self.lane_right = None
+        self.collision_sensor = None
   
     def getVehicleState(self, actor):
 
@@ -112,7 +113,7 @@ class CarlaManager:
   
     def pathCallback(self, data):
         self.lock.acquire()
-        
+        print("Collision:", self.collision_marker)
         ### Check Sync ###
         if not data.id == self.id_waiting:
             self.lock.release()
@@ -136,7 +137,6 @@ class CarlaManager:
             self.lock.acquire()
             self.first_run = 0
 
-            print("Tracking Pose:", tracking_pose)
             # time.sleep(1)
             ### Apply Control ###
             self.ego_vehicle.apply_control(self.vehicle_controller.run_step(tracking_speed, tracking_pose))
@@ -201,7 +201,6 @@ class CarlaManager:
         env_state.adjacent_lane_vehicles = [self.getVehicleState(actor) for actor in actors_in_left_lane]
         env_state.speed_limit = 20
         env_state.id = self.id
-        print("Pose:",env_state.cur_vehicle_state)
         
         reward_info = RewardInfo()
         reward_info.time_elapsed = self.timestamp
@@ -221,8 +220,6 @@ class CarlaManager:
             self.id = 0
 
       
-
-
     def publishFunc(self):
         rate = rospy.Rate(10)
         while not rospy.is_shutdown():
@@ -242,6 +239,7 @@ class CarlaManager:
         print("All actors destroyed..\n") 
         
     def collision_handler(self, event):
+        print("collision lol")
         self.collision_marker = 1
 
     def resetEnv(self):
@@ -277,7 +275,7 @@ class CarlaManager:
                 blueprints = [x for x in blueprints if not x.id.endswith('cybertruck')]
                 blueprints = [x for x in blueprints if not x.id.endswith('t2')]
 
-            num_vehicles = 5
+            num_vehicles = 15
             waypoints = self.carla_handler.world.get_map().generate_waypoints(distance=1)
             road_waypoints = []
             for waypoint in waypoints:
@@ -348,10 +346,10 @@ class CarlaManager:
             self.ego_vehicle, ego_vehicle_ID = self.carla_handler.spawn_vehicle(spawn_point=spawn_point)
             print("Ego spawned!")
                         
-            collision_sensor = self.carla_handler.world.spawn_actor(self.carla_handler.world.get_blueprint_library().find('sensor.other.collision'),
+            self.collision_sensor = self.carla_handler.world.spawn_actor(self.carla_handler.world.get_blueprint_library().find('sensor.other.collision'),
                                                     carla.Transform(), attach_to=self.ego_vehicle)
 
-            collision_sensor.listen(lambda event: self.collision_handler(event))
+            self.collision_sensor.listen(lambda event: self.collision_handler(event))
             self.vehicle_controller = GRASPPIDController(self.ego_vehicle, args_lateral = {'K_P': 0.15, 'K_D': 0.0, 'K_I': 0}, args_longitudinal = {'K_P': 0.15, 'K_D': 0.0, 'K_I': 0.0})
             time.sleep(1)
             self.original_lane = 5
