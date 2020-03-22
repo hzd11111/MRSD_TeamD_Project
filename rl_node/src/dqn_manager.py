@@ -57,7 +57,7 @@ class DQNManager:
         plt.plot(x_graph, loss_g)
         plt.xlabel("Iterations")
         plt.ylabel("Loss")
-        plt.savefig('/home/alvin/Desktop/MRSD_ws/Loss_Curve.png')
+        plt.savefig('/home/mayank/Desktop/Loss_Curve.png')
 
     def selectAction(self, state):
 
