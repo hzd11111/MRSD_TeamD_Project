@@ -118,7 +118,7 @@ class RLManager:
 		if data.reward.new_run:
 			if self.lane_changing:
 				if self.previous_reward.item() < 0.5 and self.previous_reward.item() > -0.5:
-					brak
+					print("YOLO:",self.previous_reward.item())
 				self.manager.memory.push(self.lane_change_state, self.lane_change_action, self.previous_state, self.previous_reward)
 				self.manager.optimize_model()
 			self.reset()
