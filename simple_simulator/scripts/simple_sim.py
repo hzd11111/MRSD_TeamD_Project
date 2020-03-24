@@ -16,7 +16,7 @@ from geometry_msgs.msg import PointStamped
 from geometry_msgs.msg import Pose2D
 from visualization_msgs.msg import MarkerArray
 from visualization_msgs.msg import Marker
-QUEUE_SIZE = 1
+QUEUE_SIZE = 3
 NODE_NAME = 'simple_simulator'
 SIM_TOPIC_NAME = 'environment_state'
 PATH_PLAN_TOPIC_NAME = 'path_plan'
@@ -132,7 +132,7 @@ class SimpleSimulator:
 
         
         # initialize publisher
-        self.env_pub = rospy.Publisher(SIM_TOPIC_NAME, EnvironmentState, queue_size=QUEUE_SIZE)
+        self.env_pub = rospy.Publisher(SIM_TOPIC_NAME, EnvironmentState, queue_size=QUEUE_SIZE, tcp_nodelay=True)
 
         self.lane_pub = rospy.Publisher(LANE_MARKER_TOPIC_NAME, MarkerArray, queue_size=QUEUE_SIZE)
         self.ego_pub = rospy.Publisher(EGO_MARKER_TOPIC_NAME, Marker, queue_size=QUEUE_SIZE)
@@ -158,17 +158,17 @@ class SimpleSimulator:
     def pathCallback(self, msg):
         self.lock.acquire()
 
-        print("New path received with id:", msg.id)
+        #print("New path received with id:", msg.id)
         if not msg.id == self.id_waiting:
             self.lock.release()
             return
-        print "Simulator Path Plan Msg Delay", (rospy.Time.now()-msg.sent_time).nsecs * 1e-6
+        #print "Simulator Path Plan Msg Delay", (rospy.Time.now()-msg.sent_time).nsecs * 1e-6
         tracking_pose = msg.tracking_pose
         tracking_speed = msg.tracking_speed/3.6
         reset_sim = msg.reset_sim
-        print("Self.id:", self.id)
+        #print("Self.id:", self.id)
         new_time = rospy.Time.now();
-        print "Iteration Duration: ", (new_time - self.prev_time).nsecs * 1e-6
+        #print "Iteration Duration: ", (new_time - self.prev_time).nsecs * 1e-6
         self.id_waiting = self.id
         self.lock.release()
         if reset_sim:
@@ -185,7 +185,7 @@ class SimpleSimulator:
             self.controlling_vehicle.setSpeed(tracking_speed)
             self.lock.release()
             self.renderScene()
-            print "Simulator Render Duration: ", (rospy.Time.now() - new_time).nsecs * 1e-6
+            #print "Simulator Render Duration: ", (rospy.Time.now() - new_time).nsecs * 1e-6
 
         self.publishMessages()
         self.id += 1
@@ -493,9 +493,10 @@ class SimpleSimulator:
         self.updateMarkers()
         self.first_run = 0
 
-    def resetScene(self, num_vehicles=[20, 0], num_lanes=2, lane_width_m=[3, 3], lane_length_m=500, \
-                   max_vehicle_gaps_vehicle_len=5, min_vehicle_gaps_vehicle_len=0.5, \
+    def resetScene(self, num_vehicles=[5, 0], num_lanes=2, lane_width_m=[3, 3], lane_length_m=500, \
+                   max_vehicle_gaps_vehicle_len=7, min_vehicle_gaps_vehicle_len=1, \
                    vehicle_width=2, vehicle_length=4, starting_lane=-1, initial_speed=8):
+        initial_speed = initial_speed + random.uniform(-0.5 * initial_speed, 1.2 * initial_speed)
         self.timestamp = 0
         self.first_run = 1
         self.vehicles = []

@@ -15,7 +15,7 @@ from grasp_path_planner.msg import EnvironmentState
 from grasp_path_planner.msg import RLCommand
 from grasp_path_planner.msg import PathPlan
 
-QUEUE_SIZE = 1
+QUEUE_SIZE = 3
 NODE_NAME = 'path_planner'
 SIM_TOPIC_NAME = "environment_state"
 RL_TOPIC_NAME = "rl_decision"
@@ -289,14 +289,14 @@ class TrajGenerator:
 		new_path_plan = PathPlan()
 		new_path_plan.tracking_pose = closest_pose.pose
 		new_path_plan.reset_sim = rl_data.reset_run
-		#new_path_plan.tracking_speed = cur_vehicle_speed
-		new_path_plan.tracking_speed = 20
+		new_path_plan.tracking_speed = cur_vehicle_speed
+		#new_path_plan.tracking_speed = 20
 		return new_path_plan
 
 	def cubicSplineGen(self, cur_lane_width, next_lane_width, v_cur):
 		v_cur = v_cur/3.6
-		if v_cur < 10:
-			v_cur = 10
+		if v_cur < 5:
+			v_cur = 5
 		# determine external parameters
 		w = (cur_lane_width + next_lane_width)/2.
 		l = self.traj_parameters['lane_change_length']
@@ -405,8 +405,8 @@ TRAJ_PARAM = {'look_up_distance' : 0 ,\
 		'lane_change_length' : 30,\
 		'lane_change_time_constant' : 1.05,\
 		'lane_change_time_disc' : 0.05,\
-		'accelerate_amt' : 3,\
-		'decelerate_amt' : 3,\
+		'accelerate_amt' : 5,\
+		'decelerate_amt' : 5,\
 		'min_speed' : 0
 }
 
@@ -426,7 +426,7 @@ class PathPlannerManager:
 	def rlCallback(self, data):
 		self.lock.acquire()
 		iter_start_time = rospy.Time.now();
-		print "PP RL Delay", (rospy.Time.now() - data.sent_time).nsecs * 1e-6
+		#print "PP RL Delay", (rospy.Time.now() - data.sent_time).nsecs * 1e-6
 		#print("RL ID Received:",data.id)
 		self.backlog_manager.newRLMessage(copy.copy(data))
 		#print("RL ID Added:",data.id)
@@ -436,13 +436,13 @@ class PathPlannerManager:
 			if rl_data:
 				self.newest_rl_data = rl_data
 				self.pathPlanCallback()
-		print "Path Planner RL Callback Duration", (rospy.Time.now() - iter_start_time).nsecs * 1e-6
+		#print "Path Planner RL Callback Duration", (rospy.Time.now() - iter_start_time).nsecs * 1e-6
 		self.lock.release()
 
 	def simCallback(self, data):
 		self.lock.acquire()
 		iter_start_time = rospy.Time.now();
-		print "PP Sim Msg Delay", (rospy.Time.now() - data.sent_time).nsecs * 1e-6
+		#print "PP Sim Msg Delay", (rospy.Time.now() - data.sent_time).nsecs * 1e-6
 		#print("Simulation ID Received:",data.id)
 		self.backlog_manager.newSimMessage(copy.copy(data))
 		#print("Path Planner Received Vehicle Pose")
@@ -454,7 +454,7 @@ class PathPlannerManager:
 			if sim_data:
 				self.newest_sim_data = sim_data
 				self.pathPlanCallback()
-		print "Path Planner Sim Callback Duration", (rospy.Time.now() - iter_start_time).nsecs * 1e-6
+		#print "Path Planner Sim Callback Duration", (rospy.Time.now() - iter_start_time).nsecs * 1e-6
 		self.lock.release()
 
 	def pathPlanCallback(self):
@@ -482,7 +482,7 @@ class PathPlannerManager:
 			self.pub_path.publish(traj)
 			self.prev_traj = traj
 			#print "Publishing Traj:",traj.id
-			print "Path Planner Duration", (rospy.Time.now() - iter_start_time).nsecs * 1e-6
+			#print "Path Planner Duration", (rospy.Time.now() - iter_start_time).nsecs * 1e-6
 	
 	def publishFunc(self):
 		rate = rospy.Rate(10)
@@ -496,7 +496,7 @@ class PathPlannerManager:
 
 	def initialize(self):
 		# initialize publisher
-		self.pub_path = rospy.Publisher(PATH_PLAN_TOPIC_NAME, PathPlan, queue_size = QUEUE_SIZE)
+		self.pub_path = rospy.Publisher(PATH_PLAN_TOPIC_NAME, PathPlan, queue_size = QUEUE_SIZE, tcp_nodelay=True)
 
 		# initialize node
 		rospy.init_node(NODE_NAME, anonymous=True)
