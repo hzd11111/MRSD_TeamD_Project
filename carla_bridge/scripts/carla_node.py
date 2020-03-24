@@ -69,6 +69,14 @@ class CarlaManager:
         self.lock = threading.Lock()
         self.env_msg = False
         self.vehicles_list = []
+        self.original_lane = None
+        self.timestamp = 0
+        self.collision_marker = 0
+        self.first_run = 1
+        self.lane_cur = None
+        self.lane_left = None
+        self.lane_right = None
+        self.collision_sensor = None
   
     def getVehicleState(self, actor):
 
@@ -79,7 +87,7 @@ class CarlaManager:
         vehicle.vehicle_location.x = actor.get_transform().location.x
         vehicle.vehicle_location.y = actor.get_transform().location.y
         vehicle.vehicle_location.theta = actor.get_transform().rotation.yaw * np.pi / 180 #CHECK : Changed this to radians. 
-        vehicle.vehicle_speed = np.sqrt(actor.get_velocity().x**2 + actor.get_velocity().y**2 + actor.get_velocity().z**2) 
+        vehicle.vehicle_speed = np.sqrt(actor.get_velocity().x**2 + actor.get_velocity().y**2) 
 
         vehicle_bounding_box = actor.bounding_box.extent
         vehicle.length = vehicle_bounding_box.x*2
@@ -96,7 +104,7 @@ class CarlaManager:
             lane_point.pose.y = waypoint.transform.location.y
             lane_point.pose.x = waypoint.transform.location.x
             lane_point.pose.theta = waypoint.transform.rotation.yaw * np.pi / 180 # CHECK : Changed this to radians.
-            lane_point.width = 3 # TODO
+            lane_point.width = 4 # TODO
             lane_points.append(lane_point)
         lane_cur.lane = lane_points
 
@@ -105,48 +113,68 @@ class CarlaManager:
   
     def pathCallback(self, data):
         self.lock.acquire()
-        
-        ### Get requested pose and speed values ###
-        tracking_pose = data.tracking_pose
-        tracking_speed = data.tracking_speed
-        reset_sim = data.reset_sim
-        
+        print("Collision:", self.collision_marker)
         ### Check Sync ###
         if not data.id == self.id_waiting:
             self.lock.release()
             return
         
-        ### Apply Control ###
-        self.ego_vehicle.apply_control(self.vehicle_controller.run_step(tracking_speed, tracking_pose))
-
-        ### Visualize requested waypoint ###
-        tracking_loc = carla.Location(x=tracking_pose.x, y=tracking_pose.y, z=self.ego_vehicle.get_location().z)
-        self.carla_handler.world.debug.draw_string(tracking_loc, 'O', draw_shadow=False,
-                                            color=carla.Color(r=255, g=0, b=0), life_time=20,
-                                            persistent_lines=True)
+        ### Get requested pose and speed values ###
+        tracking_pose = data.tracking_pose
+        tracking_speed = data.tracking_speed
+        reset_sim = data.reset_sim
+        print("RESET:",reset_sim)
         
-        #### Check Sync ###
-        flag = 0
-        while(flag == 0):
-            try:
-                self.carla_handler.world.tick()
-                flag = 1
-            except:
-                print("Missed Tick....................................................................................")
-                continue
+        ### Update ROS Sync ###
+        self.id_waiting = self.id
+        self.lock.release()
+        
+        
+        if(reset_sim):
+            self.resetEnv()
+            
+        else:
+            self.lock.acquire()
+            self.first_run = 0
 
+            # time.sleep(1)
+            ### Apply Control ###
+            self.ego_vehicle.apply_control(self.vehicle_controller.run_step(tracking_speed, tracking_pose))
+
+            ### Visualize requested waypoint ###
+            tracking_loc = carla.Location(x=tracking_pose.x, y=tracking_pose.y, z=self.ego_vehicle.get_location().z)
+            self.carla_handler.world.debug.draw_string(tracking_loc, 'O', draw_shadow=False,
+                                                color=carla.Color(r=255, g=0, b=0), life_time=1,
+                                                persistent_lines=True)
+            
+            #### Check Sync ###
+            flag = 0
+            while(flag == 0):
+                try:
+                    self.carla_handler.world.tick()
+                    flag = 1
+                except:
+                    print("Missed Tick....................................................................................")
+                    continue
+            self.lock.release()
+            self.timestamp += 0.05
+            
         ### Extract State Information
-        state_information = self.carla_handler.get_state_information(self.ego_vehicle)
+        nearest_waypoint = self.carla_handler.world_map.get_waypoint(self.ego_vehicle.get_location(), project_to_road=True)
+        state_information = self.carla_handler.get_state_information(self.ego_vehicle, self.original_lane)
         current_lane_waypoints, left_lane_waypoints, right_lane_waypoints, front_vehicle, rear_vehicle, actors_in_current_lane, actors_in_left_lane, actors_in_right_lane = state_information
+        ####
+        
+        ####
 
         # Current Lane
-        lane_cur = self.getLanePoints(current_lane_waypoints)
+        lane_cur = self.lane_cur#self.getLanePoints(current_lane_waypoints)
         
         # Left Lane
-        lane_left = self.getLanePoints(left_lane_waypoints) 
+        lane_left = self.lane_left#self.getLanePoints(left_lane_waypoints) 
         
         # Right Lane
-        lane_right = self.getLanePoints(right_lane_waypoints)
+        lane_right = self.lane_right#self.getLanePoints(right_lane_waypoints)
         
         # Ego vehicle	
         vehicle_ego = self.getVehicleState(self.ego_vehicle)
@@ -162,7 +190,7 @@ class CarlaManager:
             vehicle_rear = vehicle_ego
         else:	
             vehicle_rear = self.getVehicleState(rear_vehicle)
-
+            
         # Contruct enviroment state ROS message
         env_state = EnvironmentState()
         env_state.cur_vehicle_state = vehicle_ego
@@ -171,24 +199,27 @@ class CarlaManager:
         env_state.current_lane = lane_cur
         env_state.next_lane = lane_left
         env_state.adjacent_lane_vehicles = [self.getVehicleState(actor) for actor in actors_in_left_lane]
-        env_state.speed_limit = 40
+        env_state.speed_limit = 20
         env_state.id = self.id
+        
+        reward_info = RewardInfo()
+        reward_info.time_elapsed = self.timestamp
+        reward_info.new_run = self.first_run
+        reward_info.collision = self.collision_marker
+        env_state.reward = reward_info
 
-        ### Update ROS Sync ###
-        self.id_waiting = self.id
-        self.id += 1
-        if self.id > 100000:
-            self.id = 0
+
         
         # publish environment state
         self.env_msg = env_state
         self.env_pub.publish(env_state)
+        
+        ## CARLA Sync
+        self.id += 1
+        if self.id > 100000:
+            self.id = 0
 
-        ####
-        self.lock.release()
-        ####
-
-
+      
     def publishFunc(self):
         rate = rospy.Rate(10)
         while not rospy.is_shutdown():
@@ -198,17 +229,33 @@ class CarlaManager:
             self.lock.release()
             rate.sleep()    
 
-    def destroy_actors(self):
+    def destroy_actors_and_sensors(self):
         for actor in self.carla_handler.world.get_actors().filter('vehicle.*'):
+            actor.destroy()
+        for actor in self.carla_handler.world.get_actors().filter('sensor.*'):
             actor.destroy()
                 
         self.vehicles_list = []
         print("All actors destroyed..\n") 
-
+        
+    def collision_handler(self, event):
+        print("collision lol")
+        self.collision_marker = 1
 
     def resetEnv(self):
+
+        settings = self.carla_handler.world.get_settings()
+        settings.synchronous_mode = False
+        settings.fixed_delta_seconds = None
+        self.carla_handler.world.apply_settings(settings)
         
-        self.destroy_actors()
+        self.destroy_actors_and_sensors()
+        self.timestamp = 0
+        self.collision_marker = 0
+        self.first_run = 1
+
+        
+
 
         try:
 
@@ -217,16 +264,7 @@ class CarlaManager:
 
             synchronous_master = False
 
-            if True:
-                settings = self.carla_handler.world.get_settings()
-                traffic_manager.set_synchronous_mode(True)
-                if not settings.synchronous_mode:
-                    synchronous_master = True
-                    settings.synchronous_mode = True
-                    settings.fixed_delta_seconds = 0.05
-                    self.carla_handler.world.apply_settings(settings)
-                else:
-                    synchronous_master = False
+
 
             blueprints = self.carla_handler.world.get_blueprint_library().filter('vehicle.*')
 
@@ -237,11 +275,11 @@ class CarlaManager:
                 blueprints = [x for x in blueprints if not x.id.endswith('cybertruck')]
                 blueprints = [x for x in blueprints if not x.id.endswith('t2')]
 
-            num_vehicles = 5
+            num_vehicles = 15
             waypoints = self.carla_handler.world.get_map().generate_waypoints(distance=1)
             road_waypoints = []
             for waypoint in waypoints:
-                if(waypoint.road_id == 40 and waypoint.lane_id == 5):
+                if(waypoint.road_id == 40 and waypoint.lane_id == 4):
                     road_waypoints.append(waypoint)
             number_of_spawn_points = len(road_waypoints)
             print("get", len(road_waypoints), "on road 12 with lane id 0")
@@ -275,7 +313,7 @@ class CarlaManager:
                     blueprint.set_attribute('driver_id', driver_id)
                 blueprint.set_attribute('role_name', 'autopilot')
                 transform = t.transform
-                transform.location.z += 2.0
+                transform.location.z += 0.1
                 batch.append(SpawnActor(blueprint, transform).then(SetAutopilot(FutureActor, True)))
 
             for response in self.client.apply_batch_sync(batch, synchronous_master):
@@ -302,13 +340,33 @@ class CarlaManager:
             #         self.carla_handler.world.wait_for_tick()
                 
             # Spawn ego vehicle on road 
-            filtered_waypoints = self.carla_handler.filter_waypoints(self.carla_handler.get_waypoints(1), road_id=40, lane_id=4)
-            spawn_point = filtered_waypoints[4].transform # Select random point from filtered waypoint list #TODO Initialization Scheme Design
-            spawn_point.location.z = spawn_point.location.z + 1 # To avoid collision during spawn
+            filtered_waypoints = self.carla_handler.filter_waypoints(self.carla_handler.get_waypoints(1), road_id=40, lane_id=5)
+            spawn_point = filtered_waypoints[100].transform # Select random point from filtered waypoint list #TODO Initialization Scheme Design
+            spawn_point.location.z = spawn_point.location.z + 0.1 # To avoid collision during spawn
             self.ego_vehicle, ego_vehicle_ID = self.carla_handler.spawn_vehicle(spawn_point=spawn_point)
             print("Ego spawned!")
+                        
+            self.collision_sensor = self.carla_handler.world.spawn_actor(self.carla_handler.world.get_blueprint_library().find('sensor.other.collision'),
+                                                    carla.Transform(), attach_to=self.ego_vehicle)
+
+            self.collision_sensor.listen(lambda event: self.collision_handler(event))
+            self.vehicle_controller = GRASPPIDController(self.ego_vehicle, args_lateral = {'K_P': 0.15, 'K_D': 0.0, 'K_I': 0}, args_longitudinal = {'K_P': 0.15, 'K_D': 0.0, 'K_I': 0.0})
+            time.sleep(1)
+            self.original_lane = 5
+            
+            if True:
+                settings = self.carla_handler.world.get_settings()
+                traffic_manager.set_synchronous_mode(True)
+                if not settings.synchronous_mode:
+                    synchronous_master = True
+                    settings.synchronous_mode = True
+                    settings.fixed_delta_seconds = 0.05
+                    self.carla_handler.world.apply_settings(settings)
+                else:
+                    synchronous_master = False
                 
         except rospy.ROSInterruptException:
+            print("failed....")
             pass
 
 
@@ -319,7 +377,7 @@ class CarlaManager:
         rospy.init_node(NODE_NAME, anonymous=True)
 
         # initialize publisher
-        self.env_pub = rospy.Publisher(SIM_TOPIC_NAME, EnvironmentState, queue_size = 1000)
+        self.env_pub = rospy.Publisher(SIM_TOPIC_NAME, EnvironmentState, queue_size = 10)
         
         # initlize subscriber
         self.path_sub = rospy.Subscriber(PATH_PLAN_TOPIC_NAME, PathPlan, self.pathCallback)
@@ -336,27 +394,24 @@ class CarlaManager:
 
         # Reset Environment
         self.resetEnv()
-
-        time.sleep(3)
-        
+                
         # Initialize PID Controller
-        self.vehicle_controller = GRASPPIDController(self.ego_vehicle, args_lateral = {'K_P': 0.05, 'K_D': 0.0, 'K_I': 0}, args_longitudinal = {'K_P': 0.5, 'K_D': 0.0, 'K_I': 0.0})
+        self.vehicle_controller = GRASPPIDController(self.ego_vehicle, args_lateral = {'K_P': 0.15, 'K_D': 0.0, 'K_I': 0}, args_longitudinal = {'K_P': 0.15, 'K_D': 0.0, 'K_I': 0.0})
 
 
-        state_information = self.carla_handler.get_state_information(self.ego_vehicle)
+        state_information = self.carla_handler.get_state_information(self.ego_vehicle, self.original_lane)
         current_lane_waypoints, left_lane_waypoints, right_lane_waypoints, front_vehicle, rear_vehicle, actors_in_current_lane, actors_in_left_lane, actors_in_right_lane = state_information
         
         ##############################################################################################################
         # publish the first frame 
-        
         # Current Lane
-        lane_cur = self.getLanePoints(current_lane_waypoints)
+        self.lane_cur = self.getLanePoints(current_lane_waypoints)
+        
         
         # Left Lane
-        lane_left = self.getLanePoints(left_lane_waypoints)
-        
+        self.lane_left = self.getLanePoints(left_lane_waypoints)
         # Right Lane
-        lane_right = self.getLanePoints(right_lane_waypoints)
+        self.lane_right = self.getLanePoints(right_lane_waypoints)
 
         vehicle_ego = self.getVehicleState(self.ego_vehicle)
         
@@ -379,11 +434,18 @@ class CarlaManager:
         env_state.front_vehicle_state = vehicle_front
         env_state.back_vehicle_state = vehicle_rear
         env_state.adjacent_lane_vehicles = [self.getVehicleState(actor) for actor in actors_in_left_lane] #TODO : Only considering left lane for now. Need to make this more general 
-        env_state.current_lane = lane_cur
-        env_state.next_lane = lane_left
+        env_state.current_lane = self.lane_cur
+        env_state.next_lane = self.lane_left
         env_state.max_num_vehicles = 5
-        env_state.speed_limit = 40
+        env_state.speed_limit = 20
         env_state.id = self.id
+        
+        reward_info = RewardInfo()
+        reward_info.time_elapsed = self.timestamp
+        reward_info.new_run = self.first_run
+        reward_info.collision = self.collision_marker
+        env_state.reward = reward_info
+       
 
         # Update Sync
         self.id_waiting = self.id
@@ -396,6 +458,7 @@ class CarlaManager:
         # publish environment state
         self.env_msg = env_state
         self.env_pub.publish(env_state)
+        rate.sleep()
 
     def spin(self):
         print("Start Ros Spin")	
