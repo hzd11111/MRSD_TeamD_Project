@@ -59,12 +59,14 @@ from grasp_path_planner.msg import RLCommand
 import gym
 import time
 from gym import spaces
-sys.path.remove('/opt/ros/kinetic/lib/python2.7/dist-packages')
-
+# sys.path.remove('/opt/ros/kinetic/lib/python2.7/dist-packages')
+import tensorflow as tf
+import tensorflow.contrib as tf_contrib
+import tensorflow.contrib.layers as tf_layers
 from stable_baselines import DQN,PPO2
 from stable_baselines.common.vec_env import DummyVecEnv
 from stable_baselines.deepq.policies import MlpPolicy
-# import tensorflow.python.util.deprecation as deprecation
+from stable_baselines.deepq.policies import DQNPolicy
 from stable_baselines.common.env_checker import check_env
 from stable_baselines.common.cmd_util import make_vec_env
 
@@ -81,6 +83,72 @@ CONSTANT_SPEED = 0
 ACCELERATE = 2
 DECELERATE = 3
 
+# make a custom policy
+class CustomPolicy(DQNPolicy):
+    """
+    Policy object that implements DQN policy, using a MLP (2 layers of 64)
+
+    :param sess: (TensorFlow session) The current TensorFlow session
+    :param ob_space: (Gym Space) The observation space of the environment
+    :param ac_space: (Gym Space) The action space of the environment
+    :param n_env: (int) The number of environments to run
+    :param n_steps: (int) The number of steps to run for each environment
+    :param n_batch: (int) The number of batch to run (n_envs * n_steps)
+    :param reuse: (bool) If the policy is reusable or not
+    :param obs_phs: (TensorFlow Tensor, TensorFlow Tensor) a tuple containing an override for observation placeholder
+        and the processed observation placeholder respectively
+    :param dueling: (bool) if true double the output MLP to compute a baseline for action scores
+    :param _kwargs: (dict) Extra keyword arguments for the nature CNN feature extraction
+    """
+    def embedding_net(self,input_vec):
+        out = input_vec
+        with tf.variable_scope("embedding_network", reuse=tf.AUTO_REUSE):
+            out=tf_layers.fully_connected(out, num_outputs=16, activation_fn=tf.nn.relu)
+            out=tf_layers.fully_connected(out, num_outputs=32, activation_fn=tf.nn.relu)
+            out=tf_layers.fully_connected(out, num_outputs=64, activation_fn=tf.nn.relu)
+        return out
+    
+    def q_net(self,input_vec):
+        out=input_vec
+        with tf.variable_scope("action_value"):
+            out = tf_layers.fully_connected(out, num_outputs=64, activation_fn=tf.nn.relu)
+            out = tf_layers.fully_connected(out, num_outputs=128, activation_fn=tf.nn.relu)
+            out = tf_layers.fully_connected(out, num_outputs=4, activation_fn=tf.nn.tanh)
+        return out
+    
+    def __init__(self, sess, ob_space, ac_space, n_env, n_steps, n_batch, reuse=False,
+                 obs_phs=None, dueling=False, **kwargs):
+        super(CustomPolicy, self).__init__(sess, ob_space, ac_space, n_env, n_steps,
+                                                n_batch, dueling=dueling, reuse=reuse,
+                                                scale=False, obs_phs=obs_phs)
+        with tf.variable_scope("model", reuse=reuse):
+            out_ph = tf.layers.flatten(self.processed_obs)
+            embed_list=[]
+            for i in range(5):
+                embed_list.append(self.embedding_net(tf.concat([out_ph[:,:4],out_ph[:,(i+1)*4:(i+2)*4]],axis=1)))
+            stacked_out = tf.stack(embed_list,axis=1)
+            max_out = tf.reduce_max(stacked_out, axis=1)
+            q_out=self.q_net(max_out)
+        self.q_values=q_out
+        self._setup_init()
+
+    def step(self, obs, state=None, mask=None, deterministic=True):
+        q_values, actions_proba = self.sess.run([self.q_values, self.policy_proba], {self.obs_ph: obs})
+        if deterministic:
+            actions = np.argmax(q_values, axis=1)
+        else:
+            # Unefficient sampling
+            # TODO: replace the loop
+            # maybe with Gumbel-max trick ? (http://amid.fish/humble-gumbel)
+            actions = np.zeros((len(obs),), dtype=np.int64)
+            for action_idx in range(len(obs)):
+                actions[action_idx] = np.random.choice(self.n_actions, p=actions_proba[action_idx])
+
+        return actions, q_values, None
+
+    def proba_step(self, obs, state=None, mask=None):
+        return self.sess.run(self.policy_proba, {self.obs_ph: obs})
+
 # make custom environment class to only read values. It should not directly change values in the other thread.
 class CustomEnv(gym.Env):
     """Custom Environment that follows gym interface"""
@@ -93,7 +161,7 @@ class CustomEnv(gym.Env):
         # They must be gym.spaces objects
         # Example when using discrete actions:
         self.action_space = spaces.Discrete(N_DISCRETE_ACTIONS)
-        self.observation_space = spaces.Box(low = -1000, high=1000, shape = (1,25))
+        self.observation_space = spaces.Box(low = -1000, high=1000, shape = (1,24))
         self.rl_manager = rl_manager
 
     def step(self, action):
@@ -106,7 +174,7 @@ class CustomEnv(gym.Env):
         # rl_manager.lock.acquire()
         reward=rl_manager.reward
         cur_state=rl_manager.previous_state
-        done=cur_state.reward.collision
+        done=self.rl_manager.done
         # if lane change was the action then reset the sim as it was a success
         if action==LANE_CHANGE:
             done=True
@@ -118,6 +186,7 @@ class CustomEnv(gym.Env):
     def reset(self):
         # reset sb_event flag if previously set in previous action
         print("SENDING RESET")
+        self.rl_manager.done=False
         self.rl_manager.sb_event.clear()
         rl_manager.make_rl_message(None, True)
         self.rl_manager.sb_event.wait()
@@ -147,8 +216,9 @@ class RLManager:
         self.cur_action=None
         self.lane_term_th=1e-2
         self.previous_reward=None
-        self.episode_duration=10
-        self.option_duration=0.01
+        self.episode_duration=30
+        self.option_duration=0.05
+        self.done=False
 
     def is_terminal_option(self, data):
         if(self.previous_reward == None):
@@ -157,8 +227,8 @@ class RLManager:
             print("Option Time elapsed is", data.reward.time_elapsed - self.previous_reward.time_elapsed)
         if self.cur_action.constant_speed or self.cur_action.accelerate or self.cur_action.decelerate:
             if(self.previous_reward == None):
-                return data.reward.time_elapsed>1
-            return (data.reward.time_elapsed - self.previous_reward.time_elapsed)>1
+                return data.reward.time_elapsed>self.option_duration
+            return (data.reward.time_elapsed - self.previous_reward.time_elapsed)>self.option_duration
         else:
             return data.reward.new_run
 
@@ -176,18 +246,20 @@ class RLManager:
             self.reward=-1
         elif self.cur_action.change_lane:
             if data.reward.new_run and self.previous_state is not None:
-                self.reward=1
+                self.reward=5
         else:
             self.reward=0
             
         self.previous_reward = data.reward
 
     def is_new_episode(self,data):
+        print("Episode time elapsed is ",data.reward.time_elapsed)
         return data.reward.new_run or data.reward.time_elapsed>self.episode_duration
     
     def is_terminate_episode(self, data):
         print("Episode Time elapsed is", data.reward.time_elapsed)
-        return data.reward.collision or data.reward.time_elapsed>self.episode_duration
+        self.done=data.reward.collision or data.reward.time_elapsed>self.episode_duration
+        return self.done
 
     def simCallback(self, data):
         # Pause until an action is given to execute action to execute
@@ -258,8 +330,9 @@ class RLManager:
         '''
         i=0
         env_state = []
-        env_state.append(data.cur_vehicle_state.vehicle_speed)
-        self.append_vehicle_state(env_state, data.back_vehicle_state)
+        self.append_vehicle_state(env_state, data.cur_vehicle_state)
+        # self.append_vehicle_state(env_state, data.back_vehicle_state)
+        # self.append_vehicle_state(env_state, data.front_vehicle_state)
         for _, veh_state in enumerate(data.adjacent_lane_vehicles):
             if i < 5:
                 self.append_vehicle_state(env_state, veh_state)
@@ -314,10 +387,25 @@ class RLManager:
 def sb_model_train(rl_manager):
     env=CustomEnv(rl_manager)
     env=make_vec_env(lambda:env, n_envs=1)
-    model = DQN(MlpPolicy, env, verbose=1, tensorboard_log='./Logs/')
-    model.learn(total_timesteps=500)
+    model = DQN(CustomPolicy, env, verbose=1, learning_starts=256, batch_size=256, exploration_fraction=0.5,  target_network_update_freq=10, tensorboard_log='./Logs/')
+    # model = DQN(MlpPolicy, env, verbose=1, learning_starts=64,  target_network_update_freq=50, tensorboard_log='./Logs/')
+    model.learn(total_timesteps=10000)
+    # model = PPO2(MlpPolicy, env, verbose=1,tensorboard_log="./Logs/")
+    # model.learn(total_timesteps=20000)
     model.save("DQN_Model_SimpleSim")
     return
+
+def sb_model_test(rl_manager):
+    env=CustomEnv(rl_manager)
+    env=make_vec_env(lambda:env, n_envs=1)
+    model = DQN.load("DQN_Model_SimpleSim")
+    obs = env.reset()
+    while True:
+        done = False
+        while not done:
+            action, _ = model.predict(obs)
+            print(action)
+            obs, reward, done, info = env.step(action)
 
 if __name__ == '__main__':
     try:
