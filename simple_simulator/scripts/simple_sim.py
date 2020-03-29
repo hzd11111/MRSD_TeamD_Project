@@ -103,6 +103,9 @@ class SimpleSimulator:
         self.tracking_pose = None
         self.visualization_mode = visualization_mode
 
+        self.action_progress = 0
+        self.end_of_action = True
+
         self.env_msg = None
         self.lane_marker = None
         self.ego_marker = None
@@ -166,6 +169,8 @@ class SimpleSimulator:
         tracking_pose = msg.tracking_pose
         tracking_speed = msg.tracking_speed/3.6
         reset_sim = msg.reset_sim
+        self.end_of_action = msg.end_of_action
+        self.action_progress = msg.action_progress
         #print("Self.id:", self.id)
         new_time = rospy.Time.now();
         #print "Iteration Duration: ", (new_time - self.prev_time).nsecs * 1e-6
@@ -367,9 +372,10 @@ class SimpleSimulator:
         reward_info.time_elapsed = self.timestamp
         reward_info.new_run = self.first_run
         reward_info.collision = self.collisionCheck()
+        reward_info.action_progress = self.action_progress
+        reward_info.end_of_action = self.end_of_action
         publish_msg.reward = reward_info
         publish_msg.id = self.id
-        
 
         self.env_msg = publish_msg
 

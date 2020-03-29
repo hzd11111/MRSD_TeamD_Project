@@ -20,7 +20,10 @@ NODE_NAME = 'path_planner'
 SIM_TOPIC_NAME = "environment_state"
 RL_TOPIC_NAME = "rl_decision"
 PATH_PLAN_TOPIC_NAME = "path_plan"
+
+
 class RLDecision(Enum):
+	NO_ACTION = 0
 	CONSTANT_SPEED = 1
 	ACCELERATE = 2
 	DECELERATE = 3
@@ -67,6 +70,8 @@ class SimDataProcessor:
 		self.next_lane = sim_data.next_lane
 		self.ego_vehicle = sim_data.cur_vehicle_state
 		self.id = sim_data.id
+		self.sim_time = sim_data.reward.time_elapsed
+
 	@property
 	def cur_lane(self):
 		return self.__cur_lane
@@ -236,21 +241,35 @@ class PoseSpeedTemp(PoseTemp):
 class TrajGenerator:
 	SAME_POSE_THRESHOLD = 1
 	SAME_POSE_LOWER_THRESHOLD = 0.02
+
 	def __init__(self, traj_parameters):
 		self.traj_parameters = traj_parameters
-		self.reset()
-	
-	def reset(self):
-		self.lane_switching = False
+		self.current_action = RLDecision.NO_ACTION
 		self.generated_path = []
 		self.path_pointer = 0
+		self.action_start_time = 0
+		self.start_speed = 0
+		self.reset()
+	
+	def reset(self, cur_act = RLDecision.NO_ACTION, start_speed = 0):
+		self.curent_action = cur_act
+		self.generated_path = []
+		self.path_pointer = 0
+		self.action_start_time = 0
+		self.start_speed = start_speed
 
 	def trajPlan(self, rl_data, sim_data):
 		if len(sim_data.cur_lane.lane) <= 0 or len(sim_data.next_lane.lane) <= 0:
 			print("Lane has no component")
 
-		if self.lane_switching:
+		if self.current_action == RLDecision.SWITCH_LANE:
 			return self.laneChangeTraj(rl_data, sim_data)
+		elif self.current_action == RLDecision.ACCELERATE:
+			return self.accelerateTraj(rl_data, sim_data)
+		elif self.current_action == RLDecision.DECELERATE:
+			return self.decelerateTraj(rl_data, sim_data)
+		elif self.current_action == RLDecision.CONSTANT_SPEED:
+			return self.constSpeedTraj(rl_data, sim_data)
 		elif rl_data.rl_decision == RLDecision.CONSTANT_SPEED:
 			return self.constSpeedTraj(rl_data, sim_data)
 		elif rl_data.rl_decision == RLDecision.ACCELERATE:
@@ -267,15 +286,7 @@ class TrajGenerator:
 		else:
 			print("RL Decision Error")
 
-	def constSpeedTraj(self, rl_data, sim_data):
-		
-		# current vehicle state
-		cur_vehicle_state = sim_data.ego_vehicle
-		cur_vehicle_pose = PoseTemp(cur_vehicle_state.vehicle_location)
-		cur_vehicle_speed = cur_vehicle_state.vehicle_speed
-	
-		# determine the closest next pose in the current lane
-		lane_pose_array = sim_data.cur_lane.lane
+	def findNextLanePose(self, cur_vehicle_pose, lane_pose_array):
 		closest_pose = lane_pose_array[0]
 
 		for lane_waypoint in lane_pose_array:
@@ -284,13 +295,124 @@ class TrajGenerator:
 			if way_pose.distance(cur_vehicle_pose) < TrajGenerator.SAME_POSE_THRESHOLD and\
 				way_pose.isInfrontOf(cur_vehicle_pose) and \
 					way_pose.distance(cur_vehicle_pose) > TrajGenerator.SAME_POSE_LOWER_THRESHOLD:
-				break	
+				return closest_pose
+		return closest_pose
+
+	def constSpeedTraj(self, rl_data, sim_data):
+		# duration evaluation
+		if not self.current_action == RLDecision.CONSTANT_SPEED:
+			self.reset(RLDecision.CONSTANT_SPEED, sim_data.ego_vehicle.vehicle_speed)
+
+			# set action start time
+			self.action_start_time = sim_data.sim_time
+
+		new_sim_time = sim_data.sim_time
+		# current vehicle state
+		cur_vehicle_state = sim_data.ego_vehicle
+		cur_vehicle_pose = PoseTemp(cur_vehicle_state.vehicle_location)
+		cur_vehicle_speed = cur_vehicle_state.vehicle_speed
+	
+		# determine the closest next pose in the current lane
+		lane_pose_array = sim_data.cur_lane.lane
+		closest_pose = self.findNextLanePose(cur_vehicle_pose, lane_pose_array)
+
+		end_of_action = False
+		if rl_data.reset_run:
+			end_of_action = True
+
+		action_progress = (new_sim_time - self.action_start_time) / self.traj_parameters['action_duration']
+
+		if action_progress >= 1.:
+			end_of_action = True
+			action_progress = 1.
+
+		if end_of_action:
+			self.reset()
 
 		new_path_plan = PathPlan()
 		new_path_plan.tracking_pose = closest_pose.pose
 		new_path_plan.reset_sim = rl_data.reset_run
-		new_path_plan.tracking_speed = cur_vehicle_speed
-		#new_path_plan.tracking_speed = 20
+		new_path_plan.tracking_speed = self.start_speed
+		new_path_plan.end_of_action = end_of_action
+		new_path_plan.action_progress = action_progress
+		return new_path_plan
+
+	def accelerateTraj(self, rl_data, sim_data):
+		# duration evaluation
+		if not self.current_action == RLDecision.ACCELERATE:
+			self.reset(RLDecision.ACCELERATE, sim_data.ego_vehicle.vehicle_speed)
+
+			# set action start time
+			self.action_start_time = sim_data.sim_time
+
+		new_sim_time = sim_data.sim_time
+		# current vehicle state
+		cur_vehicle_state = sim_data.ego_vehicle
+		cur_vehicle_pose = PoseTemp(cur_vehicle_state.vehicle_location)
+		cur_vehicle_speed = cur_vehicle_state.vehicle_speed
+
+		# determine the closest next pose in the current lane
+		lane_pose_array = sim_data.cur_lane.lane
+		closest_pose = self.findNextLanePose(cur_vehicle_pose, lane_pose_array)
+
+		end_of_action = False
+		if rl_data.reset_run:
+			end_of_action = True
+
+		action_progress = (new_sim_time - self.action_start_time) / self.traj_parameters['action_duration']
+
+		if action_progress >= 1.:
+			end_of_action = True
+			action_progress = 1.
+
+		if end_of_action:
+			self.reset()
+
+		new_path_plan = PathPlan()
+		new_path_plan.tracking_pose = closest_pose.pose
+		new_path_plan.reset_sim = rl_data.reset_run
+		new_path_plan.tracking_speed = self.start_speed + action_progress * self.traj_parameters['accelerate_amt']
+		new_path_plan.end_of_action = end_of_action
+		new_path_plan.action_progress = action_progress
+		return new_path_plan
+
+	def accelerateTraj(self, rl_data, sim_data):
+		# duration evaluation
+		if not self.current_action == RLDecision.DECELERATE:
+			self.reset(RLDecision.DECELERATE, sim_data.ego_vehicle.vehicle_speed)
+
+			# set action start time
+			self.action_start_time = sim_data.sim_time
+
+		new_sim_time = sim_data.sim_time
+		# current vehicle state
+		cur_vehicle_state = sim_data.ego_vehicle
+		cur_vehicle_pose = PoseTemp(cur_vehicle_state.vehicle_location)
+		cur_vehicle_speed = cur_vehicle_state.vehicle_speed
+
+		# determine the closest next pose in the current lane
+		lane_pose_array = sim_data.cur_lane.lane
+		closest_pose = self.findNextLanePose(cur_vehicle_pose, lane_pose_array)
+
+		end_of_action = False
+		if rl_data.reset_run:
+			end_of_action = True
+
+		action_progress = (new_sim_time - self.action_start_time) / self.traj_parameters['action_duration']
+
+		if action_progress >= 1.:
+			end_of_action = True
+			action_progress = 1.
+
+		if end_of_action:
+			self.reset()
+
+		new_path_plan = PathPlan()
+		new_path_plan.tracking_pose = closest_pose.pose
+		new_path_plan.reset_sim = rl_data.reset_run
+		new_path_plan.tracking_speed = self.start_speed - action_progress * self.traj_parameters['decelerate_amt']
+		new_path_plan.end_of_action = end_of_action
+		new_path_plan.action_progress = action_progress
 		return new_path_plan
 
 	def cubicSplineGen(self, cur_lane_width, next_lane_width, v_cur):
@@ -337,13 +459,13 @@ class TrajGenerator:
 			neutral_traj.append(pose)
 		
 		return neutral_traj
-		
 
 	def laneChangeTraj(self, rl_data, sim_data):
 		cur_vehicle_pose = PoseTemp(sim_data.ego_vehicle.vehicle_location)
 		
 		# generate trajectory
-		if not self.lane_switching:
+		if not self.current_action == RLDecision.SWITCH_LANE:
+			self.reset(RLDecision.SWITCH_LANE)
 			# ToDo: Use closest pose for lane width
 			#print("reached here")
 			neutral_traj = self.cubicSplineGen(sim_data.cur_lane.lane[0].width,\
@@ -365,9 +487,6 @@ class TrajGenerator:
 			# offset the trajectory with the closest pose
 			for pose_speed in neutral_traj:
 				self.generated_path.append(pose_speed.addToPose(closest_pose))
-	
-			# change lane switching status	
-			self.lane_switching = True
 
 			self.path_pointer = 0
 
@@ -385,26 +504,33 @@ class TrajGenerator:
 		new_path_plan = PathPlan()
 		#print("Total Path Length", len(self.generated_path))
 		# determine if lane switch is completed
-		if self.path_pointer >= len(self.generated_path):
-			#print("Reset Called ,......................................")
-			# reset the trajectory
+
+		action_progress = self.path_pointer / len(self.generated_path)
+		end_of_action = False
+		if rl_data.reset_run:
+			end_of_action = True
+		if action_progress >= 0.9999:
+			end_of_action = True
+			action_progress = 1.
+
+		if end_of_action:
 			self.reset()
-			new_path_plan.reset_sim = 1
-			return new_path_plan	
 		
 		new_path_plan.tracking_pose.x = self.generated_path[self.path_pointer].x
 		new_path_plan.tracking_pose.y = self.generated_path[self.path_pointer].y
 		new_path_plan.tracking_pose.theta = self.generated_path[self.path_pointer].theta
-		new_path_plan.reset_sim = rl_data.reset_run
+		new_path_plan.reset_sim = end_of_action
 		new_path_plan.tracking_speed = self.generated_path[self.path_pointer].speed
-		if new_path_plan.reset_sim:
-			self.reset()
+		new_path_plan.end_of_action = end_of_action
+		new_path_plan.action_progress = action_progress
+
 		return new_path_plan		
 
 TRAJ_PARAM = {'look_up_distance' : 0 ,\
 		'lane_change_length' : 30,\
 		'lane_change_time_constant' : 1.05,\
 		'lane_change_time_disc' : 0.05,\
+		'action_duration' : 2,\
 		'accelerate_amt' : 5,\
 		'decelerate_amt' : 5,\
 		'min_speed' : 0
