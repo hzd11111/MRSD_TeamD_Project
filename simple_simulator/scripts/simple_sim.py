@@ -16,7 +16,7 @@ from geometry_msgs.msg import PointStamped
 from geometry_msgs.msg import Pose2D
 from visualization_msgs.msg import MarkerArray
 from visualization_msgs.msg import Marker
-
+QUEUE_SIZE = 3
 NODE_NAME = 'simple_simulator'
 SIM_TOPIC_NAME = 'environment_state'
 PATH_PLAN_TOPIC_NAME = 'path_plan'
@@ -92,7 +92,7 @@ class Vehicle:
 
 
 class SimpleSimulator:
-    def __init__(self, time_step):
+    def __init__(self, time_step, visualization_mode):
         self.vehicles = []
         self.controlling_vehicle = None
         self.lanes = []
@@ -101,6 +101,7 @@ class SimpleSimulator:
         self.timestamp = 0
         self.first_run = 1
         self.tracking_pose = None
+        self.visualization_mode = visualization_mode
 
         self.env_msg = None
         self.lane_marker = None
@@ -122,19 +123,22 @@ class SimpleSimulator:
         self.id = 0
         self.id_waiting = 0
 
+        # time counter
+        self.prev_time = None
+
     def initialize(self):
         # initialize node
         rospy.init_node(NODE_NAME, anonymous=True)
 
         
         # initialize publisher
-        self.env_pub = rospy.Publisher(SIM_TOPIC_NAME, EnvironmentState, queue_size=1000)
+        self.env_pub = rospy.Publisher(SIM_TOPIC_NAME, EnvironmentState, queue_size=QUEUE_SIZE, tcp_nodelay=True)
 
-        self.lane_pub = rospy.Publisher(LANE_MARKER_TOPIC_NAME, MarkerArray, queue_size=1000)
-        self.ego_pub = rospy.Publisher(EGO_MARKER_TOPIC_NAME, Marker, queue_size=1000)
-        self.vehicle_pub = rospy.Publisher(VEHICLE_MARKER_TOPIC_NAME, MarkerArray, queue_size=1000)
-        self.tracking_pub = rospy.Publisher(TRACKING_POSE_TOPIC_NAME, Marker, queue_size=1000)
-        self.collision_pub = rospy.Publisher(COLLISION_TOPIC_NAME, Marker, queue_size = 1000)
+        self.lane_pub = rospy.Publisher(LANE_MARKER_TOPIC_NAME, MarkerArray, queue_size=QUEUE_SIZE)
+        self.ego_pub = rospy.Publisher(EGO_MARKER_TOPIC_NAME, Marker, queue_size=QUEUE_SIZE)
+        self.vehicle_pub = rospy.Publisher(VEHICLE_MARKER_TOPIC_NAME, MarkerArray, queue_size=QUEUE_SIZE)
+        self.tracking_pub = rospy.Publisher(TRACKING_POSE_TOPIC_NAME, Marker, queue_size=QUEUE_SIZE)
+        self.collision_pub = rospy.Publisher(COLLISION_TOPIC_NAME, Marker, queue_size = QUEUE_SIZE)
 
         # initialize subscriber
         self.path_sub = rospy.Subscriber(PATH_PLAN_TOPIC_NAME, PathPlan, self.pathCallback)
@@ -142,26 +146,30 @@ class SimpleSimulator:
         time.sleep(2)
         # reset scene
         self.resetScene()
+        self.prev_time = rospy.Time.now()
 
         # send the first message
-        self.publishMessages()
         self.id_waiting = self.id
+        self.publishMessages()
         self.id += 1
         if self.id > 100000:
             self.id = 0
 
     def pathCallback(self, msg):
         self.lock.acquire()
-        print("New path received with id:", msg.id)
+
+        #print("New path received with id:", msg.id)
         if not msg.id == self.id_waiting:
             self.lock.release()
             return
-        print("Continued......")
+        #print "Simulator Path Plan Msg Delay", (rospy.Time.now()-msg.sent_time).nsecs * 1e-6
         tracking_pose = msg.tracking_pose
         tracking_speed = msg.tracking_speed/3.6
         reset_sim = msg.reset_sim
-        print("Self.id:", self.id)
-        
+        #print("Self.id:", self.id)
+        new_time = rospy.Time.now();
+        #print "Iteration Duration: ", (new_time - self.prev_time).nsecs * 1e-6
+        self.id_waiting = self.id
         self.lock.release()
         if reset_sim:
             self.resetScene()
@@ -177,10 +185,13 @@ class SimpleSimulator:
             self.controlling_vehicle.setSpeed(tracking_speed)
             self.lock.release()
             self.renderScene()
-        self.id_waiting = self.id
+            #print "Simulator Render Duration: ", (rospy.Time.now() - new_time).nsecs * 1e-6
+
+        self.publishMessages()
         self.id += 1
         if self.id > 100000:
             self.id = 0
+        self.prev_time = rospy.Time.now()
 
     def spin(self):
         print("Start Ros Spin")
@@ -192,17 +203,19 @@ class SimpleSimulator:
         self.lock.acquire()
 
         if self.env_msg:
-        	self.env_pub.publish(self.env_msg)
-        if self.lane_marker:
-            self.lane_pub.publish(self.lane_marker)
-        if self.ego_marker:
-            self.ego_pub.publish(self.ego_marker)
-        if self.vehicle_marker:
-            self.vehicle_pub.publish(self.vehicle_marker)
-        if self.tracking_pose_marker:
-            self.tracking_pub.publish(self.tracking_pose_marker)
-        if self.collision_marker:
-            self.collision_pub.publish(self.collision_marker)
+            self.env_msg.sent_time = rospy.Time.now()
+            self.env_pub.publish(self.env_msg)
+        if self.visualization_mode:
+            if self.lane_marker:
+                self.lane_pub.publish(self.lane_marker)
+            if self.ego_marker:
+                self.ego_pub.publish(self.ego_marker)
+            if self.vehicle_marker:
+                self.vehicle_pub.publish(self.vehicle_marker)
+            if self.tracking_pose_marker:
+                self.tracking_pub.publish(self.tracking_pose_marker)
+            if self.collision_marker:
+                self.collision_pub.publish(self.collision_marker)
 
         self.lock.release()
 
@@ -242,6 +255,12 @@ class SimpleSimulator:
         return norm_axis
 
     def vehicleToVehicleCollision(self, veh1, veh2):
+        veh_distance = np.linalg.norm(np.array(veh1.x-veh2.x, veh1.y-veh2.y))
+        veh_1_norm_length = np.linalg.norm(np.array([veh1.length, veh1.width]))/2.
+        veh_2_norm_length = np.linalg.norm(np.array([veh2.length, veh2.width]))/2.
+        if veh_distance > veh_1_norm_length+veh_2_norm_length:
+            return False
+
         # normal axis
         norm_axis = []
         norm_axis.extend(self.vehAxis(veh1))
@@ -357,112 +376,113 @@ class SimpleSimulator:
         self.lock.release()
 
     def updateMarkers(self):
-        self.lock.acquire()
-        marker_id = 0
+        if self.visualization_mode:
+            self.lock.acquire()
+            marker_id = 0
 
-        # collision marker
-        collision_occured = self.collisionCheck()
-        self.collision_marker = Marker()
-        self.collision_marker.header.frame_id = "map"
-        self.collision_marker.type = self.collision_marker.SPHERE
-        self.collision_marker.action = self.collision_marker.ADD
-        self.collision_marker.scale.x = 3
-        self.collision_marker.scale.y = 3
-        self.collision_marker.scale.z = 3
-        self.collision_marker.pose.position.x = 0
-        self.collision_marker.pose.position.y = 3
-        self.collision_marker.pose.position.z = 0
-        self.collision_marker.pose.orientation.w = 1.0
-        if collision_occured:
-            self.collision_marker.color.r = 1.0
-        else:
-            self.collision_marker.color.g = 1.0
-        self.collision_marker.color.a = 1.0
-        self.collision_marker.id = marker_id
-        marker_id += 1
-
-        # tracking pose
-        if self.tracking_pose:
-            radius = 2
-            self.tracking_pose_marker = Marker()
-            self.tracking_pose_marker.header.frame_id = "map"
-            self.tracking_pose_marker.type = self.tracking_pose_marker.SPHERE
-            self.tracking_pose_marker.action = self.tracking_pose_marker.ADD
-            self.tracking_pose_marker.scale.x = radius
-            self.tracking_pose_marker.scale.y = radius
-            self.tracking_pose_marker.scale.z = radius
-            self.tracking_pose_marker.pose.position.x = self.tracking_pose.x
-            self.tracking_pose_marker.pose.position.y = -self.tracking_pose.y
-            self.tracking_pose_marker.pose.position.z = 3
-            self.tracking_pose_marker.pose.orientation.w = 1.0
-            self.tracking_pose_marker.color.b = 1.0
-            self.tracking_pose_marker.color.a = 1.0
-            self.tracking_pose_marker.id = marker_id
-        marker_id += 1
-
-        # vehicles
-        self.vehicle_marker = MarkerArray()
-        for v in self.vehicles:
-            marker = Marker()
-            marker.header.frame_id = "map"
-            marker.type = marker.CUBE
-            marker.action = marker.ADD
-            marker.scale.x = v.length
-            marker.scale.y = v.width
-            marker.scale.z = 1.5
-            marker.pose.orientation.w = 1.0 # ToDo: add in orientation
-            marker.pose.position.x = v.x
-            marker.pose.position.y = -v.y
-            marker.pose.position.z = 0.75
-            marker.color.g = 1.0
-            marker.color.a = 1.0
-            marker.id = marker_id
+            # collision marker
+            collision_occured = self.collisionCheck()
+            self.collision_marker = Marker()
+            self.collision_marker.header.frame_id = "map"
+            self.collision_marker.type = self.collision_marker.SPHERE
+            self.collision_marker.action = self.collision_marker.ADD
+            self.collision_marker.scale.x = 3
+            self.collision_marker.scale.y = 3
+            self.collision_marker.scale.z = 3
+            self.collision_marker.pose.position.x = 0
+            self.collision_marker.pose.position.y = 3
+            self.collision_marker.pose.position.z = 0
+            self.collision_marker.pose.orientation.w = 1.0
+            if collision_occured:
+                self.collision_marker.color.r = 1.0
+            else:
+                self.collision_marker.color.g = 1.0
+            self.collision_marker.color.a = 1.0
+            self.collision_marker.id = marker_id
             marker_id += 1
-            self.vehicle_marker.markers.append(marker)
 
-        # ego vehicle
-        self.ego_marker = Marker()
-        self.ego_marker.header.frame_id = "map"
-        self.ego_marker.type = self.ego_marker.CUBE
-        self.ego_marker.action = self.ego_marker.ADD
-        self.ego_marker.scale.x = self.controlling_vehicle.length
-        self.ego_marker.scale.y = self.controlling_vehicle.width
-        self.ego_marker.scale.z = 1.5
-        self.ego_marker.pose.orientation.w = 1.0 # ToDo: add in orientation
-        vehicle_right_hand_theta = -self.controlling_vehicle.theta
-        self.ego_marker.pose.orientation.w = np.cos(vehicle_right_hand_theta)
-        self.ego_marker.pose.orientation.z = np.sin(vehicle_right_hand_theta)
-        self.ego_marker.pose.position.x = self.controlling_vehicle.x
-        self.ego_marker.pose.position.y = -self.controlling_vehicle.y
-        self.ego_marker.pose.position.z = 0.75
-        self.ego_marker.color.r = 1.0
-        self.ego_marker.color.a = 1.0
-        self.ego_marker.id = marker_id
-        marker_id += 1
+            # tracking pose
+            if self.tracking_pose:
+                radius = 2
+                self.tracking_pose_marker = Marker()
+                self.tracking_pose_marker.header.frame_id = "map"
+                self.tracking_pose_marker.type = self.tracking_pose_marker.SPHERE
+                self.tracking_pose_marker.action = self.tracking_pose_marker.ADD
+                self.tracking_pose_marker.scale.x = radius
+                self.tracking_pose_marker.scale.y = radius
+                self.tracking_pose_marker.scale.z = radius
+                self.tracking_pose_marker.pose.position.x = self.tracking_pose.x
+                self.tracking_pose_marker.pose.position.y = -self.tracking_pose.y
+                self.tracking_pose_marker.pose.position.z = 3
+                self.tracking_pose_marker.pose.orientation.w = 1.0
+                self.tracking_pose_marker.color.b = 1.0
+                self.tracking_pose_marker.color.a = 1.0
+                self.tracking_pose_marker.id = marker_id
+            marker_id += 1
 
-        # lanes
-        self.lane_marker = MarkerArray()
-
-        for l in self.lanes:
-            for leng in range(0, l.length,1):
+            # vehicles
+            self.vehicle_marker = MarkerArray()
+            for v in self.vehicles:
                 marker = Marker()
                 marker.header.frame_id = "map"
-                marker.header.stamp = rospy.Time.now()
-                marker.type = marker.SPHERE
+                marker.type = marker.CUBE
                 marker.action = marker.ADD
-                marker.scale.x = 0.2
-                marker.scale.y = 0.2
-                marker.scale.z = 0.2
-                marker.color.a = 1.0
+                marker.scale.x = v.length
+                marker.scale.y = v.width
+                marker.scale.z = 1.5
+                marker.pose.orientation.w = 1.0 # ToDo: add in orientation
+                marker.pose.position.x = v.x
+                marker.pose.position.y = -v.y
+                marker.pose.position.z = 0.75
                 marker.color.g = 1.0
-                marker.pose.orientation.w = 1.0
-                marker.pose.position.x = l.starting_x + leng * np.cos(l.starting_theta)
-                marker.pose.position.y = -(l.starting_y - leng * np.sin(l.starting_theta))
-                marker.pose.position.z = 0
-                marker.id=marker_id
+                marker.color.a = 1.0
+                marker.id = marker_id
                 marker_id += 1
-                self.lane_marker.markers.append(marker)
-        self.lock.release()
+                self.vehicle_marker.markers.append(marker)
+
+            # ego vehicle
+            self.ego_marker = Marker()
+            self.ego_marker.header.frame_id = "map"
+            self.ego_marker.type = self.ego_marker.CUBE
+            self.ego_marker.action = self.ego_marker.ADD
+            self.ego_marker.scale.x = self.controlling_vehicle.length
+            self.ego_marker.scale.y = self.controlling_vehicle.width
+            self.ego_marker.scale.z = 1.5
+            self.ego_marker.pose.orientation.w = 1.0 # ToDo: add in orientation
+            vehicle_right_hand_theta = -self.controlling_vehicle.theta
+            self.ego_marker.pose.orientation.w = np.cos(vehicle_right_hand_theta)
+            self.ego_marker.pose.orientation.z = np.sin(vehicle_right_hand_theta)
+            self.ego_marker.pose.position.x = self.controlling_vehicle.x
+            self.ego_marker.pose.position.y = -self.controlling_vehicle.y
+            self.ego_marker.pose.position.z = 0.75
+            self.ego_marker.color.r = 1.0
+            self.ego_marker.color.a = 1.0
+            self.ego_marker.id = marker_id
+            marker_id += 1
+
+            # lanes
+            self.lane_marker = MarkerArray()
+
+            for l in self.lanes:
+                for leng in range(0, l.length,1):
+                    marker = Marker()
+                    marker.header.frame_id = "map"
+                    marker.header.stamp = rospy.Time.now()
+                    marker.type = marker.SPHERE
+                    marker.action = marker.ADD
+                    marker.scale.x = 0.2
+                    marker.scale.y = 0.2
+                    marker.scale.z = 0.2
+                    marker.color.a = 1.0
+                    marker.color.g = 1.0
+                    marker.pose.orientation.w = 1.0
+                    marker.pose.position.x = l.starting_x + leng * np.cos(l.starting_theta)
+                    marker.pose.position.y = -(l.starting_y - leng * np.sin(l.starting_theta))
+                    marker.pose.position.z = 0
+                    marker.id=marker_id
+                    marker_id += 1
+                    self.lane_marker.markers.append(marker)
+            self.lock.release()
 
     def renderScene(self):
         for v in self.vehicles:
@@ -473,9 +493,10 @@ class SimpleSimulator:
         self.updateMarkers()
         self.first_run = 0
 
-    def resetScene(self, num_vehicles=[30, 0], num_lanes=2, lane_width_m=[3, 3], lane_length_m=500, \
-                   max_vehicle_gaps_vehicle_len=5, min_vehicle_gaps_vehicle_len=0.5, \
+    def resetScene(self, num_vehicles=[5, 0], num_lanes=2, lane_width_m=[3, 3], lane_length_m=500, \
+                   max_vehicle_gaps_vehicle_len=7, min_vehicle_gaps_vehicle_len=1, \
                    vehicle_width=2, vehicle_length=4, starting_lane=-1, initial_speed=8):
+        initial_speed = initial_speed + random.uniform(-0.5 * initial_speed, 1.2 * initial_speed)
         self.timestamp = 0
         self.first_run = 1
         self.vehicles = []
@@ -510,12 +531,12 @@ class SimpleSimulator:
 
         # current vehicle
         self.controlling_vehicle = Vehicle(vehicle_length, vehicle_width, self.cur_lane)
-        #cur_vehicle_x = random.uniform(vehicle_length, max_vehicle_head_pos)
-        cur_vehicle_x = 10
+        cur_vehicle_x = random.uniform(vehicle_length, max_vehicle_head_pos)
+        #cur_vehicle_x = 10
         cur_vehicle_y = self.lanes[self.cur_lane].starting_y
         cur_vehicle_theta = self.lanes[self.cur_lane].starting_theta
         self.controlling_vehicle.place(cur_vehicle_x, cur_vehicle_y, cur_vehicle_theta)
-        self.controlling_vehicle.setSpeed(initial_speed)
+        self.controlling_vehicle.setSpeed(initial_speed + random.uniform(-0.5 * initial_speed, 0.5 * initial_speed))
         self.renderScene()
 
 
@@ -529,7 +550,7 @@ class SimpleSimulator:
 
 if __name__ == '__main__':
     try:
-        simple_sim = SimpleSimulator(0.01)
+        simple_sim = SimpleSimulator(0.01, True)
         simple_sim.initialize()
         pub_thread = threading.Thread(target=simple_sim.publishFunc)
         pub_thread.start()

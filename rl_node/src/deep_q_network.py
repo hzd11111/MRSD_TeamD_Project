@@ -41,14 +41,36 @@ class DQN_Conv(nn.Module):
 class DQN_Linear(nn.Module):
     def __init__(self, input_size, output_size, requires_grad = True):
         super().__init__()
+
+        # vehicle embedding
+        self.vehicle_embedding = nn.Sequential(
+            nn.Linear(8,16),
+            nn.ReLU(),
+            nn.Linear(16,32),
+            nn.ReLU(),
+            #nn.Linear(32,64),
+            #nn.ReLU(),
+            #nn.Linear(64,32),
+            #nn.ReLU(),
+            nn.Linear(32,64)
+        )
+
         # create a neural network
         self.network = nn.Sequential(
-            nn.Linear(input_size, 30),
+            nn.Linear(64, 64),
             nn.ReLU(),
-            nn.Linear(30, 15),
+            nn.Linear(64, 128),
             nn.ReLU(),
-            nn.Linear(15, output_size),
-            nn.Sigmoid()
+            #nn.Linear(128, 256),
+            #nn.ReLU(),
+            #nn.Linear(256, 256),
+            #nn.ReLU(),
+            #nn.Linear(256, 512),
+            #nn.ReLU(),
+            #nn.Linear(512, 512),
+            #nn.ReLU(),
+            nn.Linear(128, output_size),
+            nn.Tanh()
         )
         self.loss_fn = F.mse_loss
         self.optimiser = torch.optim.Adam(self.network.parameters())
@@ -58,5 +80,42 @@ class DQN_Linear(nn.Module):
                 parameter.requires_grad = False
 
     def forward(self, X):
-        out = self.network(X)
+        if len(list(X.size())) == 1:
+            X = torch.reshape(X,(1, X.shape[0]))
+        #print(X.shape)
+        print ("Forward")
+        veh1_comb = torch.Tensor(X.shape[0],8)
+        veh1_comb[:,:4] = X[:,:4]
+        veh1_comb[:,4:] = X[:,4:8]
+        veh1_embedding = self.vehicle_embedding(veh1_comb)
+
+        veh2_comb = torch.Tensor(X.shape[0],8)
+        veh2_comb[:,:4] = X[:,:4]
+        veh2_comb[:,4:] = X[:,8:12]
+        veh2_embedding = self.vehicle_embedding(veh2_comb)
+
+        veh3_comb = torch.Tensor(X.shape[0],8)
+        veh3_comb[:,:4] = X[:,:4]
+        veh3_comb[:,4:] = X[:,12:16]
+        veh3_embedding = self.vehicle_embedding(veh3_comb)
+
+        veh4_comb = torch.Tensor(X.shape[0],8)
+        veh4_comb[:,:4] = X[:,:4]
+        veh4_comb[:,4:] = X[:,16:20]
+        veh4_embedding = self.vehicle_embedding(veh4_comb)
+
+        veh5_comb = torch.Tensor(X.shape[0],8)
+        veh5_comb[:,:4] = X[:,:4]
+        veh5_comb[:,4:] = X[:,20:24]
+        veh5_embedding = self.vehicle_embedding(veh5_comb)
+
+        veh_embedding_all = torch.stack((veh1_embedding, veh2_embedding, veh3_embedding, veh4_embedding, veh5_embedding), -1)
+        veh_embedding_max = torch.max(veh_embedding_all,-1)[0]
+        out = self.network(veh_embedding_max)
         return out
+
+#a = torch.Tensor(2)
+#a[0] = 1
+#a[1] = 2
+#b = torch.stack((a,a,a,a),-1)
+#print(b.shape)

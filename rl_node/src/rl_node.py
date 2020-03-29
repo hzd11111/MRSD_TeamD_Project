@@ -57,6 +57,7 @@ from grasp_path_planner.msg import RLCommand
 
 import dqn_manager
 
+QUEUE_SIZE = 3
 NODE_NAME = 'rl_node'
 RL_TOPIC_NAME = 'rl_decision'
 ENVIRONMENT_TOPIC_NAME = 'environment_state'
@@ -64,14 +65,16 @@ ENVIRONMENT_TOPIC_NAME = 'environment_state'
 # DQN Settings
 ##############################################
 settings = {
-	"BATCH_SIZE" : 64,
-	"GAMMA" : 0.99,
+	"BATCH_SIZE" : 256,
+	"GAMMA" : 0.90,
+	#"EPS_START" : 0.9,
+	#"EPS_END" : 0.05,
 	"EPS_START" : 0.9,
-	"EPS_END" : 0.05,
+	"EPS_END" : 0.01,
 	"EPS_DECAY" : 200,
 	"TARGET_UPDATE" : 10,
 	"INPUT_HEIGHT" : 0,
-	"INPUT_WIDTH" : 25,
+	"INPUT_WIDTH" : 24,
 	"CAPACITY" : 10000,
 	"N_ACTIONS": 4,
 	"DEVICE" : "cpu"
@@ -89,30 +92,69 @@ class RLManager:
 		self.manager.initialize()
 		self.previous_state = None
 		self.previous_action = None
+		self.lane_change_state = None
+		self.lane_change_action = None
+		self.lane_changing = False
+		self.previous_reward = None
+		self.previous_reward_value = None
+
+	def reset(self):
+		self.previous_state = None
+		self.previous_action = None
+		self.lane_changing = False
+		self.lane_change_state = None
+		self.lane_change_action = None
+		self.previous_reward = None
 
 	def simCallback(self, data):
 		self.lock.acquire()
+
 		if data.id == self.previous_id:
 			self.lock.release()
 			return
 
+		iter_start_time = rospy.Time.now()
+		#print("RL Sim Msg Delay", (rospy.Time.now() - data.sent_time).nsecs * 1e-6)
 		env_state = self.make_state_vector(data)
 		env_state = np.array(env_state)
+
+		if data.reward.new_run:
+			if self.lane_changing:
+				self.manager.memory.push(self.lane_change_state, self.lane_change_action, self.previous_state, self.previous_reward)
+				self.manager.optimize_model()
+			if self.previous_reward_value:
+				self.manager.new_rewards(self.previous_reward_value)
+			self.reset()
+
 		# computation with rl_agent
-		rl_decision = self.make_decision(env_state, data.id)	
+		if self.lane_changing:
+			rl_decision = RLCommand()
+			rl_decision.constant_speed = 1
+			rl_decision.id = data.id
+		else:
+			rl_decision = self.make_decision(env_state, data.id)
+		rl_decision.reset_run = self.manager.exitCondition(data)
+		#print("Decision Duration", (rospy.Time.now() - iter_start_time).nsecs * 1e-6)
+
+		self.previous_reward_value = self.manager.rewardCalculation(data)
+		self.previous_reward = torch.tensor([self.previous_reward_value]).to(settings["DEVICE"])
 		# create a record
-		if self.previous_action is not None and self.previous_state is not None:
+		if (self.previous_action is not None) and (self.previous_state is not None) and (not self.lane_changing):
+			iter_start_time = rospy.Time.now()
 			reward = self.manager.rewardCalculation(data)
 			reward = torch.tensor([reward]).to(settings["DEVICE"])
 			env_tensor = torch.tensor(env_state).float().view(1,-1).to(settings["DEVICE"])
 			self.manager.memory.push(self.previous_state,self.previous_action,env_tensor,reward)
 			self.manager.optimize_model()
+			#print("Model Optimization Duration", (rospy.Time.now() - iter_start_time).nsecs * 1e-6)
+
 		self.previous_id = data.id
 		self.previous_state = torch.tensor(env_state).float().view(1,-1).to(settings["DEVICE"])
 		# publish message
+		rl_decision.sent_time = rospy.Time.now()
 		self.pub_rl.publish(rl_decision)
 		self.rl_decision = rl_decision
-		print("Published:",rl_decision.id)
+		#print("Published:",rl_decision.id)
 		self.lock.release()
 
 	def initialize(self):
@@ -122,7 +164,7 @@ class RLManager:
 		self.env_sub = rospy.Subscriber(ENVIRONMENT_TOPIC_NAME, 
 							EnvironmentState, self.simCallback)
 		# initialize pulbisher
-		self.pub_rl = rospy.Publisher(RL_TOPIC_NAME, RLCommand, queue_size = 10)
+		self.pub_rl = rospy.Publisher(RL_TOPIC_NAME, RLCommand, queue_size = QUEUE_SIZE, tcp_nodelay=True)
 		# initlialize rl class
 		
 	def publishFunc(self):
@@ -130,6 +172,7 @@ class RLManager:
 		while not rospy.is_shutdown():
 			self.lock.acquire()
 			if self.rl_decision:
+				self.rl_decision.sent_time = rospy.Time.now()
 				self.pub_rl.publish(self.rl_decision)
 			self.lock.release()
 			rate.sleep()
@@ -139,6 +182,7 @@ class RLManager:
 		create a state vector from the message recieved
 		'''
 		env_state = []
+
 		def append_vehicle_state(env_state, vehicle_state):
 			env_state.append(vehicle_state.vehicle_location.x)
 			env_state.append(vehicle_state.vehicle_location.y)
@@ -147,11 +191,13 @@ class RLManager:
 			return
 		# items needed
 		# current vehicle velocity
-		env_state.append(data.cur_vehicle_state.vehicle_speed)
+		append_vehicle_state(env_state, data.cur_vehicle_state)
+		#env_state.append(data.cur_vehicle_state.vehicle_speed)
 		# rear vehicle state
 			# position
 			# velocity
-		append_vehicle_state(env_state, data.back_vehicle_state)
+		#append_vehicle_state(env_state, data.back_vehicle_state)
+		#append_vehicle_state(env_state, data.front_vehicle_state)
 		# adjacent vehicle state
 			# position
 			# velocity
@@ -163,9 +209,9 @@ class RLManager:
 				break
 			i+=1
 		dummy = VehicleState()
-		dummy.vehicle_location.x = 10000
-		dummy.vehicle_location.y = 10000
-		dummy.vehicle_location.theta = 10000
+		dummy.vehicle_location.x = data.cur_vehicle_state.vehicle_location.x + 100
+		dummy.vehicle_location.y = data.cur_vehicle_state.vehicle_location.y + 100
+		dummy.vehicle_location.theta = 0
 		dummy.vehicle_speed = 0
 		while i<5:
 			append_vehicle_state(env_state, dummy)
@@ -183,19 +229,27 @@ class RLManager:
 		# action_vals = self.offline_network(env_state)
 		# max_val, arg_val = torch.max(action_vals,1)
 		state_tensor = torch.Tensor(env_state).to(settings["DEVICE"])
-		arg_val = self.manager.target_net(state_tensor).view(-1,4).max(1)[1].view(1,1).item()
+		arg_val = self.manager.selectAction(state_tensor).item()
+		#arg_val = self.manager.target_net(state_tensor).view(-1,4).max(1)[1].view(1,1).item()
 		self.previous_action = torch.tensor([[arg_val]]).long().to(settings["DEVICE"])
 		# arg_val = 1
 		rl_command = RLCommand()
 		# arg_val = 0
-		if arg_val is 0:
+		if arg_val == 0:
 			rl_command.accelerate = 1
-		elif arg_val is 1:
+			print("RL Decision: Accelerate")
+		elif arg_val == 1:
 			rl_command.decelerate = 1
-		elif arg_val is 2:
+			print("RL Decision: Decelerate")
+		elif arg_val == 2:
 			rl_command.change_lane = 1
-		elif arg_val is 3:
+			self.lane_changing = True
+			self.lane_change_state = torch.tensor(env_state).float().view(1,-1).to(settings["DEVICE"])
+			self.lane_change_action = torch.tensor([[arg_val]]).long().to(settings["DEVICE"])
+			print("RL Decision: Change Lane")
+		elif arg_val == 3:
 			rl_command.constant_speed = 1
+			print("RL Decision: Constant Speed")
 		rl_command.id = id
 		return rl_command
 
@@ -207,11 +261,17 @@ class RLManager:
 	def train(self, env_state):
 		self.manager.optimize_model()
 		return
+
+	def saveGraph(self):
+		self.manager.saveGraph()
+		return
 if __name__ == '__main__':
 	try:
 		rl_manager = RLManager()
 		rl_manager.initialize()
 		pub_thread = threading.Thread(target=rl_manager.publishFunc)
+		pub_thread.start()
 		rl_manager.spin()
+		rl_manager.saveGraph()
 	except rospy.ROSInterruptException:
 		pass

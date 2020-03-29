@@ -15,7 +15,7 @@ from grasp_path_planner.msg import EnvironmentState
 from grasp_path_planner.msg import RLCommand
 from grasp_path_planner.msg import PathPlan
 
-
+QUEUE_SIZE = 3
 NODE_NAME = 'path_planner'
 SIM_TOPIC_NAME = "environment_state"
 RL_TOPIC_NAME = "rl_decision"
@@ -254,9 +254,14 @@ class TrajGenerator:
 		elif rl_data.rl_decision == RLDecision.CONSTANT_SPEED:
 			return self.constSpeedTraj(rl_data, sim_data)
 		elif rl_data.rl_decision == RLDecision.ACCELERATE:
-			return self.constSpeedTraj(rl_data, sim_data)
+			new_path_plan = self.constSpeedTraj(rl_data, sim_data)
+			new_path_plan.tracking_speed += self.traj_parameters["accelerate_amt"]
+			return new_path_plan
 		elif rl_data.rl_decision == RLDecision.DECELERATE:
-			return self.constSpeedTraj(rl_data, sim_data)
+			new_path_plan = self.constSpeedTraj(rl_data, sim_data)
+			new_path_plan.tracking_speed -= self.traj_parameters["decelerate_amt"]
+			new_path_plan.tracking_speed = max(0, new_path_plan.tracking_speed)
+			return new_path_plan
 		elif rl_data.rl_decision == RLDecision.SWITCH_LANE:
 			return self.laneChangeTraj(rl_data, sim_data)
 		else:
@@ -284,14 +289,14 @@ class TrajGenerator:
 		new_path_plan = PathPlan()
 		new_path_plan.tracking_pose = closest_pose.pose
 		new_path_plan.reset_sim = rl_data.reset_run
-		#new_path_plan.tracking_speed = cur_vehicle_speed
-		new_path_plan.tracking_speed = 20
+		new_path_plan.tracking_speed = cur_vehicle_speed
+		#new_path_plan.tracking_speed = 20
 		return new_path_plan
 
 	def cubicSplineGen(self, cur_lane_width, next_lane_width, v_cur):
 		v_cur = v_cur/3.6
-		if v_cur < 10:
-			v_cur = 10
+		if v_cur < 5:
+			v_cur = 5
 		# determine external parameters
 		w = (cur_lane_width + next_lane_width)/2.
 		l = self.traj_parameters['lane_change_length']
@@ -340,7 +345,7 @@ class TrajGenerator:
 		# generate trajectory
 		if not self.lane_switching:
 			# ToDo: Use closest pose for lane width
-			print("reached here")
+			#print("reached here")
 			neutral_traj = self.cubicSplineGen(sim_data.cur_lane.lane[0].width,\
 						sim_data.next_lane.lane[0].width, sim_data.ego_vehicle.vehicle_speed)
 
@@ -378,10 +383,10 @@ class TrajGenerator:
 			self.path_pointer += 1
 		
 		new_path_plan = PathPlan()
-		print("Total Path Length", len(self.generated_path))
+		#print("Total Path Length", len(self.generated_path))
 		# determine if lane switch is completed
 		if self.path_pointer >= len(self.generated_path):
-			print("Reset Called ,......................................")
+			#print("Reset Called ,......................................")
 			# reset the trajectory
 			self.reset()
 			new_path_plan.reset_sim = 1
@@ -390,16 +395,18 @@ class TrajGenerator:
 		new_path_plan.tracking_pose.x = self.generated_path[self.path_pointer].x
 		new_path_plan.tracking_pose.y = self.generated_path[self.path_pointer].y
 		new_path_plan.tracking_pose.theta = self.generated_path[self.path_pointer].theta
-		new_path_plan.reset_sim = 0
+		new_path_plan.reset_sim = rl_data.reset_run
 		new_path_plan.tracking_speed = self.generated_path[self.path_pointer].speed
+		if new_path_plan.reset_sim:
+			self.reset()
 		return new_path_plan		
 
 TRAJ_PARAM = {'look_up_distance' : 0 ,\
 		'lane_change_length' : 30,\
 		'lane_change_time_constant' : 1.05,\
 		'lane_change_time_disc' : 0.05,\
-		'accelerate_amt' : 3,\
-		'decelerate_amt' : 3,\
+		'accelerate_amt' : 5,\
+		'decelerate_amt' : 5,\
 		'min_speed' : 0
 }
 
@@ -418,35 +425,43 @@ class PathPlannerManager:
 
 	def rlCallback(self, data):
 		self.lock.acquire()
-		print("RL ID Received:",data.id)
+		iter_start_time = rospy.Time.now();
+		#print "PP RL Delay", (rospy.Time.now() - data.sent_time).nsecs * 1e-6
+		#print("RL ID Received:",data.id)
 		self.backlog_manager.newRLMessage(copy.copy(data))
-		print("RL ID Added:",data.id)
+		#print("RL ID Added:",data.id)
 		# get the rl data if rl missing
 		if not self.newest_rl_data:
 			rl_data = self.backlog_manager.getNextRLData()
 			if rl_data:
 				self.newest_rl_data = rl_data
 				self.pathPlanCallback()
+		#print "Path Planner RL Callback Duration", (rospy.Time.now() - iter_start_time).nsecs * 1e-6
 		self.lock.release()
 
 	def simCallback(self, data):
 		self.lock.acquire()
-		print("Simulation ID Received:",data.id)
+		iter_start_time = rospy.Time.now();
+		#print "PP Sim Msg Delay", (rospy.Time.now() - data.sent_time).nsecs * 1e-6
+		#print("Simulation ID Received:",data.id)
 		self.backlog_manager.newSimMessage(copy.copy(data))
-		print("Path Planner Received Vehicle Pose")
-		print(data.cur_vehicle_state)
-		print("Simulation ID Added:",data.id)
+		#print("Path Planner Received Vehicle Pose")
+		#print(data.cur_vehicle_state)
+		#print("Simulation ID Added:",data.id)
 		# get the sim data if sim missing
 		if not self.newest_sim_data:
 			sim_data = self.backlog_manager.getNextSimData()
 			if sim_data:
 				self.newest_sim_data = sim_data
 				self.pathPlanCallback()
+		#print "Path Planner Sim Callback Duration", (rospy.Time.now() - iter_start_time).nsecs * 1e-6
 		self.lock.release()
 
 	def pathPlanCallback(self):
 		
 		if self.newest_rl_data and self.newest_sim_data:
+
+			iter_start_time = rospy.Time.now();
 			# generate the path
 			traj = self.traj_gen.trajPlan(self.newest_rl_data, self.newest_sim_data)
 		
@@ -463,23 +478,25 @@ class PathPlannerManager:
 			self.newest_sim_data = False
 
 			# publish the path
-
+			traj.sent_time = rospy.Time.now()
 			self.pub_path.publish(traj)
 			self.prev_traj = traj
-			print "Publishing Traj:",traj.id
+			#print "Publishing Traj:",traj.id
+			#print "Path Planner Duration", (rospy.Time.now() - iter_start_time).nsecs * 1e-6
 	
 	def publishFunc(self):
 		rate = rospy.Rate(10)
 		while not rospy.is_shutdown():
 			self.lock.acquire()
 			if self.prev_traj:
+				self.prev_traj.sent_time = rospy.Time.now()
 				self.pub_path.publish(self.prev_traj)	
 			self.lock.release()
 			rate.sleep()
 
 	def initialize(self):
 		# initialize publisher
-		self.pub_path = rospy.Publisher(PATH_PLAN_TOPIC_NAME, PathPlan, queue_size = 10)
+		self.pub_path = rospy.Publisher(PATH_PLAN_TOPIC_NAME, PathPlan, queue_size = QUEUE_SIZE, tcp_nodelay=True)
 
 		# initialize node
 		rospy.init_node(NODE_NAME, anonymous=True)
@@ -501,5 +518,6 @@ if __name__ == '__main__':
 		path_planner_main.initialize()
 		pub_thread = threading.Thread(target=path_planner_main.publishFunc)
 		path_planner_main.spin()
+		pub_thread.start()
 	except rospy.ROSInterruptException:
 		pass

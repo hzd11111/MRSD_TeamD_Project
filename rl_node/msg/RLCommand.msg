@@ -1,3 +1,4 @@
+time sent_time
 bool constant_speed
 bool accelerate
 bool decelerate

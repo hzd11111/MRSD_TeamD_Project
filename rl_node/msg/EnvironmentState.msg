@@ -1,3 +1,4 @@
+time sent_time
 VehicleState cur_vehicle_state
 VehicleState front_vehicle_state
 VehicleState back_vehicle_state
