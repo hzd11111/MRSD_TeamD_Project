@@ -387,8 +387,9 @@ class RLManager:
 def sb_model_train(rl_manager):
     env=CustomEnv(rl_manager)
     env=make_vec_env(lambda:env, n_envs=1)
-    model = DQN(CustomPolicy, env, verbose=1, learning_starts=256, batch_size=256, exploration_fraction=0.5,  target_network_update_freq=10, tensorboard_log='./Logs/')
+    # model = DQN(CustomPolicy, env, verbose=1, learning_starts=256, batch_size=256, exploration_fraction=0.5,  target_network_update_freq=10, tensorboard_log='./Logs/')
     # model = DQN(MlpPolicy, env, verbose=1, learning_starts=64,  target_network_update_freq=50, tensorboard_log='./Logs/')
+    model = DQN.load("DQN_Model_SimpleSim",env=env)
     model.learn(total_timesteps=10000)
     # model = PPO2(MlpPolicy, env, verbose=1,tensorboard_log="./Logs/")
     # model.learn(total_timesteps=20000)
@@ -411,7 +412,7 @@ if __name__ == '__main__':
     try:
         rl_manager = RLManager()
         rl_manager.initialize()
-        sb_model_thread = threading.Thread(target=sb_model_train, args=(rl_manager,))
+        sb_model_thread = threading.Thread(target=sb_model_test, args=(rl_manager,))
         sb_model_thread.start()
         rl_manager.spin()
 

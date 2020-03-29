@@ -428,7 +428,7 @@ class PathPlannerManager:
 
 	def rlCallback(self, data):
 		self.lock.acquire()
-		iter_start_time = rospy.Time.now();
+		iter_start_time = rospy.Time.now()
 		# print "PP RL Delay", (rospy.Time.now() - data.sent_time).nsecs * 1e-6
 		#print("RL ID Received:",data.id)
 		self.backlog_manager.newRLMessage(copy.copy(data))
