@@ -219,6 +219,7 @@ class RLManager:
         self.episode_duration=30
         self.option_duration=0.05
         self.done=False
+        self.finish=False
 
     def is_terminal_option(self, data):
         if(self.previous_reward == None):
@@ -263,6 +264,8 @@ class RLManager:
 
     def simCallback(self, data):
         # Pause until an action is given to execute action to execute
+        if self.finish:
+            sys.exit()
         if not self.action_event.is_set():
             print("Paused")
             return
@@ -383,36 +386,46 @@ class RLManager:
         res = np.matmul(H, np.array([x,y,1]).reshape(3,1))
         return res[0,0], res[1,0]
 
+def sb_model_test(rl_manager):
+    env=CustomEnv(rl_manager)
+    env=make_vec_env(lambda:env, n_envs=1)
+    model = DQN.load("DQN_Model_SimpleSim_40k")
+    obs = env.reset()
+    count=0
+    success=0
+    while count<100:
+        done = False
+        print("Count ",count, "Success ", success)
+        while not done:
+            action, _ = model.predict(obs)
+            
+            print(action)
+            obs, reward, done, info = env.step(action)
+        count+=1
+        if reward==5:
+            success+=1
+    print("Success Rate ",success/count, success, count)
+    rl_manager.finish=True
 
 def sb_model_train(rl_manager):
     env=CustomEnv(rl_manager)
     env=make_vec_env(lambda:env, n_envs=1)
     # model = DQN(CustomPolicy, env, verbose=1, learning_starts=256, batch_size=256, exploration_fraction=0.5,  target_network_update_freq=10, tensorboard_log='./Logs/')
     # model = DQN(MlpPolicy, env, verbose=1, learning_starts=64,  target_network_update_freq=50, tensorboard_log='./Logs/')
-    model = DQN.load("DQN_Model_SimpleSim",env=env)
+    model = DQN.load("DQN_Model_SimpleSim_30k",env=env,exploration_fraction=0.1,tensorboard_log='./Logs/')
     model.learn(total_timesteps=10000)
     # model = PPO2(MlpPolicy, env, verbose=1,tensorboard_log="./Logs/")
     # model.learn(total_timesteps=20000)
-    model.save("DQN_Model_SimpleSim")
+    model.save("DQN_Model_SimpleSim_40k_1")
+    # sb_model_test(rl_manager)
     return
 
-def sb_model_test(rl_manager):
-    env=CustomEnv(rl_manager)
-    env=make_vec_env(lambda:env, n_envs=1)
-    model = DQN.load("DQN_Model_SimpleSim")
-    obs = env.reset()
-    while True:
-        done = False
-        while not done:
-            action, _ = model.predict(obs)
-            print(action)
-            obs, reward, done, info = env.step(action)
 
 if __name__ == '__main__':
     try:
         rl_manager = RLManager()
         rl_manager.initialize()
-        sb_model_thread = threading.Thread(target=sb_model_test, args=(rl_manager,))
+        sb_model_thread = threading.Thread(target=sb_model_train, args=(rl_manager,))
         sb_model_thread.start()
         rl_manager.spin()
 
