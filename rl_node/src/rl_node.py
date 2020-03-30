@@ -135,7 +135,7 @@ class RLManager:
 			rl_decision = self.make_decision(env_state, data.id)
 		rl_decision.reset_run = self.manager.exitCondition(data)
 		#print("Decision Duration", (rospy.Time.now() - iter_start_time).nsecs * 1e-6)
-
+		print("Action Progress:", data.reward.action_progress)
 		self.previous_reward_value = self.manager.rewardCalculation(data)
 		self.previous_reward = torch.tensor([self.previous_reward_value]).to(settings["DEVICE"])
 		# create a record

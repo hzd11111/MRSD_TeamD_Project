@@ -82,6 +82,7 @@ LANE_CHANGE = 1
 CONSTANT_SPEED = 0
 ACCELERATE = 2
 DECELERATE = 3
+RESET=CONSTANT_SPEED
 
 # make a custom policy
 class CustomPolicy(DQNPolicy):
@@ -188,7 +189,7 @@ class CustomEnv(gym.Env):
         print("SENDING RESET")
         self.rl_manager.done=False
         self.rl_manager.sb_event.clear()
-        rl_manager.make_rl_message(None, True)
+        rl_manager.make_rl_message(RESET, True)
         self.rl_manager.sb_event.wait()
         print("Returned to RESET")
         self.rl_manager.previous_reward = None
@@ -249,8 +250,7 @@ class RLManager:
             if data.reward.new_run and self.previous_state is not None:
                 self.reward=5
         else:
-            self.reward=0
-            
+            self.reward=0   
         self.previous_reward = data.reward
 
     def is_new_episode(self,data):
@@ -294,7 +294,7 @@ class RLManager:
                 self.sb_event.set()
                 self.action_event.clear()     
         # check if current option is terminated or collision
-        elif self.is_terminal_option(data) or self.is_terminate_episode(data): 
+        elif data.reward.end_of_action or self.is_terminate_episode(data): 
             # print("Option ",self.is_terminal_option(data), data.reward.new_run)
             # print("Collision ",data.reward.collision)
             self.update_reward(data)
@@ -410,13 +410,13 @@ def sb_model_test(rl_manager):
 def sb_model_train(rl_manager):
     env=CustomEnv(rl_manager)
     env=make_vec_env(lambda:env, n_envs=1)
-    # model = DQN(CustomPolicy, env, verbose=1, learning_starts=256, batch_size=256, exploration_fraction=0.5,  target_network_update_freq=10, tensorboard_log='./Logs/')
+    model = DQN(CustomPolicy, env, verbose=1, learning_starts=256, batch_size=256, exploration_fraction=0.5,  target_network_update_freq=10, tensorboard_log='./Logs/')
     # model = DQN(MlpPolicy, env, verbose=1, learning_starts=64,  target_network_update_freq=50, tensorboard_log='./Logs/')
-    model = DQN.load("DQN_Model_SimpleSim_30k",env=env,exploration_fraction=0.1,tensorboard_log='./Logs/')
+    # model = DQN.load("DQN_Model_SimpleSim_30k",env=env,exploration_fraction=0.1,tensorboard_log='./Logs/')
     model.learn(total_timesteps=10000)
     # model = PPO2(MlpPolicy, env, verbose=1,tensorboard_log="./Logs/")
     # model.learn(total_timesteps=20000)
-    model.save("DQN_Model_SimpleSim_40k_1")
+    model.save("DQN_Model_SimpleSim")
     # sb_model_test(rl_manager)
     return
 
