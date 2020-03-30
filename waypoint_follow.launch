@@ -1,5 +1,6 @@
 <launch>
 	<node name = "path_planning_node" pkg="grasp_path_planner" type="path_planner_node" output="screen"/>
-	<node name = "rl_node" pkg="rl_node" type="rl_node.py" output="screen"/>
+	<!-- <node name = "rl_node" pkg="rl_node" type="rl_node.py" output="screen"/> -->
 	<node name = "demo_node" pkg="simple_simulator" type="simple_sim.py" output="screen"/>
+    <node pkg="rviz" type="rviz" name="rviz"/>
 </launch>
