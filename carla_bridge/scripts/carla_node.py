@@ -44,6 +44,8 @@ from grasp_path_planner.msg import RewardInfo
 from grasp_path_planner.msg import EnvironmentState
 from grasp_path_planner.msg import PathPlan
 
+from scenario_manager import CustomScenario
+
 #######################################################################################
 
 NODE_NAME = 'carla_bridge'
@@ -77,6 +79,7 @@ class CarlaManager:
         self.lane_left = None
         self.lane_right = None
         self.collision_sensor = None
+        self.tm = None
   
     def getVehicleState(self, actor):
 
@@ -104,7 +107,7 @@ class CarlaManager:
             lane_point.pose.y = waypoint.transform.location.y
             lane_point.pose.x = waypoint.transform.location.x
             lane_point.pose.theta = waypoint.transform.rotation.yaw * np.pi / 180 # CHECK : Changed this to radians.
-            lane_point.width = 4 # TODO
+            lane_point.width = 3.5 # TODO
             lane_points.append(lane_point)
         lane_cur.lane = lane_points
 
@@ -157,7 +160,7 @@ class CarlaManager:
                     print("Missed Tick....................................................................................")
                     continue
             self.lock.release()
-            self.timestamp += 0.05
+            self.timestamp += 0.1
             
         ### Extract State Information
         nearest_waypoint = self.carla_handler.world_map.get_waypoint(self.ego_vehicle.get_location(), project_to_road=True)
@@ -255,115 +258,31 @@ class CarlaManager:
         self.first_run = 1
 
         
-
+        synchronous_master = False
 
         try:
-
-            traffic_manager = self.client.get_trafficmanager(8000)
-            traffic_manager.set_global_distance_to_leading_vehicle(2.0)
-
-            synchronous_master = False
-
-
-
-            blueprints = self.carla_handler.world.get_blueprint_library().filter('vehicle.*')
-
+    
             if True:
-                blueprints = [x for x in blueprints if int(x.get_attribute('number_of_wheels')) == 4]
-                blueprints = [x for x in blueprints if not x.id.endswith('isetta')]
-                blueprints = [x for x in blueprints if not x.id.endswith('carlacola')]
-                blueprints = [x for x in blueprints if not x.id.endswith('cybertruck')]
-                blueprints = [x for x in blueprints if not x.id.endswith('t2')]
-
-            num_vehicles = 15
-            waypoints = self.carla_handler.world.get_map().generate_waypoints(distance=1)
-            road_waypoints = []
-            for waypoint in waypoints:
-                if(waypoint.road_id == 40 and waypoint.lane_id == 4):
-                    road_waypoints.append(waypoint)
-            number_of_spawn_points = len(road_waypoints)
-            print("get", len(road_waypoints), "on road 12 with lane id 0")
-            if num_vehicles < number_of_spawn_points:
-                print("randomize distance in between cars")
-                random.shuffle(road_waypoints)
-            elif num_vehicles > number_of_spawn_points:
-                msg = 'requested %d vehicles, but could only find %d spawn points'
-                # logging.warning(msg, num_vehicles, number_of_spawn_points)
-                num_vehicles = number_of_spawn_points
-
-            
-            # @todo cannot import these directly.
-            SpawnActor = carla.command.SpawnActor
-            SetAutopilot = carla.command.SetAutopilot
-            FutureActor = carla.command.FutureActor
-
-            # --------------
-            # Spawn vehicles
-            # --------------
-            batch = []
-            for n, t in enumerate(road_waypoints):
-                if n >= num_vehicles:
-                    break
-                blueprint = random.choice(blueprints)
-                if blueprint.has_attribute('color'):
-                    color = random.choice(blueprint.get_attribute('color').recommended_values)
-                    blueprint.set_attribute('color', color)
-                if blueprint.has_attribute('driver_id'):
-                    driver_id = random.choice(blueprint.get_attribute('driver_id').recommended_values)
-                    blueprint.set_attribute('driver_id', driver_id)
-                blueprint.set_attribute('role_name', 'autopilot')
-                transform = t.transform
-                transform.location.z += 0.1
-                batch.append(SpawnActor(blueprint, transform).then(SetAutopilot(FutureActor, True)))
-
-            for response in self.client.apply_batch_sync(batch, synchronous_master):
-                if response.error:
-                    # logging.error(response.error)
-                    print("Response Error while applying batch!")
+                settings = self.carla_handler.world.get_settings()
+                self.tm.traffic_manager.set_synchronous_mode(True)
+                if not settings.synchronous_mode:
+                    synchronous_master = True
+                    settings.synchronous_mode = True
+                    settings.fixed_delta_seconds = 0.1
+                    self.carla_handler.world.apply_settings(settings)
                 else:
-                    self.vehicles_list.append(response.actor_id)
-                    print('created %s' % response.actor_id)
-            my_vehicles = self.carla_handler.world.get_actors(self.vehicles_list)
-
-            for n, v in enumerate(my_vehicles):
-                # c = v.get_physics_control()
-                # c.max_rpm = args.max_vehicles_speed * 133 
-                # v.apply_physics_control(c)
-                # if n == 0:
-                #     print("vehicles' speed limit:", v.get_speed_limit())
-                traffic_manager.auto_lane_change(v,False)
-                
-            # while True:
-            #     if True:#args.sync and synchronous_master:
-            #         self.carla_handler.world.tick()
-            #     else:
-            #         self.carla_handler.world.wait_for_tick()
-                
-            # Spawn ego vehicle on road 
-            filtered_waypoints = self.carla_handler.filter_waypoints(self.carla_handler.get_waypoints(1), road_id=40, lane_id=5)
-            spawn_point = filtered_waypoints[100].transform # Select random point from filtered waypoint list #TODO Initialization Scheme Design
-            spawn_point.location.z = spawn_point.location.z + 0.1 # To avoid collision during spawn
-            self.ego_vehicle, ego_vehicle_ID = self.carla_handler.spawn_vehicle(spawn_point=spawn_point)
-            print("Ego spawned!")
-                        
+                    synchronous_master = False
+                    
+            self.ego_vehicle = self.tm.reset()
+            
+            ## Handing over control
             self.collision_sensor = self.carla_handler.world.spawn_actor(self.carla_handler.world.get_blueprint_library().find('sensor.other.collision'),
                                                     carla.Transform(), attach_to=self.ego_vehicle)
 
             self.collision_sensor.listen(lambda event: self.collision_handler(event))
             self.vehicle_controller = GRASPPIDController(self.ego_vehicle, args_lateral = {'K_P': 0.15, 'K_D': 0.0, 'K_I': 0}, args_longitudinal = {'K_P': 0.15, 'K_D': 0.0, 'K_I': 0.0})
-            time.sleep(1)
+            # time.sleep(1)
             self.original_lane = 5
-            
-            if True:
-                settings = self.carla_handler.world.get_settings()
-                traffic_manager.set_synchronous_mode(True)
-                if not settings.synchronous_mode:
-                    synchronous_master = True
-                    settings.synchronous_mode = True
-                    settings.fixed_delta_seconds = 0.05
-                    self.carla_handler.world.apply_settings(settings)
-                else:
-                    synchronous_master = False
                 
         except rospy.ROSInterruptException:
             print("failed....")
@@ -391,7 +310,7 @@ class CarlaManager:
         # Create a CarlaHandler object. CarlaHandler provides some cutom built APIs for the Carla Server.
         self.carla_handler = CarlaHandler(client)
         self.client = client
-
+        self.tm = CustomScenario(self.client, self.carla_handler)
         # Reset Environment
         self.resetEnv()
                 
