@@ -82,6 +82,7 @@ LANE_CHANGE = 1
 CONSTANT_SPEED = 0
 ACCELERATE = 2
 DECELERATE = 3
+RESET=CONSTANT_SPEED
 
 # make a custom policy
 class CustomPolicy(DQNPolicy):
@@ -188,7 +189,7 @@ class CustomEnv(gym.Env):
         print("SENDING RESET")
         self.rl_manager.done=False
         self.rl_manager.sb_event.clear()
-        rl_manager.make_rl_message(None, True)
+        rl_manager.make_rl_message(RESET, True)
         self.rl_manager.sb_event.wait()
         print("Returned to RESET")
         self.rl_manager.previous_reward = None
