@@ -166,6 +166,7 @@ class SimpleSimulator:
             self.lock.release()
             return
         #print "Simulator Path Plan Msg Delay", (rospy.Time.now()-msg.sent_time).nsecs * 1e-6
+
         tracking_pose = msg.tracking_pose
         tracking_speed = msg.tracking_speed/3.6
         reset_sim = msg.reset_sim

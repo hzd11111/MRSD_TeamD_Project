@@ -252,7 +252,7 @@ class TrajGenerator:
 		self.reset()
 	
 	def reset(self, cur_act = RLDecision.NO_ACTION, start_speed = 0):
-		self.curent_action = cur_act
+		self.current_action = cur_act
 		self.generated_path = []
 		self.path_pointer = 0
 		self.action_start_time = 0
@@ -273,13 +273,10 @@ class TrajGenerator:
 		elif rl_data.rl_decision == RLDecision.CONSTANT_SPEED:
 			return self.constSpeedTraj(rl_data, sim_data)
 		elif rl_data.rl_decision == RLDecision.ACCELERATE:
-			new_path_plan = self.constSpeedTraj(rl_data, sim_data)
-			new_path_plan.tracking_speed += self.traj_parameters["accelerate_amt"]
+			new_path_plan = self.accelerateTraj(rl_data, sim_data)
 			return new_path_plan
 		elif rl_data.rl_decision == RLDecision.DECELERATE:
-			new_path_plan = self.constSpeedTraj(rl_data, sim_data)
-			new_path_plan.tracking_speed -= self.traj_parameters["decelerate_amt"]
-			new_path_plan.tracking_speed = max(0, new_path_plan.tracking_speed)
+			new_path_plan = self.decelerateTraj(rl_data, sim_data)
 			return new_path_plan
 		elif rl_data.rl_decision == RLDecision.SWITCH_LANE:
 			return self.laneChangeTraj(rl_data, sim_data)
@@ -305,7 +302,6 @@ class TrajGenerator:
 
 			# set action start time
 			self.action_start_time = sim_data.sim_time
-
 		new_sim_time = sim_data.sim_time
 		# current vehicle state
 		cur_vehicle_state = sim_data.ego_vehicle
@@ -326,15 +322,16 @@ class TrajGenerator:
 			end_of_action = True
 			action_progress = 1.
 
-		if end_of_action:
-			self.reset()
-
 		new_path_plan = PathPlan()
 		new_path_plan.tracking_pose = closest_pose.pose
 		new_path_plan.reset_sim = rl_data.reset_run
 		new_path_plan.tracking_speed = self.start_speed
 		new_path_plan.end_of_action = end_of_action
 		new_path_plan.action_progress = action_progress
+
+		if end_of_action:
+			self.reset()
+
 		return new_path_plan
 
 	def accelerateTraj(self, rl_data, sim_data):
@@ -344,7 +341,6 @@ class TrajGenerator:
 
 			# set action start time
 			self.action_start_time = sim_data.sim_time
-
 		new_sim_time = sim_data.sim_time
 		# current vehicle state
 		cur_vehicle_state = sim_data.ego_vehicle
@@ -364,9 +360,6 @@ class TrajGenerator:
 		if action_progress >= 1.:
 			end_of_action = True
 			action_progress = 1.
-
-		if end_of_action:
-			self.reset()
 
 		new_path_plan = PathPlan()
 		new_path_plan.tracking_pose = closest_pose.pose
@@ -374,16 +367,18 @@ class TrajGenerator:
 		new_path_plan.tracking_speed = self.start_speed + action_progress * self.traj_parameters['accelerate_amt']
 		new_path_plan.end_of_action = end_of_action
 		new_path_plan.action_progress = action_progress
+
+		if end_of_action:
+			self.reset()
 		return new_path_plan
 
-	def accelerateTraj(self, rl_data, sim_data):
+	def decelerateTraj(self, rl_data, sim_data):
 		# duration evaluation
 		if not self.current_action == RLDecision.DECELERATE:
 			self.reset(RLDecision.DECELERATE, sim_data.ego_vehicle.vehicle_speed)
 
 			# set action start time
 			self.action_start_time = sim_data.sim_time
-
 		new_sim_time = sim_data.sim_time
 		# current vehicle state
 		cur_vehicle_state = sim_data.ego_vehicle
@@ -404,15 +399,16 @@ class TrajGenerator:
 			end_of_action = True
 			action_progress = 1.
 
-		if end_of_action:
-			self.reset()
-
 		new_path_plan = PathPlan()
 		new_path_plan.tracking_pose = closest_pose.pose
 		new_path_plan.reset_sim = rl_data.reset_run
-		new_path_plan.tracking_speed = self.start_speed - action_progress * self.traj_parameters['decelerate_amt']
+		new_path_plan.tracking_speed = max(0, self.start_speed - action_progress * self.traj_parameters['decelerate_amt'])
 		new_path_plan.end_of_action = end_of_action
 		new_path_plan.action_progress = action_progress
+
+		if end_of_action:
+			self.reset()
+
 		return new_path_plan
 
 	def cubicSplineGen(self, cur_lane_width, next_lane_width, v_cur):
@@ -505,7 +501,7 @@ class TrajGenerator:
 		#print("Total Path Length", len(self.generated_path))
 		# determine if lane switch is completed
 
-		action_progress = self.path_pointer / len(self.generated_path)
+		action_progress = self.path_pointer / float(len(self.generated_path))
 		end_of_action = False
 		if rl_data.reset_run:
 			end_of_action = True
@@ -515,12 +511,12 @@ class TrajGenerator:
 
 		if end_of_action:
 			self.reset()
-		
-		new_path_plan.tracking_pose.x = self.generated_path[self.path_pointer].x
-		new_path_plan.tracking_pose.y = self.generated_path[self.path_pointer].y
-		new_path_plan.tracking_pose.theta = self.generated_path[self.path_pointer].theta
+		else:
+			new_path_plan.tracking_pose.x = self.generated_path[self.path_pointer].x
+			new_path_plan.tracking_pose.y = self.generated_path[self.path_pointer].y
+			new_path_plan.tracking_pose.theta = self.generated_path[self.path_pointer].theta
+			new_path_plan.tracking_speed = self.generated_path[self.path_pointer].speed
 		new_path_plan.reset_sim = end_of_action
-		new_path_plan.tracking_speed = self.generated_path[self.path_pointer].speed
 		new_path_plan.end_of_action = end_of_action
 		new_path_plan.action_progress = action_progress
 
