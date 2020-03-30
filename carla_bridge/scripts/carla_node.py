@@ -97,6 +97,24 @@ class CarlaManager:
         vehicle.width = vehicle_bounding_box.y*2
 
         return vehicle
+    
+    def getPedestrianState(self, actor):
+
+        ## TODO: Processing them like vehicles for now
+        if(actor == None):
+            return None
+
+        vehicle = VehicleState()
+        vehicle.vehicle_location.x = actor.get_transform().location.x
+        vehicle.vehicle_location.y = actor.get_transform().location.y
+        vehicle.vehicle_location.theta = actor.get_transform().rotation.yaw * np.pi / 180 #CHECK : Changed this to radians. 
+        vehicle.vehicle_speed = np.sqrt(actor.get_velocity().x**2 + actor.get_velocity().y**2) 
+
+        vehicle_bounding_box = actor.bounding_box.extent
+        vehicle.length = vehicle_bounding_box.x*2
+        vehicle.width = vehicle_bounding_box.y*2
+
+        return vehicle
   
     def getLanePoints(self, waypoints, flip=False):
 
@@ -166,6 +184,8 @@ class CarlaManager:
         nearest_waypoint = self.carla_handler.world_map.get_waypoint(self.ego_vehicle.get_location(), project_to_road=True)
         state_information = self.carla_handler.get_state_information(self.ego_vehicle, self.original_lane)
         current_lane_waypoints, left_lane_waypoints, right_lane_waypoints, front_vehicle, rear_vehicle, actors_in_current_lane, actors_in_left_lane, actors_in_right_lane = state_information
+        
+        pedestrians_on_current_road = self.carla_handler.get_pedestrian_information(self.ego_vehicle)
         ####
         
         ####
@@ -320,6 +340,8 @@ class CarlaManager:
 
         state_information = self.carla_handler.get_state_information(self.ego_vehicle, self.original_lane)
         current_lane_waypoints, left_lane_waypoints, right_lane_waypoints, front_vehicle, rear_vehicle, actors_in_current_lane, actors_in_left_lane, actors_in_right_lane = state_information
+        
+        pedestrians_on_current_road = self.carla_handler.get_pedestrian_information(self.ego_vehicle)
         
         ##############################################################################################################
         # publish the first frame 

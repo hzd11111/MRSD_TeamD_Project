@@ -144,6 +144,25 @@ class CarlaHandler:
 			
 			return transform_position_as_seen_from_actor
 
+	def get_pedestrian_information(self, ego_vehicle=None):
+		pedestrian_list = []
+  
+		ego_vehicle_location = ego_vehicle.get_location()
+		nearest_waypoint = self.world_map.get_waypoint(ego_vehicle_location, project_to_road=True)
+
+		# Get current road and lane IDs
+		current_road_ID = nearest_waypoint.road_id
+  
+		for actor in self.world.get_actors().filter('walker.*'):
+			actor_nearest_waypoint = self.world_map.get_waypoint(actor.get_location(), project_to_road=True)
+			if(actor_nearest_waypoint.road_id == current_road_ID):
+				pedestrian_list.append(actor)
+    
+		return pedestrian_list
+				
+			
+
+
 
 	def get_state_information(self, ego_vehicle=None, original_lane_ID=None):
 
