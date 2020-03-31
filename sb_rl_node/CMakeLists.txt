@@ -125,8 +125,8 @@ catkin_package(
 ## Specify additional locations of header files
 ## Your package locations should be listed before other locations
 include_directories(
-  include
-  ${catkin_INCLUDE_DIRS}
+#   include
+#   ${catkin_INCLUDE_DIRS}
 )
 
 ## Declare a C++ library
@@ -168,7 +168,7 @@ include_directories(
 # See http://ros.org/doc/api/catkin/html/adv_user_guide/variables.html
 
 catkin_install_python(PROGRAMS
-  src/sb_rl_node.py
+  scripts/sb_rl_node.py
   DESTINATION ${CATKIN_PACKAGE_BIN_DESTINATION}
 )
 

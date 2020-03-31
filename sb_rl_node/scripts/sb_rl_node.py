@@ -1,4 +1,4 @@
-#!/usr/bin/env python3
+#!/usr/bin/env python
 # Software License Agreement (BSD License)
 #
 # Copyright (c) 2008, Willow Garage, Inc.
@@ -389,7 +389,7 @@ class RLManager:
 def sb_model_test(rl_manager):
     env=CustomEnv(rl_manager)
     env=make_vec_env(lambda:env, n_envs=1)
-    model = DQN.load("DQN_Model_SimpleSim_40k")
+    model = DQN.load("DQN_Model_SimpleSim_30k")
     obs = env.reset()
     count=0
     success=0
@@ -425,7 +425,7 @@ if __name__ == '__main__':
     try:
         rl_manager = RLManager()
         rl_manager.initialize()
-        sb_model_thread = threading.Thread(target=sb_model_train, args=(rl_manager,))
+        sb_model_thread = threading.Thread(target=sb_model_test, args=(rl_manager,))
         sb_model_thread.start()
         rl_manager.spin()
 
