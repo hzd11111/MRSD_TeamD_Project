@@ -1,4 +1,4 @@
-#!/usr/bin/env python
+#!/usr/bin/env python3
 # Software License Agreement (BSD License)
 #
 # Copyright (c) 2008, Willow Garage, Inc.
@@ -37,7 +37,15 @@
 ## to the 'chatter' topic
 
 import sys
-sys.path.append("/home/arcot/GRASP/src")
+import os
+homedir=os.getenv("HOME")
+distro=os.getenv("ROS_DISTRO")
+sys.path.remove("/opt/ros/"+distro+"/lib/python2.7/dist-packages")
+sys.path.remove(homedir+"/GRASP/devel/lib/python2.7/dist-packages")
+sys.path.append("/opt/ros/"+distro+"/lib/python2.7/dist-packages")
+sys.path.append(homedir+"/GRASP/devel/lib/python2.7/dist-packages")
+sys.path.append(homedir+"/GRASP/scripts")
+print(sys.path)
 # to remove tensorflow warnings
 import warnings
 warnings.filterwarnings("ignore")
@@ -70,10 +78,7 @@ from stable_baselines.deepq.policies import DQNPolicy
 from stable_baselines.common.env_checker import check_env
 from stable_baselines.common.cmd_util import make_vec_env
 
-
-# deprecation._PRINT_DEPRECATION_WARNINGS = False
-
-
+dir_path = os.path.dirname(os.path.realpath(__file__))
 NODE_NAME = 'sb_rl_node'
 RL_TOPIC_NAME = 'rl_decision'
 ENVIRONMENT_TOPIC_NAME = 'environment_state'
@@ -389,7 +394,7 @@ class RLManager:
 def sb_model_test(rl_manager):
     env=CustomEnv(rl_manager)
     env=make_vec_env(lambda:env, n_envs=1)
-    model = DQN.load("DQN_Model_SimpleSim_30k")
+    model = DQN.load(dir_path+"/DQN_Model_SimpleSim_30k")
     obs = env.reset()
     count=0
     success=0
@@ -416,7 +421,7 @@ def sb_model_train(rl_manager):
     model.learn(total_timesteps=10000)
     # model = PPO2(MlpPolicy, env, verbose=1,tensorboard_log="./Logs/")
     # model.learn(total_timesteps=20000)
-    model.save("DQN_Model_SimpleSim")
+    model.save(dir_path+"/DQN_Model_SimpleSim")
     # sb_model_test(rl_manager)
     return
 
@@ -427,6 +432,7 @@ if __name__ == '__main__':
         rl_manager.initialize()
         sb_model_thread = threading.Thread(target=sb_model_test, args=(rl_manager,))
         sb_model_thread.start()
+        print("RL Spin")
         rl_manager.spin()
 
     except rospy.ROSInterruptException:

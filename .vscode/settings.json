@@ -3,5 +3,6 @@
         "/home/arcot/MRSD/PFP3/ws/devel/lib/python2.7/dist-packages",
         "/home/arcot/GRASP/devel/lib/python2.7/dist-packages",
         "/opt/ros/melodic/lib/python2.7/dist-packages"
-    ]
+    ],
+    "python.pythonPath": "/home/arcot/anaconda3/envs/rl/bin/python"
 }
