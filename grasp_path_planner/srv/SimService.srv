@@ -5,7 +5,6 @@ float64 tracking_speed
 bool reset_sim
 bool end_of_action
 float64 action_progress
-int32 id
 ---
 #response contents
 time sent_time
@@ -18,4 +17,3 @@ float64 speed_limit
 Lane current_lane
 Lane next_lane
 RewardInfo reward
-int32 id
