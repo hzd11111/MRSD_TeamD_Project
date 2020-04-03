@@ -80,6 +80,11 @@ class CarlaManager:
         self.lane_right = None
         self.collision_sensor = None
         self.tm = None
+        
+        self.simulation_sync_timestep = 0.1
+        
+        self.action_progress = 0
+        self.end_of_action = True
   
     def getVehicleState(self, actor):
 
@@ -134,7 +139,7 @@ class CarlaManager:
   
     def pathCallback(self, data):
         self.lock.acquire()
-        print("Collision:", self.collision_marker)
+        # print("Collision:", self.collision_marker)
         ### Check Sync ###
         if not data.id == self.id_waiting:
             self.lock.release()
@@ -144,7 +149,11 @@ class CarlaManager:
         tracking_pose = data.tracking_pose
         tracking_speed = data.tracking_speed
         reset_sim = data.reset_sim
-        print("RESET:",reset_sim)
+        print("Tracking Speed:", tracking_speed, "Current Speed:", self.getVehicleState(self.ego_vehicle).vehicle_speed)
+        # print("RESET:",reset_sim)
+        
+        self.end_of_action = data.end_of_action
+        self.action_progress = data.action_progress
         
         ### Update ROS Sync ###
         self.id_waiting = self.id
@@ -178,7 +187,7 @@ class CarlaManager:
                     print("Missed Tick....................................................................................")
                     continue
             self.lock.release()
-            self.timestamp += 0.1
+            self.timestamp += self.simulation_sync_timestep
             
         ### Extract State Information
         nearest_waypoint = self.carla_handler.world_map.get_waypoint(self.ego_vehicle.get_location(), project_to_road=True)
@@ -229,6 +238,8 @@ class CarlaManager:
         reward_info.time_elapsed = self.timestamp
         reward_info.new_run = self.first_run
         reward_info.collision = self.collision_marker
+        reward_info.action_progress = self.action_progress
+        reward_info.end_of_action = self.end_of_action
         env_state.reward = reward_info
 
 
@@ -253,16 +264,20 @@ class CarlaManager:
             rate.sleep()    
 
     def destroy_actors_and_sensors(self):
+
+        # for actor in self.carla_handler.world.get_actors().filter('sensor.*'):
+        #     actor.destroy()
+        if(self.collision_sensor is not None):
+            self.collision_sensor.destroy()
+
         for actor in self.carla_handler.world.get_actors().filter('vehicle.*'):
-            actor.destroy()
-        for actor in self.carla_handler.world.get_actors().filter('sensor.*'):
             actor.destroy()
                 
         self.vehicles_list = []
         print("All actors destroyed..\n") 
         
     def collision_handler(self, event):
-        print("collision lol")
+        # print("collision lol")
         self.collision_marker = 1
 
     def resetEnv(self):
@@ -288,7 +303,7 @@ class CarlaManager:
                 if not settings.synchronous_mode:
                     synchronous_master = True
                     settings.synchronous_mode = True
-                    settings.fixed_delta_seconds = 0.1
+                    settings.fixed_delta_seconds = self.simulation_sync_timestep
                     self.carla_handler.world.apply_settings(settings)
                 else:
                     synchronous_master = False
@@ -296,11 +311,12 @@ class CarlaManager:
             self.ego_vehicle = self.tm.reset()
             
             ## Handing over control
+            del self.collision_sensor
             self.collision_sensor = self.carla_handler.world.spawn_actor(self.carla_handler.world.get_blueprint_library().find('sensor.other.collision'),
                                                     carla.Transform(), attach_to=self.ego_vehicle)
 
             self.collision_sensor.listen(lambda event: self.collision_handler(event))
-            self.vehicle_controller = GRASPPIDController(self.ego_vehicle, args_lateral = {'K_P': 0.15, 'K_D': 0.0, 'K_I': 0}, args_longitudinal = {'K_P': 0.15, 'K_D': 0.0, 'K_I': 0.0})
+            self.vehicle_controller = GRASPPIDController(self.ego_vehicle, args_lateral = {'K_P': 0.4, 'K_D': 0.0, 'K_I': 0}, args_longitudinal = {'K_P': 0.4, 'K_D': 0.0, 'K_I': 0.0})
             # time.sleep(1)
             self.original_lane = 5
                 
@@ -335,7 +351,7 @@ class CarlaManager:
         self.resetEnv()
                 
         # Initialize PID Controller
-        self.vehicle_controller = GRASPPIDController(self.ego_vehicle, args_lateral = {'K_P': 0.15, 'K_D': 0.0, 'K_I': 0}, args_longitudinal = {'K_P': 0.15, 'K_D': 0.0, 'K_I': 0.0})
+        self.vehicle_controller = GRASPPIDController(self.ego_vehicle, args_lateral = {'K_P': 0.4, 'K_D': 0.0, 'K_I': 0}, args_longitudinal = {'K_P': 0.4, 'K_D': 0.0, 'K_I': 0.0})
 
 
         state_information = self.carla_handler.get_state_information(self.ego_vehicle, self.original_lane)
