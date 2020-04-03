@@ -640,7 +640,7 @@ class RLManager:
         reward = 0
         if env_desc.reward.collision:
             reward = reward - 1
-        if env_desc.reward.current_action == RLDecision.SWITCH_LANE:
+        if env_desc.reward.path_planner_terminate:
             reward += env_desc.reward.action_progress
         return reward
 
