@@ -45,12 +45,16 @@ from grasp_path_planner.msg import EnvironmentState
 from grasp_path_planner.msg import PathPlan
 
 from scenario_manager import CustomScenario
+from grasp_path_planner.srv import SimService, SimServiceResponse
+
 
 #######################################################################################
 
 NODE_NAME = 'carla_bridge'
 SIM_TOPIC_NAME = 'environment_state'
 PATH_PLAN_TOPIC_NAME = 'path_plan'
+
+SIM_SERVICE_NAME = 'carla_simulator'
 
 #######################################################################################
 
@@ -82,6 +86,9 @@ class CarlaManager:
         self.tm = None
         
         self.simulation_sync_timestep = 0.1
+        
+        self.first_frame_generated = False
+        self.path_planner_terminate = False
         
         self.action_progress = 0
         self.end_of_action = True
@@ -135,6 +142,122 @@ class CarlaManager:
         lane_cur.lane = lane_points
 
         return lane_cur
+    
+    def pathRequest(self, data):
+        
+        if self.first_frame_generated:
+            data = data.path_plan
+            
+            ### Get requested pose and speed values ###
+            tracking_pose = data.tracking_pose
+            tracking_speed = data.tracking_speed / 3.6
+            reset_sim = data.reset_sim
+            print("Tracking Speed:", tracking_speed, "Current Speed:", self.getVehicleState(self.ego_vehicle).vehicle_speed)
+            # print("RESET:",reset_sim)
+            
+            self.end_of_action = data.end_of_action
+            self.action_progress = data.action_progress
+            self.path_planner_terminate = data.path_planner_terminate
+            
+            ### Update ROS Sync ###
+            self.id_waiting = self.id
+            
+            
+            if(reset_sim):
+                self.resetEnv()
+                
+            else:
+                self.first_run = 0
+
+                # time.sleep(1)
+                ### Apply Control ###
+                self.ego_vehicle.apply_control(self.vehicle_controller.run_step(tracking_speed, tracking_pose))
+
+                ### Visualize requested waypoint ###
+                tracking_loc = carla.Location(x=tracking_pose.x, y=tracking_pose.y, z=self.ego_vehicle.get_location().z)
+                self.carla_handler.world.debug.draw_string(tracking_loc, 'O', draw_shadow=False,
+                                                    color=carla.Color(r=255, g=0, b=0), life_time=1,
+                                                    persistent_lines=True)
+                
+                #### Check Sync ###
+                flag = 0
+                while(flag == 0):
+                    try:
+                        self.carla_handler.world.tick()
+                        flag = 1
+                    except:
+                        print("Missed Tick....................................................................................")
+                        continue
+                self.timestamp += self.simulation_sync_timestep
+        else:
+            self.first_frame_generated = True
+            self.resetEnv()
+            
+        ### Extract State Information
+        nearest_waypoint = self.carla_handler.world_map.get_waypoint(self.ego_vehicle.get_location(), project_to_road=True)
+        state_information = self.carla_handler.get_state_information(self.ego_vehicle, self.original_lane)
+        current_lane_waypoints, left_lane_waypoints, right_lane_waypoints, front_vehicle, rear_vehicle, actors_in_current_lane, actors_in_left_lane, actors_in_right_lane = state_information
+        
+        pedestrians_on_current_road = self.carla_handler.get_pedestrian_information(self.ego_vehicle)
+        ####
+        
+        ####
+
+        # Current Lane
+        lane_cur = self.lane_cur#self.getLanePoints(current_lane_waypoints)
+        
+        # Left Lane
+        lane_left = self.lane_left#self.getLanePoints(left_lane_waypoints) 
+        
+        # Right Lane
+        lane_right = self.lane_right#self.getLanePoints(right_lane_waypoints)
+        
+        # Ego vehicle	
+        vehicle_ego = self.getVehicleState(self.ego_vehicle)
+        
+        # Front vehicle	
+        if(front_vehicle == None):
+            vehicle_front = vehicle_ego
+        else:
+            vehicle_front = self.getVehicleState(front_vehicle)
+        
+        # Rear vehicle
+        if(rear_vehicle == None):
+            vehicle_rear = vehicle_ego
+        else:	
+            vehicle_rear = self.getVehicleState(rear_vehicle)
+            
+        # Contruct enviroment state ROS message
+        env_state = EnvironmentState()
+        env_state.cur_vehicle_state = vehicle_ego
+        env_state.front_vehicle_state = vehicle_front
+        env_state.back_vehicle_state = vehicle_rear
+        env_state.current_lane = lane_cur
+        env_state.next_lane = lane_left
+        env_state.adjacent_lane_vehicles = [self.getVehicleState(actor) for actor in actors_in_left_lane]
+        env_state.speed_limit = 20
+        # env_state.id = self.id
+        
+        reward_info = RewardInfo()
+        reward_info.time_elapsed = self.timestamp
+        reward_info.new_run = self.first_run
+        reward_info.collision = self.collision_marker
+        reward_info.action_progress = self.action_progress
+        reward_info.end_of_action = self.end_of_action
+        reward_info.path_planner_terminate = self.path_planner_terminate
+        env_state.reward = reward_info
+
+
+        
+        # # publish environment state
+        # self.env_msg = env_state
+        # self.env_pub.publish(env_state)
+        return SimServiceResponse(env_state)
+            
+        
+            
+        
+        
   
   
     def pathCallback(self, data):
@@ -336,6 +459,9 @@ class CarlaManager:
         
         # initlize subscriber
         self.path_sub = rospy.Subscriber(PATH_PLAN_TOPIC_NAME, PathPlan, self.pathCallback)
+        
+        # initialize service
+        self.planner_service = rospy.Service(SIM_SERVICE_NAME, SimService, self.pathRequest)
 
         # Start Client. Make sure Carla server is running before starting.
 
