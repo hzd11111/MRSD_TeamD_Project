@@ -48,18 +48,6 @@ find_package(catkin REQUIRED COMPONENTS
 ##   * uncomment the generate_messages entry below
 ##   * add every package in MSG_DEP_SET to generate_messages(DEPENDENCIES ...)
 
-## Generate messages in the 'msg' folder
-add_message_files(
-  FILES
-  Example.msg
-  LanePoint.msg
-  Lane.msg
-  VehicleState.msg
-  RewardInfo.msg
-  EnvironmentState.msg
-  RLCommand.msg
-  PathPlan.msg
-)
 
 ## Generate services in the 'srv' folder
 # add_service_files(

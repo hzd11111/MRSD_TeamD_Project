@@ -11,6 +11,7 @@ from grasp_path_planner.msg import VehicleState
 from grasp_path_planner.msg import RewardInfo
 from grasp_path_planner.msg import EnvironmentState
 from grasp_path_planner.msg import PathPlan
+from grasp_path_planner.srv import SimService, SimServiceResponse
 
 from geometry_msgs.msg import PointStamped
 from geometry_msgs.msg import Pose2D
@@ -25,6 +26,8 @@ EGO_MARKER_TOPIC_NAME = 'ego_vehicle_marker'
 VEHICLE_MARKER_TOPIC_NAME = "vehicle_markers"
 TRACKING_POSE_TOPIC_NAME = "vehicle_tracking_pose"
 COLLISION_TOPIC_NAME = "collision_marker"
+
+SIM_SERVICE_NAME = "simulator"
 
 NUM_NEXT_LANE_VEHICLES = 5
 LANE_DISCRETIZATION  = 0.1
@@ -102,6 +105,8 @@ class SimpleSimulator:
         self.first_run = 1
         self.tracking_pose = None
         self.visualization_mode = visualization_mode
+        self.first_frame_generated = False
+        self.path_planner_terminate = False
 
         self.action_progress = 0
         self.end_of_action = True
@@ -146,6 +151,9 @@ class SimpleSimulator:
         # initialize subscriber
         self.path_sub = rospy.Subscriber(PATH_PLAN_TOPIC_NAME, PathPlan, self.pathCallback)
 
+        # initialize service
+        self.planner_service = rospy.Service(SIM_SERVICE_NAME, SimService, self.pathRequest)
+
         time.sleep(2)
         # reset scene
         self.resetScene()
@@ -157,6 +165,35 @@ class SimpleSimulator:
         self.id += 1
         if self.id > 100000:
             self.id = 0
+
+    def pathRequest(self, msg):
+        new_time = rospy.Time.now()
+
+        if self.prev_time:
+            print "Iteration Duration: ", (new_time - self.prev_time).nsecs * 1e-6
+        self.prev_time = new_time
+        if self.first_frame_generated:
+            msg = msg.path_plan
+            tracking_pose = msg.tracking_pose
+            tracking_speed = msg.tracking_speed / 3.6
+            reset_sim = msg.reset_sim
+            self.end_of_action = msg.end_of_action
+            self.action_progress = msg.action_progress
+            self.path_planner_terminate = msg.path_planner_terminate
+            if reset_sim:
+                self.resetScene()
+            else:
+                self.controlling_vehicle.theta = np.arctan2((tracking_pose.y - self.controlling_vehicle.y), \
+                                                            tracking_pose.x - self.controlling_vehicle.x)
+                self.tracking_pose = msg.tracking_pose
+                self.controlling_vehicle.setSpeed(tracking_speed)
+                self.renderScene()
+        else:
+            self.first_frame_generated = True
+            self.resetScene()
+
+        self.publishMessages()
+        return self.generateServiceResponse()
 
     def pathCallback(self, msg):
         self.lock.acquire()
@@ -173,7 +210,7 @@ class SimpleSimulator:
         self.end_of_action = msg.end_of_action
         self.action_progress = msg.action_progress
         #print("Self.id:", self.id)
-        new_time = rospy.Time.now();
+        new_time = rospy.Time.now()
         #print "Iteration Duration: ", (new_time - self.prev_time).nsecs * 1e-6
         self.id_waiting = self.id
         self.lock.release()
@@ -184,14 +221,10 @@ class SimpleSimulator:
             self.controlling_vehicle.theta = np.arctan2((tracking_pose.y - self.controlling_vehicle.y),\
                                                         tracking_pose.x - self.controlling_vehicle.x)
             self.tracking_pose = msg.tracking_pose
-            #if msg.id > 4:
-            #    self.controlling_vehicle.theta = tracking_pose.theta
-            #    self.controlling_vehicle.x = tracking_pose.x
-            #    self.controlling_vehicle.y = tracking_pose.y
+
             self.controlling_vehicle.setSpeed(tracking_speed)
             self.lock.release()
             self.renderScene()
-            #print "Simulator Render Duration: ", (rospy.Time.now() - new_time).nsecs * 1e-6
 
         self.publishMessages()
         self.id += 1
@@ -286,6 +319,94 @@ class SimpleSimulator:
                 return True
         return False
 
+    def generateServiceResponse(self):
+        publish_msg = EnvironmentState()
+
+        # current lane
+        publish_msg.current_lane = self.lanes[self.cur_lane].convert2ROS()
+
+        # next lane
+        next_lane = self.cur_lane - 1
+        if next_lane >= 0:
+            publish_msg.next_lane = self.lanes[next_lane].convert2ROS()
+
+        # vehicles
+        closest_next_lane_vehicles = []
+        front_veh = False
+        back_veh = False
+
+        def sort_veh(veh_tup):
+            return veh_tup[1]
+
+        veh_dir_vec = np.array(np.cos(self.controlling_vehicle.theta), -np.sin(self.controlling_vehicle.theta))
+        for veh in self.vehicles:
+            veh_dist = np.linalg.norm(np.array(veh.x - self.controlling_vehicle.x, veh.y - self.controlling_vehicle.y))
+
+            if veh.lane == next_lane:
+                # next lane vehicles
+                if len(closest_next_lane_vehicles) < NUM_NEXT_LANE_VEHICLES:
+                    closest_next_lane_vehicles.append(tuple((veh, veh_dist)))
+                    closest_next_lane_vehicles.sort(key = sort_veh)
+                elif veh_dist < closest_next_lane_vehicles[-1][1]:
+                    closest_next_lane_vehicles[-1] = tuple((veh, veh_dist))
+                    closest_next_lane_vehicles.sort(key = sort_veh)
+            if veh.lane == self.cur_lane:
+                x_diff = veh.x - self.controlling_vehicle.x
+                y_diff = veh.y - self.controlling_vehicle.y
+                pos_diff = np.array(x_diff, y_diff)
+                proj = np.dot(veh_dir_vec, pos_diff)
+
+                if proj > 0:  # front vehicle
+                    if front_veh:
+                        if front_veh[1] > veh_dist:
+                            front_veh = tuple((veh, veh_dist))
+                    else:
+                        front_veh = tuple((veh, veh_dist))
+                else:         # back vehicle
+                    if back_veh:
+                        if back_veh[1] > veh_dist:
+                            back_veh = tuple((veh, veh_dist))
+                    else:
+                        back_veh = tuple((veh, veh_dist))
+
+        # next lane vehicle documentation
+        for veh_tup in closest_next_lane_vehicles:
+            publish_msg.adjacent_lane_vehicles.append(veh_tup[0].convert2ROS())
+
+        # front vehicle
+        if front_veh:
+            publish_msg.front_vehicle_state = front_veh[0].convert2ROS()
+        else:
+        	# ToDo: no front vehicle
+        	publish_msg.front_vehicle_state = VehicleState()
+
+        # back vehicle
+        if back_veh:
+            publish_msg.back_vehicle_state = back_veh[0].convert2ROS()
+        else:
+        	# ToDo: no back vehicle
+        	publish_msg.back_vehicle_state = VehicleState()
+
+        # ego vehicle
+        publish_msg.cur_vehicle_state = self.controlling_vehicle.convert2ROS()
+
+        # max # vehicles
+        publish_msg.max_num_vehicles = NUM_NEXT_LANE_VEHICLES
+
+        # speed limit
+        publish_msg.speed_limit = 20
+
+        # reward info
+        reward_info = RewardInfo()
+        reward_info.time_elapsed = self.timestamp
+        reward_info.new_run = self.first_run
+        reward_info.collision = self.collisionCheck()
+        reward_info.action_progress = self.action_progress
+        reward_info.end_of_action = self.end_of_action
+        reward_info.path_planner_terminate = self.path_planner_terminate
+        publish_msg.reward = reward_info
+
+        return SimServiceResponse(publish_msg)
 
     def updateMessages(self):
         self.lock.acquire()
@@ -376,7 +497,6 @@ class SimpleSimulator:
         reward_info.action_progress = self.action_progress
         reward_info.end_of_action = self.end_of_action
         publish_msg.reward = reward_info
-        publish_msg.id = self.id
 
         self.env_msg = publish_msg
 
@@ -496,7 +616,7 @@ class SimpleSimulator:
             v.step(self.time_step)
         self.timestamp += self.time_step
         self.controlling_vehicle.step(self.time_step)
-        self.updateMessages()
+        #self.updateMessages()
         self.updateMarkers()
         self.first_run = 0
 
@@ -557,10 +677,8 @@ class SimpleSimulator:
 
 if __name__ == '__main__':
     try:
-        simple_sim = SimpleSimulator(0.01, True)
+        simple_sim = SimpleSimulator(0.2, True)
         simple_sim.initialize()
-        pub_thread = threading.Thread(target=simple_sim.publishFunc)
-        pub_thread.start()
         simple_sim.spin()
     except rospy.ROSInterruptException:
         pass

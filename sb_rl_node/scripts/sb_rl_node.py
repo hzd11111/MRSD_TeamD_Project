@@ -1,4 +1,4 @@
-#!/usr/bin/env python3
+#!/usr/bin/env python
 # Software License Agreement (BSD License)
 #
 # Copyright (c) 2008, Willow Garage, Inc.
@@ -41,10 +41,10 @@ import os
 homedir=os.getenv("HOME")
 distro=os.getenv("ROS_DISTRO")
 sys.path.remove("/opt/ros/"+distro+"/lib/python2.7/dist-packages")
-sys.path.remove(homedir+"/GRASP/devel/lib/python2.7/dist-packages")
+#sys.path.remove(homedir+"/GRASP/devel/lib/python2.7/dist-packages")
 sys.path.append("/opt/ros/"+distro+"/lib/python2.7/dist-packages")
-sys.path.append(homedir+"/GRASP/devel/lib/python2.7/dist-packages")
-sys.path.append(homedir+"/GRASP/scripts")
+#sys.path.append(homedir+"/GRASP/devel/lib/python2.7/dist-packages")
+#sys.path.append(homedir+"/GRASP/scripts")
 print(sys.path)
 # to remove tensorflow warnings
 import warnings
@@ -259,11 +259,11 @@ class RLManager:
         self.previous_reward = data.reward
 
     def is_new_episode(self,data):
-        print("Episode time elapsed is ",data.reward.time_elapsed)
+        #print("Episode time elapsed is ",data.reward.time_elapsed)
         return data.reward.new_run or data.reward.time_elapsed>self.episode_duration
     
     def is_terminate_episode(self, data):
-        print("Episode Time elapsed is", data.reward.time_elapsed)
+        #print("Episode Time elapsed is", data.reward.time_elapsed)
         self.done=data.reward.collision or data.reward.time_elapsed>self.episode_duration
         return self.done
 
