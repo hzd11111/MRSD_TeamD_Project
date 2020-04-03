@@ -4,24 +4,17 @@ import os
 homedir=os.getenv("HOME")
 distro=os.getenv("ROS_DISTRO")
 sys.path.remove("/opt/ros/"+distro+"/lib/python2.7/dist-packages")
-#sys.path.remove(homedir+"/GRASP/devel/lib/python2.7/dist-packages")
 sys.path.append("/opt/ros/"+distro+"/lib/python2.7/dist-packages")
-#sys.path.append(homedir+"/GRASP/devel/lib/python2.7/dist-packages")
-#sys.path.append(homedir+"/GRASP/scripts")
-print(sys.path)
 # to remove tensorflow warnings
 import warnings
 warnings.filterwarnings("ignore")
 import os,logging
 logging.disable(logging.WARNING)
 os.environ['TF_CPP_MIN_LOG_LEVEL'] = '2'
-
-
+# path planner packages
 import math
-
 from enum import Enum
 import rospy
-
 import numpy as np
 from std_msgs.msg import String
 from grasp_path_planner.msg import LanePoint
@@ -32,13 +25,10 @@ from grasp_path_planner.msg import EnvironmentState
 from grasp_path_planner.msg import RLCommand
 from grasp_path_planner.msg import PathPlan
 from grasp_path_planner.srv import SimService, SimServiceResponse, SimServiceRequest
-
-
-
+# RL packages
 import gym
 import time
 from gym import spaces
-# sys.path.remove('/opt/ros/kinetic/lib/python2.7/dist-packages')
 import tensorflow as tf
 import tensorflow.contrib as tf_contrib
 import tensorflow.contrib.layers as tf_layers
@@ -63,13 +53,13 @@ TRAJ_PARAM = {'look_up_distance' : 0 ,\
 }
 
 N_DISCRETE_ACTIONS = 4
-
+dir_path = os.path.dirname(os.path.realpath(__file__))
 
 class RLDecision(Enum):
     CONSTANT_SPEED = 0
-    ACCELERATE = 1
-    DECELERATE = 2
-    SWITCH_LANE = 3
+    ACCELERATE = 2
+    DECELERATE = 3
+    SWITCH_LANE = 1
     NO_ACTION = 4
 
 
@@ -622,13 +612,13 @@ class PathPlannerManager:
 class RLManager:
 
     def convertDecision(self, action):
-        if action == 0:
+        if action == RLDecision.CONSTANT_SPEED.value:
             return RLDecision.CONSTANT_SPEED
-        elif action == 1:
+        elif action == RLDecision.ACCELERATE.value:
             return RLDecision.ACCELERATE
-        elif action == 2:
+        elif action == RLDecision.DECELERATE.value:
             return RLDecision.DECELERATE
-        elif action == 3:
+        elif action == RLDecision.SWITCH_LANE.value:
             return RLDecision.SWITCH_LANE
         else:
             print("Bug in decision conversion")
@@ -642,6 +632,7 @@ class RLManager:
             reward = reward - 1
         if env_desc.reward.path_planner_terminate:
             reward += env_desc.reward.action_progress
+            print("Progress",env_desc.reward.action_progress)
         return reward
 
     def append_vehicle_state(self, env_state, vehicle_state):
@@ -698,48 +689,35 @@ class FullPlannerManager:
         self.path_planner.initialize()
 
     def run_train(self):
-
         env = CustomEnv(self.path_planner, self.behavior_planner)
         env = make_vec_env(lambda: env, n_envs=1)
         model = DQN(CustomPolicy, env, verbose=1, learning_starts=256, batch_size=256, exploration_fraction=0.5,
-                    target_network_update_freq=10, tensorboard_log='./Logs/')
+                    target_network_update_freq=10, tensorboard_log=dir_path+'/Logs/')
         # model = DQN(MlpPolicy, env, verbose=1, learning_starts=64,  target_network_update_freq=50, tensorboard_log='./Logs/')
         # model = DQN.load("DQN_Model_SimpleSim_30k",env=env,exploration_fraction=0.1,tensorboard_log='./Logs/')
         model.learn(total_timesteps=10000)
         # model = PPO2(MlpPolicy, env, verbose=1,tensorboard_log="./Logs/")
         # model.learn(total_timesteps=20000)
-        model.save("DQN_Model_SimpleSim")
-
-        tracking_pose = SimService()
-        tracking_pose.reset_sim = True
-        sim_response = self.sendTrackingPoint(tracking_pose)
-        while True:
-            action = None
-            if self.rlRequired(sim_response):
-                action = self.behavioralDecision(sim_response)
-            tracking_pose = self.pathPlan(action, sim_response)
-            sim_response = self.sendTrackingPoint(tracking_pose)
-            self.visualization()
-            self.save_current_state()
+        model.save(dir_path+"/DQN_Model_SimpleSim")
 
     def run_test(self):
         env = CustomEnv(self.path_planner, self.behavior_planner)
         env = make_vec_env(lambda: env, n_envs=1)
-        model = DQN.load("/DQN_Model_SimpleSim_30k")
-
+        model = DQN.load(dir_path+"/DQN_Model_SimpleSim_30k")
         obs = env.reset()
         count = 0
         success = 0
-        while count < 100:
+        while count < 500:
             done = False
             print("Count ", count, "Success ", success)
             while not done:
                 action, _ = model.predict(obs)
 
                 print(action)
-                obs, reward, done, info = env.step(action)
+                obs, reward, done, _ = env.step(action)
+                print("Reward",reward)
             count += 1
-            if reward == 5:
+            if reward == 1:
                 success += 1
         print("Success Rate ", success / count, success, count)
 
@@ -747,7 +725,7 @@ if __name__ == '__main__':
     try:
         full_planner = FullPlannerManager()
         full_planner.initialize()
-        full_planner.run_train()
+        full_planner.run_test()
 
     except rospy.ROSInterruptException:
         pass

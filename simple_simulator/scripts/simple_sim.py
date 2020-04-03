@@ -210,7 +210,7 @@ class SimpleSimulator:
         self.end_of_action = msg.end_of_action
         self.action_progress = msg.action_progress
         #print("Self.id:", self.id)
-        new_time = rospy.Time.now();
+        new_time = rospy.Time.now()
         #print "Iteration Duration: ", (new_time - self.prev_time).nsecs * 1e-6
         self.id_waiting = self.id
         self.lock.release()
@@ -679,7 +679,6 @@ if __name__ == '__main__':
     try:
         simple_sim = SimpleSimulator(0.2, True)
         simple_sim.initialize()
-
         simple_sim.spin()
     except rospy.ROSInterruptException:
         pass
