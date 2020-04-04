@@ -1,6 +1,7 @@
 #!/usr/bin/env python
 import sys
 import os
+import time
 homedir=os.getenv("HOME")
 distro=os.getenv("ROS_DISTRO")
 sys.path.remove("/opt/ros/"+distro+"/lib/python2.7/dist-packages")
@@ -53,6 +54,7 @@ TRAJ_PARAM = {'look_up_distance' : 0 ,\
 }
 
 N_DISCRETE_ACTIONS = 4
+CONVERT_TO_LOCAL = True
 dir_path = os.path.dirname(os.path.realpath(__file__))
 
 class RLDecision(Enum):
@@ -402,8 +404,7 @@ class TrajGenerator:
             # ToDo: Use closest pose for lane width
             # print("reached here")
             neutral_traj = self.cubicSplineGen(sim_data.current_lane.lane[0].width, \
-                                               sim_data.next_lane.lane[0].width, sim_data.cur_vehicle_state.vehicle_speed)
-
+                            sim_data.next_lane.lane[0].width, sim_data.cur_vehicle_state.vehicle_speed)
             # determine the closest next pose in the current lane
             lane_pose_array = sim_data.current_lane.lane
             closest_pose = lane_pose_array[0].pose
@@ -544,6 +545,7 @@ class CustomEnv(gym.Env):
         self.observation_space = spaces.Box(low = -1000, high=1000, shape = (1,24))
         self.path_planner = path_planner
         self.rl_manager = rl_manager
+        self.to_local = CONVERT_TO_LOCAL
 
     def step(self, action):
         # reset sb_event flag if previously set in previous action
@@ -557,14 +559,14 @@ class CustomEnv(gym.Env):
             done = self.rl_manager.terminate(env_desc)
             end_of_action = end_of_action or done
 
-        env_state = self.rl_manager.makeStateVector(env_desc)
+        env_state = self.rl_manager.makeStateVector(env_desc, self.to_local)
         reward = self.rl_manager.rewardCalculation(env_desc)
 
         return env_state, reward, done, {}
 
     def reset(self):
         env_desc = self.path_planner.resetSim()
-        env_state = self.rl_manager.makeStateVector(env_desc)
+        env_state = self.rl_manager.makeStateVector(env_desc, self.to_local)
         return env_state
         # return observation  # reward, done, info can't be included
 
@@ -630,7 +632,8 @@ class RLManager:
         reward = 0
         if env_desc.reward.collision:
             reward = reward - 1
-        if env_desc.reward.path_planner_terminate:
+            print("Collision")
+        elif env_desc.reward.path_planner_terminate:
             reward += env_desc.reward.action_progress
             print("Progress",env_desc.reward.action_progress)
         return reward
@@ -652,16 +655,26 @@ class RLManager:
             self.append_vehicle_state(env_state, data.cur_vehicle_state)
             # self.append_vehicle_state(env_state, data.back_vehicle_state)
             # self.append_vehicle_state(env_state, data.front_vehicle_state)
-            for _, veh_state in enumerate(data.adjacent_lane_vehicles):
+            for _, vehicle in enumerate(data.adjacent_lane_vehicles):
                 if i < 5:
-                    self.append_vehicle_state(env_state, veh_state)
+                    self.append_vehicle_state(env_state, vehicle)
                 else:
                     break
                 i+=1
         else:
             cur_vehicle_state = VehicleState()
-            cur_vehicle_state.x = cu_vehicle_state.y = cur_vehicle_state.theta=0
+            cur_vehicle_state.vehicle_location.x = 0
+            cur_vehicle_state.vehicle_location.y = 0
+            cur_vehicle_state.vehicle_location.theta = 0
             cur_vehicle_state.vehicle_speed = 0
+            self.append_vehicle_state(env_state, cur_vehicle_state)
+            for _, vehicle in enumerate(data.adjacent_lane_vehicles):
+                converted_state = self.convert_to_local(data.cur_vehicle_state, vehicle)
+                if i < 5:
+                    self.append_vehicle_state(env_state, converted_state)
+                else:
+                    break
+                i+=1
         dummy = VehicleState()
         dummy.vehicle_location.x = 100
         dummy.vehicle_location.y = 100
@@ -672,17 +685,43 @@ class RLManager:
             i+=1
         return env_state
 
-    def convert_to_local(self, veh_state, x,y):
+    def convert_to_local(self, cur_vehicle, adj_vehicle):
+        result_state = VehicleState()
+        x = adj_vehicle.vehicle_location.x
+        y = adj_vehicle.vehicle_location.y
+        theta = adj_vehicle.vehicle_location.theta
+        speed = adj_vehicle.vehicle_speed
+        vx = speed*np.cos(theta)
+        vy = speed*np.sin(theta)
+        # get current_vehicle_speeds
+        cvx = cur_vehicle.vehicle_speed*np.cos(cur_vehicle.vehicle_location.theta)
+        cvy = cur_vehicle.vehicle_speed*np.sin(cur_vehicle.vehicle_location.theta)
+        # make homogeneous transform
         H = np.eye(3)
         H[-1,-1] = 1
-        H[0,-1] = -veh_state.vehicle_location.x
-        H[1,-1] = -veh_state.vehicle_location.y
-        H[0,0] = np.cos(-veh_state.vehicle_location.theta)
-        H[0,1] = np.sin(-veh_state.vehicle_location.theta)
-        H[1,0] = -np.sin(-veh_state.vehicle_location.theta)
-        H[1,1] = np.cos(-veh_state.vehicle_location.theta)
+        H[0,-1] = -cur_vehicle.vehicle_location.x
+        H[1,-1] = -cur_vehicle.vehicle_location.y
+        H[0,0] = np.cos(-cur_vehicle.vehicle_location.theta)
+        H[0,1] = np.sin(-cur_vehicle.vehicle_location.theta)
+        H[1,0] = -np.sin(-cur_vehicle.vehicle_location.theta)
+        H[1,1] = np.cos(-cur_vehicle.vehicle_location.theta)
+        # calculate and set relative position
         res = np.matmul(H, np.array([x,y,1]).reshape(3,1))
-        return res[0,0], res[1,0]
+        result_state.vehicle_location.x = res[0,0]
+        result_state.vehicle_location.y = res[1,0]
+        # calculate and set relative orientation
+        result_state.vehicle_location.theta = theta-cur_vehicle.vehicle_location.theta
+        # calculate and set relative speed
+        res_vel = np.array([vx-cvx,vy-cvy])
+        result_state.vehicle_speed = np.linalg.norm(res_vel)
+        # print("ADJ-----------------")
+        # print(adj_vehicle)
+        # print("CUR-----------------")
+        # print(cur_vehicle)
+        # print("RESULT--------------")
+        # print(result_state)
+        # time.sleep(5)
+        return result_state
 
 
 class FullPlannerManager:
@@ -703,7 +742,7 @@ class FullPlannerManager:
         model.learn(total_timesteps=20000)
         # model = PPO2(MlpPolicy, env, verbose=1,tensorboard_log="./Logs/")
         # model.learn(total_timesteps=20000)
-        model.save(dir_path+"/DQN_Model_SimpleSim")
+        model.save(dir_path+"/DQN_Model_SimpleSim_Local")
 
     def run_test(self):
         env = CustomEnv(self.path_planner, self.behavior_planner)
