@@ -109,6 +109,7 @@ class PIDLongitudinalController():
         :param current_speed: current speed of the vehicle in Km/h
         :return: throttle control in the range [0, 1]
         """
+        print(target_speed)
         _e = (target_speed - current_speed)
         self._e_buffer.append(_e)
 
