@@ -517,7 +517,7 @@ class CustomPolicy(DQNPolicy):
         if deterministic:
             actions = np.argmax(q_values, axis=1)
         else:
-            # Unefficient sampling
+            # Inefficient sampling
             # TODO: replace the loop
             # maybe with Gumbel-max trick ? (http://amid.fish/humble-gumbel)
             actions = np.zeros((len(obs),), dtype=np.int64)
@@ -642,21 +642,26 @@ class RLManager:
         env_state.append(vehicle_state.vehicle_speed)
         return
 
-    def makeStateVector(self, data):
+    def makeStateVector(self, data, local=False):
         '''
         create a state vector from the message recieved
         '''
         i=0
         env_state = []
-        self.append_vehicle_state(env_state, data.cur_vehicle_state)
-        # self.append_vehicle_state(env_state, data.back_vehicle_state)
-        # self.append_vehicle_state(env_state, data.front_vehicle_state)
-        for _, veh_state in enumerate(data.adjacent_lane_vehicles):
-            if i < 5:
-                self.append_vehicle_state(env_state, veh_state)
-            else:
-                break
-            i+=1
+        if not local:
+            self.append_vehicle_state(env_state, data.cur_vehicle_state)
+            # self.append_vehicle_state(env_state, data.back_vehicle_state)
+            # self.append_vehicle_state(env_state, data.front_vehicle_state)
+            for _, veh_state in enumerate(data.adjacent_lane_vehicles):
+                if i < 5:
+                    self.append_vehicle_state(env_state, veh_state)
+                else:
+                    break
+                i+=1
+        else:
+            cur_vehicle_state = VehicleState()
+            cur_vehicle_state.x = cu_vehicle_state.y = cur_vehicle_state.theta=0
+            cur_vehicle_state.vehicle_speed = 0
         dummy = VehicleState()
         dummy.vehicle_location.x = 100
         dummy.vehicle_location.y = 100
