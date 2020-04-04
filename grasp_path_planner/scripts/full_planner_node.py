@@ -695,7 +695,7 @@ class FullPlannerManager:
                     target_network_update_freq=10, tensorboard_log=dir_path+'/Logs/')
         # model = DQN(MlpPolicy, env, verbose=1, learning_starts=64,  target_network_update_freq=50, tensorboard_log='./Logs/')
         # model = DQN.load("DQN_Model_SimpleSim_30k",env=env,exploration_fraction=0.1,tensorboard_log='./Logs/')
-        model.learn(total_timesteps=10000)
+        model.learn(total_timesteps=20000)
         # model = PPO2(MlpPolicy, env, verbose=1,tensorboard_log="./Logs/")
         # model.learn(total_timesteps=20000)
         model.save(dir_path+"/DQN_Model_SimpleSim")
@@ -725,7 +725,7 @@ if __name__ == '__main__':
     try:
         full_planner = FullPlannerManager()
         full_planner.initialize()
-        full_planner.run_test()
+        full_planner.run_train()
 
     except rospy.ROSInterruptException:
         pass

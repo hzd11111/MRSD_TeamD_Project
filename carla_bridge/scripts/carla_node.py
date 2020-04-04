@@ -54,7 +54,7 @@ NODE_NAME = 'carla_bridge'
 SIM_TOPIC_NAME = 'environment_state'
 PATH_PLAN_TOPIC_NAME = 'path_plan'
 
-SIM_SERVICE_NAME = 'carla_simulator'
+SIM_SERVICE_NAME = 'simulator'
 
 #######################################################################################
 
@@ -92,6 +92,7 @@ class CarlaManager:
         
         self.action_progress = 0
         self.end_of_action = True
+        # self.initialize()
   
     def getVehicleState(self, actor):
 
@@ -102,7 +103,7 @@ class CarlaManager:
         vehicle.vehicle_location.x = actor.get_transform().location.x
         vehicle.vehicle_location.y = actor.get_transform().location.y
         vehicle.vehicle_location.theta = actor.get_transform().rotation.yaw * np.pi / 180 #CHECK : Changed this to radians. 
-        vehicle.vehicle_speed = np.sqrt(actor.get_velocity().x**2 + actor.get_velocity().y**2) 
+        vehicle.vehicle_speed = np.sqrt(actor.get_velocity().x**2 + actor.get_velocity().y**2 + actor.get_velocity().z**2) * 3.6
 
         vehicle_bounding_box = actor.bounding_box.extent
         vehicle.length = vehicle_bounding_box.x*2
@@ -120,8 +121,8 @@ class CarlaManager:
         vehicle.vehicle_location.x = actor.get_transform().location.x
         vehicle.vehicle_location.y = actor.get_transform().location.y
         vehicle.vehicle_location.theta = actor.get_transform().rotation.yaw * np.pi / 180 #CHECK : Changed this to radians. 
-        vehicle.vehicle_speed = np.sqrt(actor.get_velocity().x**2 + actor.get_velocity().y**2) 
-
+        vehicle.vehicle_speed = np.sqrt(actor.get_velocity().x**2 + actor.get_velocity().y**2 + actor.get_velocity().z**2) * 3.6
+        
         vehicle_bounding_box = actor.bounding_box.extent
         vehicle.length = vehicle_bounding_box.x*2
         vehicle.width = vehicle_bounding_box.y*2
@@ -150,7 +151,7 @@ class CarlaManager:
             
             ### Get requested pose and speed values ###
             tracking_pose = data.tracking_pose
-            tracking_speed = data.tracking_speed / 3.6
+            tracking_speed = data.tracking_speed# / 3.6
             reset_sim = data.reset_sim
             print("Tracking Speed:", tracking_speed, "Current Speed:", self.getVehicleState(self.ego_vehicle).vehicle_speed)
             # print("RESET:",reset_sim)
@@ -254,127 +255,6 @@ class CarlaManager:
         # self.env_pub.publish(env_state)
         return SimServiceResponse(env_state)
             
-        
-            
-        
-        
-  
-  
-    def pathCallback(self, data):
-        self.lock.acquire()
-        # print("Collision:", self.collision_marker)
-        ### Check Sync ###
-        if not data.id == self.id_waiting:
-            self.lock.release()
-            return
-        
-        ### Get requested pose and speed values ###
-        tracking_pose = data.tracking_pose
-        tracking_speed = data.tracking_speed
-        reset_sim = data.reset_sim
-        print("Tracking Speed:", tracking_speed, "Current Speed:", self.getVehicleState(self.ego_vehicle).vehicle_speed)
-        # print("RESET:",reset_sim)
-        
-        self.end_of_action = data.end_of_action
-        self.action_progress = data.action_progress
-        
-        ### Update ROS Sync ###
-        self.id_waiting = self.id
-        self.lock.release()
-        
-        
-        if(reset_sim):
-            self.resetEnv()
-            
-        else:
-            self.lock.acquire()
-            self.first_run = 0
-
-            # time.sleep(1)
-            ### Apply Control ###
-            self.ego_vehicle.apply_control(self.vehicle_controller.run_step(tracking_speed, tracking_pose))
-
-            ### Visualize requested waypoint ###
-            tracking_loc = carla.Location(x=tracking_pose.x, y=tracking_pose.y, z=self.ego_vehicle.get_location().z)
-            self.carla_handler.world.debug.draw_string(tracking_loc, 'O', draw_shadow=False,
-                                                color=carla.Color(r=255, g=0, b=0), life_time=1,
-                                                persistent_lines=True)
-            
-            #### Check Sync ###
-            flag = 0
-            while(flag == 0):
-                try:
-                    self.carla_handler.world.tick()
-                    flag = 1
-                except:
-                    print("Missed Tick....................................................................................")
-                    continue
-            self.lock.release()
-            self.timestamp += self.simulation_sync_timestep
-            
-        ### Extract State Information
-        nearest_waypoint = self.carla_handler.world_map.get_waypoint(self.ego_vehicle.get_location(), project_to_road=True)
-        state_information = self.carla_handler.get_state_information(self.ego_vehicle, self.original_lane)
-        current_lane_waypoints, left_lane_waypoints, right_lane_waypoints, front_vehicle, rear_vehicle, actors_in_current_lane, actors_in_left_lane, actors_in_right_lane = state_information
-        
-        pedestrians_on_current_road = self.carla_handler.get_pedestrian_information(self.ego_vehicle)
-        ####
-        
-        ####
-
-        # Current Lane
-        lane_cur = self.lane_cur#self.getLanePoints(current_lane_waypoints)
-        
-        # Left Lane
-        lane_left = self.lane_left#self.getLanePoints(left_lane_waypoints) 
-        
-        # Right Lane
-        lane_right = self.lane_right#self.getLanePoints(right_lane_waypoints)
-        
-        # Ego vehicle	
-        vehicle_ego = self.getVehicleState(self.ego_vehicle)
-        
-        # Front vehicle	
-        if(front_vehicle == None):
-            vehicle_front = vehicle_ego
-        else:
-            vehicle_front = self.getVehicleState(front_vehicle)
-        
-        # Rear vehicle
-        if(rear_vehicle == None):
-            vehicle_rear = vehicle_ego
-        else:	
-            vehicle_rear = self.getVehicleState(rear_vehicle)
-            
-        # Contruct enviroment state ROS message
-        env_state = EnvironmentState()
-        env_state.cur_vehicle_state = vehicle_ego
-        env_state.front_vehicle_state = vehicle_front
-        env_state.back_vehicle_state = vehicle_rear
-        env_state.current_lane = lane_cur
-        env_state.next_lane = lane_left
-        env_state.adjacent_lane_vehicles = [self.getVehicleState(actor) for actor in actors_in_left_lane]
-        env_state.speed_limit = 20
-        env_state.id = self.id
-        
-        reward_info = RewardInfo()
-        reward_info.time_elapsed = self.timestamp
-        reward_info.new_run = self.first_run
-        reward_info.collision = self.collision_marker
-        reward_info.action_progress = self.action_progress
-        reward_info.end_of_action = self.end_of_action
-        env_state.reward = reward_info
-
-
-        
-        # publish environment state
-        self.env_msg = env_state
-        self.env_pub.publish(env_state)
-        
-        ## CARLA Sync
-        self.id += 1
-        if self.id > 100000:
-            self.id = 0
 
       
     def publishFunc(self):
@@ -439,7 +319,7 @@ class CarlaManager:
                                                     carla.Transform(), attach_to=self.ego_vehicle)
 
             self.collision_sensor.listen(lambda event: self.collision_handler(event))
-            self.vehicle_controller = GRASPPIDController(self.ego_vehicle, args_lateral = {'K_P': 0.4, 'K_D': 0.0, 'K_I': 0}, args_longitudinal = {'K_P': 0.4, 'K_D': 0.0, 'K_I': 0.0})
+            self.vehicle_controller = GRASPPIDController(self.ego_vehicle, args_lateral = {'K_P': 0.5, 'K_D': 0.0, 'K_I': 0, 'dt':self.simulation_sync_timestep}, args_longitudinal = {'K_P': 1, 'K_D': 0.0, 'K_I': 0.0, 'dt':self.simulation_sync_timestep})
             # time.sleep(1)
             self.original_lane = 5
                 
@@ -458,7 +338,7 @@ class CarlaManager:
         self.env_pub = rospy.Publisher(SIM_TOPIC_NAME, EnvironmentState, queue_size = 10)
         
         # initlize subscriber
-        self.path_sub = rospy.Subscriber(PATH_PLAN_TOPIC_NAME, PathPlan, self.pathCallback)
+        # self.path_sub = rospy.Subscriber(PATH_PLAN_TOPIC_NAME, PathPlan, self.pathCallback)
         
         # initialize service
         self.planner_service = rospy.Service(SIM_SERVICE_NAME, SimService, self.pathRequest)
@@ -477,7 +357,7 @@ class CarlaManager:
         self.resetEnv()
                 
         # Initialize PID Controller
-        self.vehicle_controller = GRASPPIDController(self.ego_vehicle, args_lateral = {'K_P': 0.4, 'K_D': 0.0, 'K_I': 0}, args_longitudinal = {'K_P': 0.4, 'K_D': 0.0, 'K_I': 0.0})
+        self.vehicle_controller = GRASPPIDController(self.ego_vehicle, args_lateral = {'K_P': 0.5, 'K_D': 0.0, 'K_I': 0, 'dt':self.simulation_sync_timestep}, args_longitudinal = {'K_P': 1, 'K_D': 0.0, 'K_I': 0.0, 'dt':self.simulation_sync_timestep})
 
 
         state_information = self.carla_handler.get_state_information(self.ego_vehicle, self.original_lane)
@@ -500,13 +380,13 @@ class CarlaManager:
         
         # Front vehicle	
         if(front_vehicle == None):
-            vehicle_front = vehicle_ego
+            vehicle_front = VehicleState()#vehicle_ego
         else:
             vehicle_front = self.getVehicleState(front_vehicle)
         
         # Rear vehicle
         if(rear_vehicle == None):
-            vehicle_rear = vehicle_ego
+            vehicle_rear = VehicleState()#vehicle_ego
         else:	
             vehicle_rear = self.getVehicleState(rear_vehicle)
 
@@ -521,7 +401,7 @@ class CarlaManager:
         env_state.next_lane = self.lane_left
         env_state.max_num_vehicles = 5
         env_state.speed_limit = 20
-        env_state.id = self.id
+        # env_state.id = self.id
         
         reward_info = RewardInfo()
         reward_info.time_elapsed = self.timestamp
@@ -553,7 +433,8 @@ if __name__ == '__main__':
 	try:
 		carla_manager = CarlaManager()
 		carla_manager.initialize()
-		pub_thread = threading.Thread(target=carla_manager.publishFunc)
+		print("Initialize Done.....")
+		# pub_thread = threading.Thread(target=carla_manager.publishFunc)
 		carla_manager.spin()
 	except rospy.ROSInterruptException:
 		pass
