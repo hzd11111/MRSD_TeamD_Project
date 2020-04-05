@@ -93,6 +93,8 @@ class CarlaManager:
         self.action_progress = 0
         self.end_of_action = True
         # self.initialize()
+        
+        self.max_num_vehicles = 5
   
     def getVehicleState(self, actor):
 
@@ -235,7 +237,7 @@ class CarlaManager:
         env_state.back_vehicle_state = vehicle_rear
         env_state.current_lane = lane_cur
         env_state.next_lane = lane_left
-        env_state.adjacent_lane_vehicles = [self.getVehicleState(actor) for actor in actors_in_left_lane]
+        env_state.adjacent_lane_vehicles = self.getClosest([self.getVehicleState(actor) for actor in actors_in_left_lane], vehicle_ego, self.max_num_vehicles)
         env_state.speed_limit = 20
         # env_state.id = self.id
         
@@ -326,8 +328,15 @@ class CarlaManager:
         except rospy.ROSInterruptException:
             print("failed....")
             pass
-
-
+        
+    def getClosest(self, adjacent_lane_vehicles, ego_vehicle, n=5):
+        ego_x = ego_vehicle.vehicle_location.x
+        ego_y = ego_vehicle.vehicle_location.y
+        
+        distances = [((ego_x - adjacent_lane_vehicles[i].vehicle_location.x)**2 + (ego_y - adjacent_lane_vehicles[i].vehicle_location.y)**2) for i in range(len(adjacent_lane_vehicles))]
+        sorted_idx = np.argsort(distances)[:n]
+        
+        return [adjacent_lane_vehicles[i] for i in sorted_idx]
                 
                 
     def initialize(self):
@@ -396,10 +405,10 @@ class CarlaManager:
         env_state.cur_vehicle_state = vehicle_ego
         env_state.front_vehicle_state = vehicle_front
         env_state.back_vehicle_state = vehicle_rear
-        env_state.adjacent_lane_vehicles = [self.getVehicleState(actor) for actor in actors_in_left_lane] #TODO : Only considering left lane for now. Need to make this more general 
+        env_state.adjacent_lane_vehicles = self.getClosest([self.getVehicleState(actor) for actor in actors_in_left_lane], vehicle_ego, self.max_num_vehicles) #TODO : Only considering left lane for now. Need to make this more general 
         env_state.current_lane = self.lane_cur
         env_state.next_lane = self.lane_left
-        env_state.max_num_vehicles = 5
+        env_state.max_num_vehicles = self.max_num_vehicles
         env_state.speed_limit = 20
         # env_state.id = self.id
         

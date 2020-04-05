@@ -132,8 +132,9 @@ class CustomScenario:
         
         ################# Spawn Ego ##########################
         ego_list = []
+        # ego_spawn_pt = np.random.randint(100,200)
         filtered_waypoints = self.carla_handler.filter_waypoints(self.carla_handler.get_waypoints(1), road_id=40, lane_id=5)
-        spawn_point = filtered_waypoints[100].transform # Select random point from filtered waypoint list #TODO Initialization Scheme Design
+        spawn_point = filtered_waypoints[150].transform # Select random point from filtered waypoint list #TODO Initialization Scheme Design
         spawn_point.location.z = spawn_point.location.z + 0.1 # To avoid collision during spawn
         vehicle_blueprint = self.carla_handler.blueprint_library.filter('model3')[0]
         ego_list.append(SpawnActor(vehicle_blueprint, spawn_point).then(SetAutopilot(FutureActor, True)))
