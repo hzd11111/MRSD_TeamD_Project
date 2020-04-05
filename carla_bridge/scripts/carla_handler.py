@@ -182,12 +182,15 @@ class CarlaHandler:
 			if(original_lane_ID is not None):
 				current_lane_ID = original_lane_ID
 
-			# Get IDs of left and right lanes
-			left_lane_ID = nearest_waypoint.get_left_lane().lane_id
-			right_lane_ID = nearest_waypoint.get_right_lane().lane_id
+
 			if(original_lane_ID is not None):
 				left_lane_ID = current_lane_ID-1
 				right_lane_ID = current_lane_ID+1
+			# Get IDs of left and right lanes
+			else:
+				left_lane_ID = nearest_waypoint.get_left_lane().lane_id
+				right_lane_ID = nearest_waypoint.get_right_lane().lane_id
+
 
 			# Finding waypoints in current, left and right lanes
 			current_lane_waypoints = self.filter_waypoints(self.all_waypoints, road_id=current_road_ID, lane_id=current_lane_ID)
