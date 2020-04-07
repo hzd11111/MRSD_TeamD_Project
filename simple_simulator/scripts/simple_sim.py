@@ -66,6 +66,7 @@ class Vehicle:
         self.theta = 0
         self.speed = 0
         self.lane = lane_num
+        self.acceleration = 0
 
     def place(self, x, y, theta):
         self.x = x
@@ -76,8 +77,12 @@ class Vehicle:
         self.x += self.speed * np.cos(self.theta) * duration
         self.y += self.speed * np.sin(self.theta) * duration
 
-    def setSpeed(self, speed):
+    def setSpeed(self, speed, time_step = 0):
+        if time_step > 0.00001:
+            self.acceleration = (speed - self.speed) / time_step
         self.speed = speed
+
+
 
     def convert2ROS(self):
 
@@ -186,7 +191,7 @@ class SimpleSimulator:
                 self.controlling_vehicle.theta = np.arctan2((tracking_pose.y - self.controlling_vehicle.y), \
                                                             tracking_pose.x - self.controlling_vehicle.x)
                 self.tracking_pose = msg.tracking_pose
-                self.controlling_vehicle.setSpeed(tracking_speed)
+                self.controlling_vehicle.setSpeed(tracking_speed, self.time_step)
                 self.renderScene()
         else:
             self.first_frame_generated = True
