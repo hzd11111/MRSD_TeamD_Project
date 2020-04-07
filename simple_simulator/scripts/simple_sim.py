@@ -32,6 +32,8 @@ SIM_SERVICE_NAME = "simulator"
 
 NUM_NEXT_LANE_VEHICLES = 5
 LANE_DISCRETIZATION  = 1.0
+LANE_PASS_LOWER_BOUND = -5.
+LANE_PASS_UPPER_BOUND = 50.
 
 class LaneSim:
     def __init__(self, starting_x, starting_y, starting_theta, length, width):
@@ -43,11 +45,24 @@ class LaneSim:
         self.ros_lane = False
         self.lock = threading.Lock()
 
-    def convert2ROS(self):
+    def convert2ROS(self, vehicle_x=-1):
         self.lock.acquire()
-        if self.ros_lane == False:
-            self.ros_lane = Lane()
+
+        self.ros_lane = Lane()
+        if vehicle_x < 0:
             for lane_len in np.arange(0,self.length,LANE_DISCRETIZATION):
+                lane_pt = LanePoint()
+                lane_pt.pose.x = self.starting_x + lane_len * np.cos(self.starting_theta)
+                lane_pt.pose.y = self.starting_y + lane_len * np.sin(self.starting_theta)
+                lane_pt.pose.theta = self.starting_theta
+                lane_pt.width = self.width
+                self.ros_lane.lane.append(lane_pt)
+        else:
+            starting_x = vehicle_x + LANE_PASS_LOWER_BOUND
+            ending_x = vehicle_x + LANE_PASS_UPPER_BOUND
+            starting_len = (starting_x - self.starting_x) / np.cos(self.starting_theta) #TODO: Fix
+            ending_len = (ending_x - self.starting_x) / np.cos(self.starting_theta) #TODO:FIX
+            for lane_len in np.arange(starting_len,ending_len,LANE_DISCRETIZATION):
                 lane_pt = LanePoint()
                 lane_pt.pose.x = self.starting_x + lane_len * np.cos(self.starting_theta)
                 lane_pt.pose.y = self.starting_y + lane_len * np.sin(self.starting_theta)
@@ -179,8 +194,8 @@ class SimpleSimulator:
     def pathRequest(self, msg):
         new_time = rospy.Time.now()
 
-        '''if self.prev_time:
-            print "Iteration Duration: ", (new_time - self.prev_time).nsecs * 1e-6'''
+        if self.prev_time:
+            print "Iteration Duration: ", (new_time - self.prev_time).nsecs * 1e-6
         self.prev_time = new_time
         if self.first_frame_generated:
             msg = msg.path_plan
@@ -336,12 +351,12 @@ class SimpleSimulator:
         publish_msg = EnvironmentState()
 
         # current lane
-        publish_msg.current_lane = self.lanes[self.cur_lane].convert2ROS()
+        publish_msg.current_lane = self.lanes[self.cur_lane].convert2ROS(self.controlling_vehicle.x)
 
         # next lane
         next_lane = self.cur_lane - 1
         if next_lane >= 0:
-            publish_msg.next_lane = self.lanes[next_lane].convert2ROS()
+            publish_msg.next_lane = self.lanes[next_lane].convert2ROS(self.controlling_vehicle.x)
 
         # vehicles
         closest_next_lane_vehicles = []
@@ -714,7 +729,7 @@ class SimpleSimulator:
 
 if __name__ == '__main__':
     try:
-        simple_sim = SimpleSimulator(0.2, True)
+        simple_sim = SimpleSimulator(0.2, False)
         simple_sim.initialize()
         simple_sim.spin()
     except rospy.ROSInterruptException:
