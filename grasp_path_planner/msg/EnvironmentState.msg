@@ -3,6 +3,7 @@ VehicleState cur_vehicle_state
 VehicleState front_vehicle_state
 VehicleState back_vehicle_state
 VehicleState[] adjacent_lane_vehicles
+Pedestrian nearest_pedestrian
 int32 max_num_vehicles
 float64 speed_limit
 Lane current_lane
