@@ -26,11 +26,12 @@ EGO_MARKER_TOPIC_NAME = 'ego_vehicle_marker'
 VEHICLE_MARKER_TOPIC_NAME = "vehicle_markers"
 TRACKING_POSE_TOPIC_NAME = "vehicle_tracking_pose"
 COLLISION_TOPIC_NAME = "collision_marker"
+FUTURE_POSE_TOPIC_NAME = 'trajectory'
 
 SIM_SERVICE_NAME = "simulator"
 
 NUM_NEXT_LANE_VEHICLES = 5
-LANE_DISCRETIZATION  = 0.1
+LANE_DISCRETIZATION  = 1.0
 
 class LaneSim:
     def __init__(self, starting_x, starting_y, starting_theta, length, width):
@@ -109,6 +110,7 @@ class SimpleSimulator:
         self.timestamp = 0
         self.first_run = 1
         self.tracking_pose = None
+        self.future_poses = []
         self.visualization_mode = visualization_mode
         self.first_frame_generated = False
         self.path_planner_terminate = False
@@ -118,6 +120,7 @@ class SimpleSimulator:
 
         self.env_msg = None
         self.lane_marker = None
+        self.future_poses_marker = None
         self.ego_marker = None
         self.vehicle_marker = None
         self.tracking_pose_marker = None
@@ -131,6 +134,7 @@ class SimpleSimulator:
         self.path_sub = None
         self.tracking_pub = None
         self.collision_pub = None
+        self.future_poses_pub = None
 
         # id
         self.id = 0
@@ -152,6 +156,7 @@ class SimpleSimulator:
         self.vehicle_pub = rospy.Publisher(VEHICLE_MARKER_TOPIC_NAME, MarkerArray, queue_size=QUEUE_SIZE)
         self.tracking_pub = rospy.Publisher(TRACKING_POSE_TOPIC_NAME, Marker, queue_size=QUEUE_SIZE)
         self.collision_pub = rospy.Publisher(COLLISION_TOPIC_NAME, Marker, queue_size = QUEUE_SIZE)
+        self.future_poses_pub = rospy.Publisher(FUTURE_POSE_TOPIC_NAME, MarkerArray, queue_size = QUEUE_SIZE)
 
         # initialize subscriber
         self.path_sub = rospy.Subscriber(PATH_PLAN_TOPIC_NAME, PathPlan, self.pathCallback)
@@ -174,8 +179,8 @@ class SimpleSimulator:
     def pathRequest(self, msg):
         new_time = rospy.Time.now()
 
-        if self.prev_time:
-            print "Iteration Duration: ", (new_time - self.prev_time).nsecs * 1e-6
+        '''if self.prev_time:
+            print "Iteration Duration: ", (new_time - self.prev_time).nsecs * 1e-6'''
         self.prev_time = new_time
         if self.first_frame_generated:
             msg = msg.path_plan
@@ -191,6 +196,7 @@ class SimpleSimulator:
                 self.controlling_vehicle.theta = np.arctan2((tracking_pose.y - self.controlling_vehicle.y), \
                                                             tracking_pose.x - self.controlling_vehicle.x)
                 self.tracking_pose = msg.tracking_pose
+                self.future_poses = msg.future_poses
                 self.controlling_vehicle.setSpeed(tracking_speed, self.time_step)
                 self.renderScene()
         else:
@@ -226,7 +232,7 @@ class SimpleSimulator:
             self.controlling_vehicle.theta = np.arctan2((tracking_pose.y - self.controlling_vehicle.y),\
                                                         tracking_pose.x - self.controlling_vehicle.x)
             self.tracking_pose = msg.tracking_pose
-
+            self.future_poses = msg.future_poses
             self.controlling_vehicle.setSpeed(tracking_speed)
             self.lock.release()
             self.renderScene()
@@ -260,6 +266,8 @@ class SimpleSimulator:
                 self.tracking_pub.publish(self.tracking_pose_marker)
             if self.collision_marker:
                 self.collision_pub.publish(self.collision_marker)
+            if self.future_poses_marker:
+                self.future_poses_pub.publish(self.future_poses_marker)
 
         self.lock.release()
 
@@ -614,6 +622,29 @@ class SimpleSimulator:
                     marker.id=marker_id
                     marker_id += 1
                     self.lane_marker.markers.append(marker)
+
+            # future tracking poses
+            self.future_poses_marker = MarkerArray()
+
+            for l in self.lanes:
+                for pose in self.future_poses:
+                    marker = Marker()
+                    marker.header.frame_id = "map"
+                    marker.header.stamp = rospy.Time.now()
+                    marker.type = marker.SPHERE
+                    marker.action = marker.ADD
+                    marker.scale.x = 0.3
+                    marker.scale.y = 0.3
+                    marker.scale.z = 0.3
+                    marker.color.a = 1.0
+                    marker.color.b = 1.0
+                    marker.pose.orientation.w = 1.0
+                    marker.pose.position.x = pose.x
+                    marker.pose.position.y = -pose.y
+                    marker.pose.position.z = 3.0
+                    marker.id=marker_id
+                    marker_id += 1
+                    self.future_poses_marker.markers.append(marker)
             self.lock.release()
 
     def renderScene(self):
@@ -631,6 +662,7 @@ class SimpleSimulator:
         initial_speed = initial_speed + random.uniform(-0.5 * initial_speed, 1.2 * initial_speed)
         self.timestamp = 0
         self.first_run = 1
+        self.future_poses = []
         self.vehicles = []
         self.controlling_vehicle = None
         self.lanes = []
