@@ -619,7 +619,7 @@ class SimpleSimulator:
             self.lane_marker = MarkerArray()
 
             for l in self.lanes:
-                for leng in range(0, l.length,1):
+                for leng in range(0, l.length,20):
                     marker = Marker()
                     marker.header.frame_id = "map"
                     marker.header.stamp = rospy.Time.now()
@@ -641,25 +641,25 @@ class SimpleSimulator:
             # future tracking poses
             self.future_poses_marker = MarkerArray()
 
-            for l in self.lanes:
-                for pose in self.future_poses:
-                    marker = Marker()
-                    marker.header.frame_id = "map"
-                    marker.header.stamp = rospy.Time.now()
-                    marker.type = marker.SPHERE
-                    marker.action = marker.ADD
-                    marker.scale.x = 0.3
-                    marker.scale.y = 0.3
-                    marker.scale.z = 0.3
-                    marker.color.a = 1.0
-                    marker.color.b = 1.0
-                    marker.pose.orientation.w = 1.0
-                    marker.pose.position.x = pose.x
-                    marker.pose.position.y = -pose.y
-                    marker.pose.position.z = 3.0
-                    marker.id=marker_id
-                    marker_id += 1
-                    self.future_poses_marker.markers.append(marker)
+
+            for pose in self.future_poses:
+                marker = Marker()
+                marker.header.frame_id = "map"
+                marker.header.stamp = rospy.Time.now()
+                marker.type = marker.SPHERE
+                marker.action = marker.ADD
+                marker.scale.x = 0.3
+                marker.scale.y = 0.3
+                marker.scale.z = 0.3
+                marker.color.a = 1.0
+                marker.color.b = 1.0
+                marker.pose.orientation.w = 1.0
+                marker.pose.position.x = pose.x
+                marker.pose.position.y = -pose.y
+                marker.pose.position.z = 3.0
+                marker.id=marker_id
+                marker_id += 1
+                self.future_poses_marker.markers.append(marker)
             self.lock.release()
 
     def renderScene(self):
@@ -729,7 +729,7 @@ class SimpleSimulator:
 
 if __name__ == '__main__':
     try:
-        simple_sim = SimpleSimulator(0.2, False)
+        simple_sim = SimpleSimulator(0.2, True)
         simple_sim.initialize()
         simple_sim.spin()
     except rospy.ROSInterruptException:
