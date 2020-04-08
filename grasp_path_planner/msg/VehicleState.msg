@@ -1,4 +1,5 @@
 geometry_msgs/Pose2D vehicle_location
 float64 vehicle_speed
+float64 vehicle_acceleration
 float64 length
 float64 width

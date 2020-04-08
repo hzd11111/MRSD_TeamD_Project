@@ -97,6 +97,7 @@ add_message_files(
   EnvironmentState.msg
   RLCommand.msg
   PathPlan.msg
+  Pedestrian.msg
 )
 
 generate_messages(
