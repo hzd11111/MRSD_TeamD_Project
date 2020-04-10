@@ -673,8 +673,8 @@ class SimpleSimulator:
 
     def resetScene(self, num_vehicles=[5, 0], num_lanes=2, lane_width_m=[3, 3], lane_length_m=500, \
                    max_vehicle_gaps_vehicle_len=7, min_vehicle_gaps_vehicle_len=1, \
-                   vehicle_width=2, vehicle_length=4, starting_lane=-1, initial_speed=8):
-        initial_speed = initial_speed + random.uniform(-0.5 * initial_speed, 1.2 * initial_speed)
+                   vehicle_width=2, vehicle_length=4, starting_lane=-1, initial_speed=4.167):
+        initial_speed = initial_speed + random.uniform(0, 1.33 * initial_speed)
         self.timestamp = 0
         self.first_run = 1
         self.future_poses = []
