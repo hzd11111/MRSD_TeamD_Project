@@ -18,6 +18,7 @@ import math
 from enum import Enum
 import rospy
 import numpy as np
+from geometry_msgs.msg import Pose2D
 from std_msgs.msg import String
 from grasp_path_planner.msg import LanePoint
 from grasp_path_planner.msg import Lane
@@ -48,7 +49,8 @@ TRAJ_PARAM = {'look_up_distance' : 0 ,\
     'lane_change_length' : 30,\
     'lane_change_time_constant' : 1.05,\
     'lane_change_time_disc' : 0.4,\
-    'action_duration' : 0.5,\
+    'action_time_disc' : 0.2,\
+    'action_duration' : 2,\
     'accelerate_amt' : 5,\
     'decelerate_amt' : 5,\
     'min_speed' : 0
@@ -163,7 +165,7 @@ class PoseSpeedTemp(PoseTemp):
         return new_pose
 
 class TrajGenerator:
-    SAME_POSE_THRESHOLD = 1
+    SAME_POSE_THRESHOLD = 2
     SAME_POSE_LOWER_THRESHOLD = 0.02
 
     def __init__(self, traj_parameters):
@@ -266,6 +268,21 @@ class TrajGenerator:
         new_path_plan.action_progress = action_progress
         new_path_plan.path_planner_terminate = False
 
+        # add future poses
+        new_path_plan.future_poses = []
+        closest_pose_temp = PoseTemp(closest_pose.pose)
+        for ts in np.arange(self.traj_parameters['action_time_disc'], \
+                self.traj_parameters['action_duration'] - (new_sim_time - self.action_start_time), \
+                            self.traj_parameters['action_time_disc']):
+            delta_pose = PoseTemp()
+            delta_pose.x = ts * self.start_speed / 3.6
+            new_pose = closest_pose_temp.add(delta_pose)
+            new_pose_ros = Pose2D()
+            new_pose_ros.x = new_pose.x
+            new_pose_ros.y = new_pose.y
+            new_pose_ros.theta = new_pose.theta
+            new_path_plan.future_poses.append(new_pose_ros)
+
         if end_of_action:
             self.reset()
 
@@ -306,6 +323,23 @@ class TrajGenerator:
         new_path_plan.action_progress = action_progress
         new_path_plan.path_planner_terminate = False
 
+        # add future poses
+        new_path_plan.future_poses = []
+        closest_pose_temp = PoseTemp(closest_pose.pose)
+        acc_per_sec = self.traj_parameters['accelerate_amt'] / self.traj_parameters['action_duration']
+        for ts in np.arange(self.traj_parameters['action_time_disc'], \
+                self.traj_parameters['action_duration'] - (new_sim_time - self.action_start_time), \
+                            self.traj_parameters['action_time_disc']):
+            delta_pose = PoseTemp()
+            delta_pose.x = (ts * (self.start_speed + action_progress * self.traj_parameters['accelerate_amt']) +\
+                            acc_per_sec * (ts**2.) / 2.) / 3.6
+            new_pose = closest_pose_temp.add(delta_pose)
+            new_pose_ros = Pose2D()
+            new_pose_ros.x = new_pose.x
+            new_pose_ros.y = new_pose.y
+            new_pose_ros.theta = new_pose.theta
+            new_path_plan.future_poses.append(new_pose_ros)
+
         if end_of_action:
             self.reset()
         return new_path_plan
@@ -345,6 +379,23 @@ class TrajGenerator:
         new_path_plan.end_of_action = end_of_action
         new_path_plan.action_progress = action_progress
         new_path_plan.path_planner_terminate = False
+
+        # add future poses
+        new_path_plan.future_poses = []
+        closest_pose_temp = PoseTemp(closest_pose.pose)
+        dec_per_sec = self.traj_parameters['decelerate_amt'] / self.traj_parameters['action_duration']
+        for ts in np.arange(self.traj_parameters['action_time_disc'], \
+                self.traj_parameters['action_duration'] - (new_sim_time - self.action_start_time), \
+                            self.traj_parameters['action_time_disc']):
+            delta_pose = PoseTemp()
+            delta_pose.x = (ts * (self.start_speed - action_progress * self.traj_parameters['accelerate_amt']) -\
+                            dec_per_sec * (ts**2.) / 2.) / 3.6
+            new_pose = closest_pose_temp.add(delta_pose)
+            new_pose_ros = Pose2D()
+            new_pose_ros.x = new_pose.x
+            new_pose_ros.y = new_pose.y
+            new_pose_ros.theta = new_pose.theta
+            new_path_plan.future_poses.append(new_pose_ros)
 
         if end_of_action:
             self.reset()
@@ -459,6 +510,17 @@ class TrajGenerator:
         new_path_plan.end_of_action = end_of_action
         new_path_plan.action_progress = action_progress
         new_path_plan.path_planner_terminate = end_of_action
+
+        # future poses
+        path_pointer = self.path_pointer
+        new_path_plan.future_poses = []
+        while path_pointer < len(self.generated_path):
+            new_pose_ros = Pose2D()
+            new_pose_ros.x = self.generated_path[self.path_pointer].x
+            new_pose_ros.y = self.generated_path[self.path_pointer].y
+            new_pose_ros.theta = self.generated_path[self.path_pointer].theta
+            new_path_plan.future_poses.append(new_pose_ros)
+            path_pointer += 1
 
         return new_path_plan
 
@@ -901,11 +963,10 @@ class FullPlannerManager:
     def run_train(self):
         env = CustomEnv(self.path_planner, self.behavior_planner)
         env = make_vec_env(lambda: env, n_envs=1)
-        model = DQN(CustomPolicy, env, verbose=1, learning_starts=256, batch_size=256, exploration_fraction=0.5,
-                    target_network_update_freq=10, tensorboard_log=dir_path+'/Logs/')
+        model = DQN(CustomPolicy, env, verbose=1, learning_starts=256, batch_size=256, exploration_fraction=0.9, target_network_update_freq=100, tensorboard_log=dir_path+'/Logs/')
         # model = DQN(MlpPolicy, env, verbose=1, learning_starts=64,  target_network_update_freq=50, tensorboard_log='./Logs/')
         # model = DQN.load("DQN_Model_SimpleSim_30k",env=env,exploration_fraction=0.1,tensorboard_log='./Logs/')
-        model.learn(total_timesteps=20000)
+        model.learn(total_timesteps=10000)
         # model = PPO2(MlpPolicy, env, verbose=1,tensorboard_log="./Logs/")
         # model.learn(total_timesteps=20000)
         model.save(dir_path+"/DQN_Model_SimpleSim_Local")
@@ -913,7 +974,7 @@ class FullPlannerManager:
     def run_test(self):
         env = CustomEnv(self.path_planner, self.behavior_planner)
         env = make_vec_env(lambda: env, n_envs=1)
-        model = DQN.load(dir_path+"/DQN_Model_SimpleSim_30k")
+        model = DQN.load(dir_path+"/DQN_Model_CARLA_10k.zip")
         obs = env.reset()
         count = 0
         success = 0
