@@ -25,6 +25,7 @@ PATH_PLAN_TOPIC_NAME = 'path_plan'
 LANE_MARKER_TOPIC_NAME = 'lane_marker'
 EGO_MARKER_TOPIC_NAME = 'ego_vehicle_marker'
 VEHICLE_MARKER_TOPIC_NAME = "vehicle_markers"
+PEDESTRIAN_MARKER_TOPIC_NAME = "pedestrian_markers"
 TRACKING_POSE_TOPIC_NAME = "vehicle_tracking_pose"
 COLLISION_TOPIC_NAME = "collision_marker"
 FUTURE_POSE_TOPIC_NAME = 'trajectory'
@@ -116,7 +117,7 @@ class Vehicle:
         return vehicle_state
 
 class Pedestrian:
-    def __init__(self, radius, spawn_range, walking_speed):
+    def __init__(self, radius, spawn_range, walking_speed, theta_offset):
         self.length = radius * 2
         self.width = radius * 2
         self.x = None
@@ -125,11 +126,12 @@ class Pedestrian:
         self.speed = None
         self.spawn_range = spawn_range
         self.walking_speed = walking_speed
+        self.theta_offset = theta_offset
 
     def spawn(self, vehicle_x, vehicle_y, vehicle_theta):
         self.x = vehicle_x + self.spawn_range
         self.y = vehicle_y - 3
-        self.theta = vehicle_theta + np.pi/2
+        self.theta = vehicle_theta + np.pi/2 + self.theta_offset
         self.speed = self.walking_speed
 
     def step(self, duration):
@@ -147,7 +149,7 @@ class Pedestrian:
             pedestrian_state.pedestrian_location.x = self.x
             pedestrian_state.pedestrian_location.y = self.y
             pedestrian_state.pedestrian_location.theta = self.theta
-            pedestrian_state.radius = self.radius/2
+            pedestrian_state.radius = self.length/2
             pedestrian_state.pedestrian_acceleration = 0
             pedestrian_state.pedestrian_speed = self.speed
         else:
@@ -180,6 +182,7 @@ class SimpleSimulator:
         self.vehicle_marker = None
         self.tracking_pose_marker = None
         self.collision_marker = None
+        self.pedestrian_marker = None
 
         self.lock = threading.Lock()
         self.env_pub = None
@@ -190,6 +193,7 @@ class SimpleSimulator:
         self.tracking_pub = None
         self.collision_pub = None
         self.future_poses_pub = None
+        self.pedestrian_pub = None
 
         # id
         self.id = 0
@@ -212,6 +216,7 @@ class SimpleSimulator:
         self.tracking_pub = rospy.Publisher(TRACKING_POSE_TOPIC_NAME, Marker, queue_size=QUEUE_SIZE)
         self.collision_pub = rospy.Publisher(COLLISION_TOPIC_NAME, Marker, queue_size = QUEUE_SIZE)
         self.future_poses_pub = rospy.Publisher(FUTURE_POSE_TOPIC_NAME, MarkerArray, queue_size = QUEUE_SIZE)
+        self.pedestrian_pub = rospy.Publisher(PEDESTRIAN_MARKER_TOPIC_NAME, Marker, queue_size = QUEUE_SIZE)
 
         # initialize subscriber
         self.path_sub = rospy.Subscriber(PATH_PLAN_TOPIC_NAME, PathPlan, self.pathCallback)
@@ -323,6 +328,8 @@ class SimpleSimulator:
                 self.collision_pub.publish(self.collision_marker)
             if self.future_poses_marker:
                 self.future_poses_pub.publish(self.future_poses_marker)
+            if self.pedestrian_marker:
+                self.pedestrian_pub.publish(self.pedestrian_marker)
 
         self.lock.release()
 
@@ -464,6 +471,9 @@ class SimpleSimulator:
         # speed limit
         publish_msg.speed_limit = 20
 
+        # pedestrian information
+        publish_msg.nearest_pedestrian = self.pedestrians.convert2ROS()
+
         # reward info
         reward_info = RewardInfo()
         reward_info.time_elapsed = self.timestamp
@@ -596,6 +606,27 @@ class SimpleSimulator:
             self.collision_marker.id = marker_id
             marker_id += 1
 
+            # pedestrian marker
+            if self.pedestrians and self.pedestrians.x:
+                self.pedestrian_marker = Marker()
+                self.pedestrian_marker.header.frame_id = "map"
+                self.pedestrian_marker.type = self.pedestrian_marker.CUBE
+                self.pedestrian_marker.action = self.pedestrian_marker.ADD
+                self.pedestrian_marker.scale.x = self.pedestrians.length
+                self.pedestrian_marker.scale.y = self.pedestrians.width
+                self.pedestrian_marker.scale.z = 2
+                self.pedestrian_marker.pose.position.x = self.pedestrians.x
+                self.pedestrian_marker.pose.position.y = self.pedestrians.y
+                self.pedestrian_marker.pose.position.z = 0
+                pedestrian_right_hand_theta = -self.pedestrians.theta
+                self.pedestrian_marker.pose.orientation.w = np.cos(pedestrian_right_hand_theta)
+                self.pedestrian_marker.pose.orientation.z = np.sin(pedestrian_right_hand_theta)
+                self.pedestrian_marker.color.g = 1.0
+                self.pedestrian_marker.color.a = 1.0
+                self.pedestrian_marker.id = marker_id
+                marker_id += 1
+
+
             # tracking pose
             if self.tracking_pose:
                 radius = 2
@@ -714,7 +745,8 @@ class SimpleSimulator:
     def resetScene(self, num_vehicles=[5, 0], num_lanes=2, lane_width_m=[3, 3], lane_length_m=500, \
                    max_vehicle_gaps_vehicle_len=7, min_vehicle_gaps_vehicle_len=1, \
                    vehicle_width=2, vehicle_length=4, starting_lane=-1, initial_speed=4.167, \
-                   pedestrian_radius = 0.3, pedestrian_speed_range = [0,3], pedestrian_spawn_range = [20,40]):
+                   pedestrian_radius = 0.3, pedestrian_speed_range = [0,3], pedestrian_spawn_range = [20,40], \
+                   theta_offset_range = [-np.pi/6, np.pi/6]):
         initial_speed = initial_speed + random.uniform(0, 1.33 * initial_speed)
         self.timestamp = 0
         self.first_run = 1
@@ -760,7 +792,8 @@ class SimpleSimulator:
 
         # add pedestrian
         self.pedestrians = Pedestrian(pedestrian_radius, random.uniform(pedestrian_speed_range[0], pedestrian_speed_range[1]),\
-                                      random.uniform(pedestrian_spawn_range[0], pedestrian_spawn_range[1]))
+                                      random.uniform(pedestrian_spawn_range[0], pedestrian_spawn_range[1]), \
+                                      random.uniform(theta_offset_range[0], theta_offset_range[1]))
         self.renderScene()
 
 

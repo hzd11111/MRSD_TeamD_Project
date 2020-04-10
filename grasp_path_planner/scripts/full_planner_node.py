@@ -673,6 +673,7 @@ class PathPlannerManager:
         reset_msg.sent_time = rospy.Time.now()
         req = SimServiceRequest()
         req.path_plan = reset_msg
+        print(req)
         self.prev_env_desc = self.sim_service_interface(req).env
         return self.prev_env_desc
 
@@ -996,7 +997,7 @@ if __name__ == '__main__':
     try:
         full_planner = FullPlannerManager()
         full_planner.initialize()
-        full_planner.run_test()
+        full_planner.run_train()
 
     except rospy.ROSInterruptException:
         pass
