@@ -11,6 +11,7 @@ from grasp_path_planner.msg import VehicleState
 from grasp_path_planner.msg import RewardInfo
 from grasp_path_planner.msg import EnvironmentState
 from grasp_path_planner.msg import PathPlan
+from grasp_path_planner.msg import Pedestrian
 from grasp_path_planner.srv import SimService, SimServiceResponse
 
 from geometry_msgs.msg import PointStamped
@@ -114,6 +115,44 @@ class Vehicle:
         vehicle_state.vehicle_speed = speed_conversion(self.speed)
         return vehicle_state
 
+class Pedestrian:
+    def __init__(self, radius, spawn_range, walking_speed):
+        self.length = radius * 2
+        self.width = radius * 2
+        self.x = None
+        self.y = None
+        self.theta = None
+        self.speed = None
+        self.spawn_range = spawn_range
+        self.walking_speed = walking_speed
+
+    def spawn(self, vehicle_x, vehicle_y, vehicle_theta):
+        self.x = vehicle_x + self.spawn_range
+        self.y = vehicle_y - 3
+        self.theta = vehicle_theta + np.pi/2
+        self.speed = self.walking_speed
+
+    def step(self, duration):
+        self.x += self.speed * np.cos(self.theta) * duration
+        self.y += self.speed * np.sin(self.theta) * duration
+
+    def convert2ROS(self):
+
+        def speed_conversion(sim_speed):
+            return sim_speed * 3.6
+
+        pedestrian_state = Pedestrian()
+        if self.x:
+            pedestrian_state.exist = True
+            pedestrian_state.pedestrian_location.x = self.x
+            pedestrian_state.pedestrian_location.y = self.y
+            pedestrian_state.pedestrian_location.theta = self.theta
+            pedestrian_state.radius = self.radius/2
+            pedestrian_state.pedestrian_acceleration = 0
+            pedestrian_state.pedestrian_speed = self.speed
+        else:
+            pedestrian_state.exist = False
+        return pedestrian_state
 
 class SimpleSimulator:
     def __init__(self, time_step, visualization_mode):
@@ -129,6 +168,7 @@ class SimpleSimulator:
         self.visualization_mode = visualization_mode
         self.first_frame_generated = False
         self.path_planner_terminate = False
+        self.pedestrians = None
 
         self.action_progress = 0
         self.end_of_action = True
@@ -673,7 +713,8 @@ class SimpleSimulator:
 
     def resetScene(self, num_vehicles=[5, 0], num_lanes=2, lane_width_m=[3, 3], lane_length_m=500, \
                    max_vehicle_gaps_vehicle_len=7, min_vehicle_gaps_vehicle_len=1, \
-                   vehicle_width=2, vehicle_length=4, starting_lane=-1, initial_speed=4.167):
+                   vehicle_width=2, vehicle_length=4, starting_lane=-1, initial_speed=4.167, \
+                   pedestrian_radius = 0.3, pedestrian_speed_range = [0,3], pedestrian_spawn_range = [20,40]):
         initial_speed = initial_speed + random.uniform(0, 1.33 * initial_speed)
         self.timestamp = 0
         self.first_run = 1
@@ -716,6 +757,10 @@ class SimpleSimulator:
         cur_vehicle_theta = self.lanes[self.cur_lane].starting_theta
         self.controlling_vehicle.place(cur_vehicle_x, cur_vehicle_y, cur_vehicle_theta)
         self.controlling_vehicle.setSpeed(initial_speed + random.uniform(-0.5 * initial_speed, 0.5 * initial_speed))
+
+        # add pedestrian
+        self.pedestrians = Pedestrian(pedestrian_radius, random.uniform(pedestrian_speed_range[0], pedestrian_speed_range[1]),\
+                                      random.uniform(pedestrian_spawn_range[0], pedestrian_spawn_range[1]))
         self.renderScene()
 
 
