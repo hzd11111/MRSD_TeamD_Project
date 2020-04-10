@@ -116,7 +116,7 @@ class Vehicle:
         vehicle_state.vehicle_speed = speed_conversion(self.speed)
         return vehicle_state
 
-class Pedestrian:
+class PedestrianState:
     def __init__(self, radius, spawn_range, walking_speed, theta_offset):
         self.length = radius * 2
         self.width = radius * 2
@@ -130,8 +130,8 @@ class Pedestrian:
 
     def spawn(self, vehicle_x, vehicle_y, vehicle_theta):
         self.x = vehicle_x + self.spawn_range
-        self.y = vehicle_y - 3
-        self.theta = vehicle_theta + np.pi/2 + self.theta_offset
+        self.y = vehicle_y + 3
+        self.theta = vehicle_theta - np.pi/2 + self.theta_offset
         self.speed = self.walking_speed
 
     def step(self, duration):
@@ -151,7 +151,7 @@ class Pedestrian:
             pedestrian_state.pedestrian_location.theta = self.theta
             pedestrian_state.radius = self.length/2
             pedestrian_state.pedestrian_acceleration = 0
-            pedestrian_state.pedestrian_speed = self.speed
+            pedestrian_state.pedestrian_speed = speed_conversion(self.speed)
         else:
             pedestrian_state.exist = False
         return pedestrian_state
@@ -171,6 +171,7 @@ class SimpleSimulator:
         self.first_frame_generated = False
         self.path_planner_terminate = False
         self.pedestrians = None
+        self.pedestrian_likelihood = 0
 
         self.action_progress = 0
         self.end_of_action = True
@@ -392,6 +393,9 @@ class SimpleSimulator:
         for veh in self.vehicles:
             if self.vehicleToVehicleCollision(self.controlling_vehicle, veh):
                 return True
+        if self.pedestrians and self.pedestrians.x:
+            if self.vehicleToVehicleCollision(self.controlling_vehicle, self.pedestrians):
+                return True
         return False
 
     def generateServiceResponse(self):
@@ -472,8 +476,11 @@ class SimpleSimulator:
         publish_msg.speed_limit = 20
 
         # pedestrian information
-        publish_msg.nearest_pedestrian = self.pedestrians.convert2ROS()
-
+        if self.pedestrians:
+            publish_msg.nearest_pedestrian = self.pedestrians.convert2ROS()
+        else:
+            publish_msg.nearest_pedestrian = Pedestrian()
+            publish_msg.nearest_pedestrian.exist = False
         # reward info
         reward_info = RewardInfo()
         reward_info.time_elapsed = self.timestamp
@@ -616,7 +623,7 @@ class SimpleSimulator:
                 self.pedestrian_marker.scale.y = self.pedestrians.width
                 self.pedestrian_marker.scale.z = 2
                 self.pedestrian_marker.pose.position.x = self.pedestrians.x
-                self.pedestrian_marker.pose.position.y = self.pedestrians.y
+                self.pedestrian_marker.pose.position.y = -self.pedestrians.y
                 self.pedestrian_marker.pose.position.z = 0
                 pedestrian_right_hand_theta = -self.pedestrians.theta
                 self.pedestrian_marker.pose.orientation.w = np.cos(pedestrian_right_hand_theta)
@@ -624,7 +631,7 @@ class SimpleSimulator:
                 self.pedestrian_marker.color.g = 1.0
                 self.pedestrian_marker.color.a = 1.0
                 self.pedestrian_marker.id = marker_id
-                marker_id += 1
+            marker_id += 1
 
 
             # tracking pose
@@ -738,6 +745,14 @@ class SimpleSimulator:
             v.step(self.time_step)
         self.timestamp += self.time_step
         self.controlling_vehicle.step(self.time_step)
+        # spawn pedestrian
+        if self.pedestrians:
+            if not self.pedestrians.x:
+                if random.random() < self.pedestrian_likelihood:
+                    self.pedestrians.spawn(self.controlling_vehicle.x, self.controlling_vehicle.y,
+                                            self.controlling_vehicle.theta)
+            else:
+                self.pedestrians.step(self.time_step)
         #self.updateMessages()
         self.updateMarkers()
         self.first_run = 0
@@ -746,7 +761,7 @@ class SimpleSimulator:
                    max_vehicle_gaps_vehicle_len=7, min_vehicle_gaps_vehicle_len=1, \
                    vehicle_width=2, vehicle_length=4, starting_lane=-1, initial_speed=4.167, \
                    pedestrian_radius = 0.3, pedestrian_speed_range = [0,3], pedestrian_spawn_range = [20,40], \
-                   theta_offset_range = [-np.pi/6, np.pi/6]):
+                   theta_offset_range = [-np.pi/6, np.pi/6], pedestrian_likelihood = 0.2):
         initial_speed = initial_speed + random.uniform(0, 1.33 * initial_speed)
         self.timestamp = 0
         self.first_run = 1
@@ -758,7 +773,7 @@ class SimpleSimulator:
             self.cur_lane = num_lanes - 1
         else:
             self.cur_lane = starting_lane
-
+        self.pedestrian_likelihood = pedestrian_likelihood
         lane_y = 0
         max_vehicle_head_pos = vehicle_length
         for i in range(num_lanes):
@@ -791,8 +806,8 @@ class SimpleSimulator:
         self.controlling_vehicle.setSpeed(initial_speed + random.uniform(-0.5 * initial_speed, 0.5 * initial_speed))
 
         # add pedestrian
-        self.pedestrians = Pedestrian(pedestrian_radius, random.uniform(pedestrian_speed_range[0], pedestrian_speed_range[1]),\
-                                      random.uniform(pedestrian_spawn_range[0], pedestrian_spawn_range[1]), \
+        self.pedestrians = PedestrianState(pedestrian_radius, random.uniform(pedestrian_spawn_range[0], pedestrian_spawn_range[1]), \
+                                           random.uniform(pedestrian_speed_range[0], pedestrian_speed_range[1]),\
                                       random.uniform(theta_offset_range[0], theta_offset_range[1]))
         self.renderScene()
 
@@ -807,7 +822,7 @@ class SimpleSimulator:
 
 if __name__ == '__main__':
     try:
-        simple_sim = SimpleSimulator(0.2, True)
+        simple_sim = SimpleSimulator(0.01, True)
         simple_sim.initialize()
         simple_sim.spin()
     except rospy.ROSInterruptException:
