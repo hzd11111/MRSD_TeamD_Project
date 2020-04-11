@@ -17,3 +17,17 @@ Or add the following to a roslaunch file (for eg. waypoint_follow.launch). Make 
 
 This should be added to a folder called 'launch' in the workspace folder. (The workspace folder will now have build, devel, launch and src folders. ). An example launch file is added in the root folder of the project.
 
+TO RUN:
+
+1. GoTo /Carla/CARLA_0.9.8/CarlaUE4/Config/DefaultEngine.ini
+2. Replace Town0* with Town04 in the .ini file. Use replace all to be sure.
+3. Run ./CarlaUE4.sh to start CARLA.
+4. Make sure ROSMASTER is running
+5. GoTo carla_bridge/scripts/
+6. Run carla_node.py
+7. Wait till you see ros spin on the terminal.
+8. Remove/comment everything from waypoint_follow.roslaunch in base folder. Keep full_path_planner only.
+9. roslaunch waypoint_follow.roslaunch
+10. Done.
+
+
