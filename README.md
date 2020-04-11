@@ -25,8 +25,9 @@ TO RUN:
 4. Make sure ROSMASTER is running
 5. GoTo carla_bridge/scripts/
 6. Run carla_node.py
-7. Remove/comment everything from waypoint_follow.roslaunch in base folder. Keep full_path_planner only.
-8. roslaunch waypoint_follow.roslaunch
-9. Done.
+7. Wait till you see ros spin on the terminal.
+8. Remove/comment everything from waypoint_follow.roslaunch in base folder. Keep full_path_planner only.
+9. roslaunch waypoint_follow.roslaunch
+10. Done.
 
 
