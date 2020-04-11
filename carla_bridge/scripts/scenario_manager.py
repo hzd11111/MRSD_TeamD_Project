@@ -56,7 +56,7 @@ class CustomScenario:
         self.client = client
         self.traffic_manager = self.client.get_trafficmanager(8000)
         self.traffic_manager.set_global_distance_to_leading_vehicle(2.0)    
-        self.traffic_manager.global_percentage_speed_difference(50)
+        # self.traffic_manager.global_percentage_speed_difference()
 
         self.world = self.client.get_world()
         self.carla_handler = carla_handler
@@ -66,6 +66,7 @@ class CustomScenario:
         self.world.set_weather(find_weather_presets()[2][0])
 
         self.scenarios_town04 = [[[40],3,4,100,20], [[46],-2,-3,100,10], [[40],3,4,100,20], [[47],-2,-3,50,10], [[39],3,4,100,20], [[38],3,4,150,20]]
+        # self.scenarios_town04 = [[[47],-2,-3,50,10]]
         self.scenarios_town05 = [[[21,22],-1,-2,0,10], [[37], -2, -3, 25, 0]]
         self.scenarios_town03 = [[[8,7,6], 4, 5, 0, 0]]
         
@@ -79,12 +80,12 @@ class CustomScenario:
         
     def reset(self, warm_start=False, warm_start_duration=10):
                 
-        # self.target_speed = 30        
+        self.target_speed = 15       
         self.spawn_roads, self.left_lane_id, self.curr_lane_id, self.ego_spawn_idx, self.vehicle_init_speed = self.scenarios_town04[np.random.randint(0,len(self.scenarios_town04))]
         # 
         
         
-        # self.traffic_manager.set_synchronous_mode(True)
+        self.traffic_manager.set_synchronous_mode(True)
 
         self.vehicles_list = []
         synchronous_master = True
@@ -153,6 +154,17 @@ class CustomScenario:
 
         for n, v in enumerate(my_vehicles):
             
+                
+                    
+            # nearest_waypoint = self.carla_handler.world_map.get_waypoint(v.get_location(), project_to_road=True)                    
+            # current_speed_limit = v.get_speed_limit()
+            # # current_speed = np.sqrt(v.get_velocity().x**2 + v.get_velocity().y**2 + v.get_velocity().z**2) * 3.6
+            # new_limit_percentage = 100 - (self.target_speed * 100)/float(current_speed_limit)
+            # print(n, ":", np.sqrt(v.get_velocity().x**2 + v.get_velocity().y**2 + v.get_velocity().z**2) * 3.6, nearest_waypoint.road_id, current_speed_limit, new_limit_percentage)
+            # self.traffic_manager.vehicle_percentage_speed_difference(v, new_limit_percentage)
+            # # time.sleep(2)
+
+            
             # self.traffic_manager.vehicle_percentage_speed_difference(v, np.random.randint(40,50))
             self.traffic_manager.auto_lane_change(v,False)
             self.traffic_manager.ignore_lights_percentage(v, 100)
@@ -181,7 +193,7 @@ class CustomScenario:
         
         for n, v in enumerate(my_vehicles):
          
-            # self.traffic_manager.vehicle_percentage_speed_difference(v, np.random.randint(30,40))
+            # self.traffic_manager.vehicle_percentage_speed_difference(v, 100)
             self.traffic_manager.collision_detection(v, ego_vehicle, False)
 
         
@@ -200,5 +212,5 @@ class CustomScenario:
                 self.world.wait_for_tick()        
         
         print("Bombs away....")
-        return ego_vehicle
+        return ego_vehicle, my_vehicles, self.target_speed
         

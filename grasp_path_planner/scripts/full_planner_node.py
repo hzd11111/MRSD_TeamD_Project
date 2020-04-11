@@ -741,12 +741,12 @@ class FullPlannerManager:
         model.learn(total_timesteps=10000)
         # model = PPO2(MlpPolicy, env, verbose=1,tensorboard_log="./Logs/")
         # model.learn(total_timesteps=20000)
-        model.save(dir_path+"/DQN_Model_SimpleSim_Local")
+        model.save(dir_path+"/DQN_Model_CARLA_Local_multi2.zip")
 
     def run_test(self):
         env = CustomEnv(self.path_planner, self.behavior_planner)
         env = make_vec_env(lambda: env, n_envs=1)
-        model = DQN.load(dir_path+"/DQN_Model_CARLA_10k.zip")
+        model = DQN.load(dir_path+"/DQN_Model_CARLA_Local_multi.zip")
         obs = env.reset()
         count = 0
         success = 0

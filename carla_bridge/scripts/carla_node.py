@@ -85,7 +85,7 @@ class CarlaManager:
         self.collision_sensor = None
         self.tm = None
         
-        self.simulation_sync_timestep = 0.1
+        self.simulation_sync_timestep = 0.05
         
         self.first_frame_generated = False
         self.path_planner_terminate = False
@@ -96,6 +96,8 @@ class CarlaManager:
         
         self.max_num_vehicles = 5
         self.last_call_reset = False
+        
+        self.speed_limit = None
   
     def getVehicleState(self, actor):
 
@@ -178,6 +180,19 @@ class CarlaManager:
                 # time.sleep(1)
                 ### Apply Control ###
                 self.ego_vehicle.apply_control(self.vehicle_controller.run_step(tracking_speed, tracking_pose))
+                
+                # ### Maintain Speed ###
+                # for n,v in enumerate(self.tm.world.get_actors().filter('vehicle.*')):
+                    
+                #     nearest_waypoint = self.carla_handler.world_map.get_waypoint(v.get_location(), project_to_road=True)                    
+                #     current_speed_limit = v.get_speed_limit()
+                #     # current_speed = np.sqrt(v.get_velocity().x**2 + v.get_velocity().y**2 + v.get_velocity().z**2) * 3.6
+                #     new_limit_percentage = 100 - (self.speed_limit * 100)/float(current_speed_limit)
+                #     print(n, ":", np.sqrt(v.get_velocity().x**2 + v.get_velocity().y**2 + v.get_velocity().z**2) * 3.6, nearest_waypoint.road_id, current_speed_limit, new_limit_percentage)
+                #     self.tm.traffic_manager.vehicle_percentage_speed_difference(v, 90)
+                #     # time.sleep(2)
+
+                     
 
                 ### Visualize requested waypoint ###
                 tracking_loc = carla.Location(x=tracking_pose.x, y=tracking_pose.y, z=self.ego_vehicle.get_location().z)
@@ -259,7 +274,7 @@ class CarlaManager:
         env_state.current_lane = lane_cur
         env_state.next_lane = lane_left
         env_state.adjacent_lane_vehicles = self.getClosest([self.getVehicleState(actor) for actor in actors_in_left_lane], vehicle_ego, self.max_num_vehicles)
-        env_state.speed_limit = 30
+        env_state.speed_limit = self.speed_limit
         # env_state.id = self.id
         # print(env_state.cur_vehicle_state.vehicle_location.theta)
         
@@ -339,7 +354,7 @@ class CarlaManager:
             #     else:
             #         synchronous_master = False
                     
-            self.ego_vehicle = self.tm.reset()
+            self.ego_vehicle, self.vehicles_list, self.speed_limit = self.tm.reset()
             
             ## Handing over control
             del self.collision_sensor
