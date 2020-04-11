@@ -894,7 +894,7 @@ class RLManager:
             cur_vehicle_state.vehicle_location.x = 0
             cur_vehicle_state.vehicle_location.y = 0
             cur_vehicle_state.vehicle_location.theta = 0
-            cur_vehicle_state.vehicle_speed = 0
+            cur_vehicle_state.vehicle_speed = data.cur_vehicle_state.vehicle_speed
             self.append_vehicle_state(env_state, cur_vehicle_state)
             for _, vehicle in enumerate(data.adjacent_lane_vehicles):
                 converted_state = self.convert_to_local(data.cur_vehicle_state, vehicle)
@@ -941,7 +941,7 @@ class RLManager:
         result_state.vehicle_location.theta = theta-cur_vehicle.vehicle_location.theta
         # calculate and set relative speed
         res_vel = np.array([vx-cvx,vy-cvy])
-        result_state.vehicle_speed = np.linalg.norm(res_vel)
+        result_state.vehicle_speed = speed # np.linalg.norm(res_vel)
         # print("ADJ-----------------")
         # print(adj_vehicle)
         # print("CUR-----------------")
