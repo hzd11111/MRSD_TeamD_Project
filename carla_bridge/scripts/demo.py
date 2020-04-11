@@ -29,7 +29,14 @@ carla_handler_1 = CarlaHandler(client)
 ################################################################################################################################
 
 ### Example code to draw waypoints
-carla_handler_1.draw_waypoints(carla_handler_1.get_waypoints(), road_id=12)
+# carla_handler_1.draw_waypoints(carla_handler_1.get_waypoints(), section_id=3, life_time=5)
+# carla_handler_1.draw_waypoints(carla_handler_1.get_waypoints(), section_id=0, life_time=5)
+carla_handler_1.draw_waypoints(carla_handler_1.get_waypoints(), road_id=10, life_time=20)
+
+
+
+
+brak
 
 
 ################################################################################################################################

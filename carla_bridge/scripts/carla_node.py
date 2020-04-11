@@ -95,6 +95,7 @@ class CarlaManager:
         # self.initialize()
         
         self.max_num_vehicles = 5
+        self.last_call_reset = False
   
     def getVehicleState(self, actor):
 
@@ -104,7 +105,7 @@ class CarlaManager:
         vehicle = VehicleState()
         vehicle.vehicle_location.x = actor.get_transform().location.x
         vehicle.vehicle_location.y = actor.get_transform().location.y
-        vehicle.vehicle_location.theta = actor.get_transform().rotation.yaw * np.pi / 180 #CHECK : Changed this to radians. 
+        vehicle.vehicle_location.theta = actor.get_transform().rotation.yaw * np.pi / 180  #CHECK : Changed this to radians. 
         vehicle.vehicle_speed = np.sqrt(actor.get_velocity().x**2 + actor.get_velocity().y**2 + actor.get_velocity().z**2) * 3.6
 
         vehicle_bounding_box = actor.bounding_box.extent
@@ -148,6 +149,8 @@ class CarlaManager:
     
     def pathRequest(self, data):
         
+        reset_sim = False
+        # print("RESET CALLEDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDD")
         if self.first_frame_generated:
             data = data.path_plan
             
@@ -155,7 +158,7 @@ class CarlaManager:
             tracking_pose = data.tracking_pose
             tracking_speed = data.tracking_speed# / 3.6
             reset_sim = data.reset_sim
-            print("Tracking Speed:", tracking_speed, "Current Speed:", self.getVehicleState(self.ego_vehicle).vehicle_speed)
+            # print("Tracking Speed:", tracking_speed, "Current Speed:", self.getVehicleState(self.ego_vehicle).vehicle_speed)
             # print("RESET:",reset_sim)
             
             self.end_of_action = data.end_of_action
@@ -198,8 +201,16 @@ class CarlaManager:
             
         ### Extract State Information
         nearest_waypoint = self.carla_handler.world_map.get_waypoint(self.ego_vehicle.get_location(), project_to_road=True)
-        state_information = self.carla_handler.get_state_information(self.ego_vehicle, self.original_lane)
+        self.carla_handler.world.debug.draw_string(self.ego_vehicle.get_location(), 'O', draw_shadow=False,
+                                                            color=carla.Color(r=0, g=0, b=255), life_time=1,
+                                                            persistent_lines=True)
+        
+        
+        state_information = self.carla_handler.get_state_information_new(self.ego_vehicle, self.original_lane)
         current_lane_waypoints, left_lane_waypoints, right_lane_waypoints, front_vehicle, rear_vehicle, actors_in_current_lane, actors_in_left_lane, actors_in_right_lane = state_information
+        
+        # for wp in current_lane_waypoints:
+        #     print(wp.transform.location.x, wp.transform.location.y)
         
         pedestrians_on_current_road = self.carla_handler.get_pedestrian_information(self.ego_vehicle)
         ####
@@ -207,14 +218,24 @@ class CarlaManager:
         ####
 
         # Current Lane
-        lane_cur = self.lane_cur#self.getLanePoints(current_lane_waypoints)
-        
-        # Left Lane
-        lane_left = self.lane_left#self.getLanePoints(left_lane_waypoints) 
-        
-        # Right Lane
-        lane_right = self.lane_right#self.getLanePoints(right_lane_waypoints)
-        
+        if(reset_sim == True):
+            self.lane_cur = self.getLanePoints(current_lane_waypoints)
+            lane_cur = self.lane_cur
+            # Left Lane
+            self.lane_left = self.getLanePoints(left_lane_waypoints)
+            lane_left = self.lane_left
+            # Right Lane
+            self.lane_right = self.getLanePoints(right_lane_waypoints)
+            lane_right = self.lane_right
+        else:
+            lane_cur = self.lane_cur#self.getLanePoints(current_lane_waypoints)
+            
+            # Left Lane
+            lane_left = self.lane_left#self.getLanePoints(left_lane_waypoints) 
+            
+            # Right Lane
+            lane_right = self.lane_right#self.getLanePoints(right_lane_waypoints)
+            
         # Ego vehicle	
         vehicle_ego = self.getVehicleState(self.ego_vehicle)
         
@@ -238,8 +259,9 @@ class CarlaManager:
         env_state.current_lane = lane_cur
         env_state.next_lane = lane_left
         env_state.adjacent_lane_vehicles = self.getClosest([self.getVehicleState(actor) for actor in actors_in_left_lane], vehicle_ego, self.max_num_vehicles)
-        env_state.speed_limit = 20
+        env_state.speed_limit = 30
         # env_state.id = self.id
+        # print(env_state.cur_vehicle_state.vehicle_location.theta)
         
         reward_info = RewardInfo()
         reward_info.time_elapsed = self.timestamp
@@ -250,6 +272,10 @@ class CarlaManager:
         reward_info.path_planner_terminate = self.path_planner_terminate
         env_state.reward = reward_info
 
+        if(reset_sim):
+            self.last_call_reset = True
+        else:
+            self.last_call_reset = False
 
         
         # # publish environment state
@@ -275,7 +301,7 @@ class CarlaManager:
         if(self.collision_sensor is not None):
             self.collision_sensor.destroy()
 
-        for actor in self.carla_handler.world.get_actors().filter('vehicle.*'):
+        for actor in self.tm.world.get_actors().filter('vehicle.*'):
             actor.destroy()
                 
         self.vehicles_list = []
@@ -287,31 +313,31 @@ class CarlaManager:
 
     def resetEnv(self):
 
-        settings = self.carla_handler.world.get_settings()
-        settings.synchronous_mode = False
-        settings.fixed_delta_seconds = None
-        self.carla_handler.world.apply_settings(settings)
+        # settings = self.carla_handler.world.get_settings()
+        # settings.synchronous_mode = False#True
+        # settings.fixed_delta_seconds = None#self.simulation_sync_timestep
+        # self.carla_handler.world.apply_settings(settings)
         
         self.destroy_actors_and_sensors()
         self.timestamp = 0
         self.collision_marker = 0
         self.first_run = 1
 
-        
-        synchronous_master = False
+        # time.sleep(1)
+        synchronous_master = True
 
         try:
     
-            if True:
-                settings = self.carla_handler.world.get_settings()
-                self.tm.traffic_manager.set_synchronous_mode(True)
-                if not settings.synchronous_mode:
-                    synchronous_master = True
-                    settings.synchronous_mode = True
-                    settings.fixed_delta_seconds = self.simulation_sync_timestep
-                    self.carla_handler.world.apply_settings(settings)
-                else:
-                    synchronous_master = False
+            # if False:
+            #     settings = self.carla_handler.world.get_settings()
+            #     self.tm.traffic_manager.set_synchronous_mode(True)
+            #     if not settings.synchronous_mode:
+            #         synchronous_master = True
+            #         settings.synchronous_mode = True
+            #         settings.fixed_delta_seconds = self.simulation_sync_timestep
+            #         self.carla_handler.world.apply_settings(settings)
+            #     else:
+            #         synchronous_master = False
                     
             self.ego_vehicle = self.tm.reset()
             
@@ -321,9 +347,9 @@ class CarlaManager:
                                                     carla.Transform(), attach_to=self.ego_vehicle)
 
             self.collision_sensor.listen(lambda event: self.collision_handler(event))
-            self.vehicle_controller = GRASPPIDController(self.ego_vehicle, args_lateral = {'K_P': 0.5, 'K_D': 0.0, 'K_I': 0, 'dt':self.simulation_sync_timestep}, args_longitudinal = {'K_P': 1, 'K_D': 0.0, 'K_I': 0.0, 'dt':self.simulation_sync_timestep})
+            self.vehicle_controller = GRASPPIDController(self.ego_vehicle, args_lateral = {'K_P': 0.5, 'K_D': 0, 'K_I': 0, 'dt':self.simulation_sync_timestep}, args_longitudinal = {'K_P': 0.5, 'K_D': 0, 'K_I': 0, 'dt':self.simulation_sync_timestep})
             # time.sleep(1)
-            self.original_lane = 5
+            self.original_lane = -3
                 
         except rospy.ROSInterruptException:
             print("failed....")
@@ -361,16 +387,30 @@ class CarlaManager:
         # Create a CarlaHandler object. CarlaHandler provides some cutom built APIs for the Carla Server.
         self.carla_handler = CarlaHandler(client)
         self.client = client
+        
+        settings = self.carla_handler.world.get_settings()
+        settings.synchronous_mode = True
+        settings.fixed_delta_seconds = self.simulation_sync_timestep
+        self.carla_handler.world.apply_settings(settings)
+        
         self.tm = CustomScenario(self.client, self.carla_handler)
+        # self.tm.traffic_manager.set_synchronous_mode(True)
         # Reset Environment
         self.resetEnv()
                 
         # Initialize PID Controller
-        self.vehicle_controller = GRASPPIDController(self.ego_vehicle, args_lateral = {'K_P': 0.5, 'K_D': 0.0, 'K_I': 0, 'dt':self.simulation_sync_timestep}, args_longitudinal = {'K_P': 1, 'K_D': 0.0, 'K_I': 0.0, 'dt':self.simulation_sync_timestep})
+        self.vehicle_controller = GRASPPIDController(self.ego_vehicle, args_lateral = {'K_P': 0.5, 'K_D': 0, 'K_I': 0, 'dt':self.simulation_sync_timestep}, args_longitudinal = {'K_P': 1, 'K_D': 0.0, 'K_I': 0.0, 'dt':self.simulation_sync_timestep})
 
 
-        state_information = self.carla_handler.get_state_information(self.ego_vehicle, self.original_lane)
+        state_information = self.carla_handler.get_state_information_new(self.ego_vehicle, self.original_lane)
         current_lane_waypoints, left_lane_waypoints, right_lane_waypoints, front_vehicle, rear_vehicle, actors_in_current_lane, actors_in_left_lane, actors_in_right_lane = state_information
+        
+        self.current_lane = current_lane_waypoints
+        self.left_lane = left_lane_waypoints
+        
+        # self.carla_handler.draw_waypoints(current_lane_waypoints, life_time=100)
+        # self.carla_handler.draw_waypoints(left_lane_waypoints, life_time=100, color=True)
+        
         
         pedestrians_on_current_road = self.carla_handler.get_pedestrian_information(self.ego_vehicle)
         
@@ -379,12 +419,11 @@ class CarlaManager:
         # Current Lane
         self.lane_cur = self.getLanePoints(current_lane_waypoints)
         
-        
         # Left Lane
         self.lane_left = self.getLanePoints(left_lane_waypoints)
         # Right Lane
         self.lane_right = self.getLanePoints(right_lane_waypoints)
-
+        
         vehicle_ego = self.getVehicleState(self.ego_vehicle)
         
         # Front vehicle	

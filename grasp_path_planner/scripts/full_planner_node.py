@@ -88,7 +88,7 @@ class VecTemp:
         return VecTemp(self.x - other.x, self.y - other.y)
 
     def dot(self, other):
-        upper = self.x * other.x + self.y + other.y
+        upper = self.x * other.x + self.y * other.y
         lower = self.norm() * other.norm()
         if lower <= 0.00001:
             return 1
@@ -768,7 +768,7 @@ if __name__ == '__main__':
     try:
         full_planner = FullPlannerManager()
         full_planner.initialize()
-        full_planner.run_test()
+        full_planner.run_train()
 
     except rospy.ROSInterruptException:
         pass
