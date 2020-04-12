@@ -941,8 +941,8 @@ class RLManager:
         H_Rot[1,-1] = 0
         H_Rot[0,0] = np.cos(cur_vehicle.vehicle_location.theta)
         H_Rot[0,1] = -np.sin(cur_vehicle.vehicle_location.theta)
-        H_Rot[1,0] = np.sin(-cur_vehicle.vehicle_location.theta)
-        H_Rot[1,1] = np.cos(-cur_vehicle.vehicle_location.theta)
+        H_Rot[1,0] = np.sin(cur_vehicle.vehicle_location.theta)
+        H_Rot[1,1] = np.cos(cur_vehicle.vehicle_location.theta)
         H_trans = np.eye(3)
         H_trans[0,-1] = -cur_vehicle.vehicle_location.x
         H_trans[1,-1] = -cur_vehicle.vehicle_location.y
@@ -956,12 +956,12 @@ class RLManager:
         # calculate and set relative speed
         res_vel = np.array([vx-cvx,vy-cvy])
         result_state.vehicle_speed = speed # np.linalg.norm(res_vel)
-        print("ADJ-----------------")
-        print(adj_vehicle)
-        print("CUR-----------------")
-        print(cur_vehicle)
-        print("RESULT--------------")
-        print(result_state)
+        # print("ADJ-----------------")
+        # print(adj_vehicle)
+        # print("CUR-----------------")
+        # print(cur_vehicle)
+        # print("RESULT--------------")
+        # print(result_state)
         # time.sleep(5)
         return result_state
 
