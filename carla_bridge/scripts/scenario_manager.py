@@ -65,8 +65,8 @@ class CustomScenario:
         
         self.world.set_weather(find_weather_presets()[2][0])
 
-        self.scenarios_town04 = [[[40],3,4,100,20], [[46],-2,-3,100,10], [[40],3,4,100,20], [[47],-2,-3,50,10], [[39],3,4,100,20], [[38],3,4,150,20]]
-        # self.scenarios_town04 = [[[47],-2,-3,50,10]]
+        # self.scenarios_town04 = [[[40],3,4,100,20], [[40],3,4,100,20], [[39],3,4,100,20], [[38],3,4,150,20]]#, [[46],-2,-3,100,10]]
+        self.scenarios_town04 = [[[46],-2,-3,100,10]]
         self.scenarios_town05 = [[[21,22],-1,-2,0,10], [[37], -2, -3, 25, 0]]
         self.scenarios_town03 = [[[8,7,6], 4, 5, 0, 0]]
         
@@ -99,7 +99,7 @@ class CustomScenario:
             blueprints = [x for x in blueprints if not x.id.endswith('cybertruck')]
             blueprints = [x for x in blueprints if not x.id.endswith('t2')]
 
-        num_vehicles = np.random.randint(7,15)
+        num_vehicles = np.random.randint(12,15)
         waypoints = self.world.get_map().generate_waypoints(distance=np.random.randint(15,30))
         road_waypoints = []
         for waypoint in waypoints:
@@ -189,6 +189,7 @@ class CustomScenario:
         ego_vehicle_ID = response[0].actor_id
         ego_vehicle = self.world.get_actors([ego_vehicle_ID])[0]
         self.traffic_manager.ignore_lights_percentage(ego_vehicle, 100)
+        # self.traffic_manager.vehicle_percentage_speed_difference(ego_vehicle, 100)
         # self.ego_vehicle, ego_vehicle_ID = self.carla_handler.spawn_vehicle(spawn_point=spawn_point)
         
         for n, v in enumerate(my_vehicles):
@@ -209,8 +210,9 @@ class CustomScenario:
             if synchronous_master:
                 self.world.tick()
             else:
-                self.world.wait_for_tick()        
+                self.world.wait_for_tick()                
         
+        self.client.apply_batch_sync([SetAutopilot(ego_vehicle, False)], synchronous_master)
         print("Bombs away....")
         return ego_vehicle, my_vehicles, self.target_speed
         

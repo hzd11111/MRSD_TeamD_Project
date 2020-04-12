@@ -6,6 +6,7 @@ homedir=os.getenv("HOME")
 distro=os.getenv("ROS_DISTRO")
 sys.path.remove("/opt/ros/"+distro+"/lib/python2.7/dist-packages")
 sys.path.append("/opt/ros/"+distro+"/lib/python2.7/dist-packages")
+import copy
 # to remove tensorflow warnings
 import warnings
 warnings.filterwarnings("ignore")
@@ -55,6 +56,7 @@ TRAJ_PARAM = {'look_up_distance' : 0 ,\
 
 N_DISCRETE_ACTIONS = 4
 CONVERT_TO_LOCAL = True
+INVERT_ANGLES = True
 dir_path = os.path.dirname(os.path.realpath(__file__))
 
 class RLDecision(Enum):
@@ -546,6 +548,16 @@ class CustomEnv(gym.Env):
         self.path_planner = path_planner
         self.rl_manager = rl_manager
         self.to_local = CONVERT_TO_LOCAL
+        
+    def invert_angles(self,env_desc):
+        env_copy = copy.deepcopy(env_desc)
+        for vehicle in env_copy.adjacent_lane_vehicles:
+            vehicle.vehicle_location.theta*=-1
+        env_copy.back_vehicle_state.vehicle_location.theta*=-1
+        env_copy.front_vehicle_state.vehicle_location.theta*=-1
+        env_copy.cur_vehicle_state.vehicle_location.theta*=-1
+        return env_copy
+
 
     def step(self, action):
         # reset sb_event flag if previously set in previous action
@@ -558,9 +570,12 @@ class CustomEnv(gym.Env):
             env_desc, end_of_action = self.path_planner.performAction(decision)
             done = self.rl_manager.terminate(env_desc)
             end_of_action = end_of_action or done
+        env_copy = None
+        if INVERT_ANGLES:
+            env_copy = self.invert_angles(env_desc)
 
-        env_state = self.rl_manager.makeStateVector(env_desc, self.to_local)
-        reward = self.rl_manager.rewardCalculation(env_desc)
+        env_state = self.rl_manager.makeStateVector(env_copy, self.to_local)
+        reward = self.rl_manager.rewardCalculation(env_copy)
 
         return env_state, reward, done, {}
 
@@ -651,6 +666,7 @@ class RLManager:
         '''
         i=0
         env_state = []
+        env_state_global = []
         if not local:
             self.append_vehicle_state(env_state, data.cur_vehicle_state)
             # self.append_vehicle_state(env_state, data.back_vehicle_state)
@@ -666,12 +682,14 @@ class RLManager:
             cur_vehicle_state.vehicle_location.x = 0
             cur_vehicle_state.vehicle_location.y = 0
             cur_vehicle_state.vehicle_location.theta = 0
-            cur_vehicle_state.vehicle_speed = 0
+            cur_vehicle_state.vehicle_speed = 0#data.cur_vehicle_state.vehicle_speed
             self.append_vehicle_state(env_state, cur_vehicle_state)
+            self.append_vehicle_state(env_state_global, data.cur_vehicle_state)
             for _, vehicle in enumerate(data.adjacent_lane_vehicles):
                 converted_state = self.convert_to_local(data.cur_vehicle_state, vehicle)
                 if i < 5:
                     self.append_vehicle_state(env_state, converted_state)
+                    self.append_vehicle_state(env_state_global, vehicle)
                 else:
                     break
                 i+=1
@@ -683,6 +701,12 @@ class RLManager:
         while i<5:
             self.append_vehicle_state(env_state, dummy)
             i+=1
+        
+        print('###############################')
+        print("Global:", env_state_global)
+        print("Transformed:", env_state)
+       
+        print('###############################')
         return env_state
 
     def convert_to_local(self, cur_vehicle, adj_vehicle):
@@ -697,14 +721,18 @@ class RLManager:
         cvx = cur_vehicle.vehicle_speed*np.cos(cur_vehicle.vehicle_location.theta)
         cvy = cur_vehicle.vehicle_speed*np.sin(cur_vehicle.vehicle_location.theta)
         # make homogeneous transform
-        H = np.eye(3)
-        H[-1,-1] = 1
-        H[0,-1] = -cur_vehicle.vehicle_location.x
-        H[1,-1] = -cur_vehicle.vehicle_location.y
-        H[0,0] = np.cos(-cur_vehicle.vehicle_location.theta)
-        H[0,1] = np.sin(-cur_vehicle.vehicle_location.theta)
-        H[1,0] = -np.sin(-cur_vehicle.vehicle_location.theta)
-        H[1,1] = np.cos(-cur_vehicle.vehicle_location.theta)
+        H_Rot = np.eye(3)
+        H_Rot[-1,-1] = 1
+        H_Rot[0,-1] = 0
+        H_Rot[1,-1] = 0
+        H_Rot[0,0] = np.cos(cur_vehicle.vehicle_location.theta)
+        H_Rot[0,1] = -np.sin(cur_vehicle.vehicle_location.theta)
+        H_Rot[1,0] = np.sin(cur_vehicle.vehicle_location.theta)
+        H_Rot[1,1] = np.cos(cur_vehicle.vehicle_location.theta)
+        H_trans = np.eye(3)
+        H_trans[0,-1] = -cur_vehicle.vehicle_location.x
+        H_trans[1,-1] = -cur_vehicle.vehicle_location.y
+        H = np.matmul(H_Rot,H_trans)
         # calculate and set relative position
         res = np.matmul(H, np.array([x,y,1]).reshape(3,1))
         result_state.vehicle_location.x = res[0,0]
@@ -735,18 +763,18 @@ class FullPlannerManager:
     def run_train(self):
         env = CustomEnv(self.path_planner, self.behavior_planner)
         env = make_vec_env(lambda: env, n_envs=1)
-        model = DQN(CustomPolicy, env, verbose=1, learning_starts=256, batch_size=256, exploration_fraction=0.9, target_network_update_freq=100, tensorboard_log=dir_path+'/Logs/')
+        # model = DQN(CustomPolicy, env, verbose=1, learning_starts=256, batch_size=256, exploration_fraction=0.1, target_network_update_freq=100, tensorboard_log=dir_path+'/Logs/')
         # model = DQN(MlpPolicy, env, verbose=1, learning_starts=64,  target_network_update_freq=50, tensorboard_log='./Logs/')
-        # model = DQN.load("DQN_Model_SimpleSim_30k",env=env,exploration_fraction=0.1,tensorboard_log='./Logs/')
-        model.learn(total_timesteps=10000)
+        model = DQN.load(dir_path+"/DQN_Model_CARLA_Local_multi2.zip",env=env,exploration_fraction=0.1,tensorboard_log='./Logs/')
+        model.learn(total_timesteps=5000)
         # model = PPO2(MlpPolicy, env, verbose=1,tensorboard_log="./Logs/")
         # model.learn(total_timesteps=20000)
-        model.save(dir_path+"/DQN_Model_CARLA_Local_multi2.zip")
+        model.save(dir_path+"/DQN_Model_CARLA_Local_multi3.zip")
 
     def run_test(self):
         env = CustomEnv(self.path_planner, self.behavior_planner)
         env = make_vec_env(lambda: env, n_envs=1)
-        model = DQN.load(dir_path+"/DQN_Model_CARLA_Local_multi.zip")
+        model = DQN.load(dir_path+"/DQN_Model_local_CARLA_10k.zip")
         obs = env.reset()
         count = 0
         success = 0
@@ -768,7 +796,7 @@ if __name__ == '__main__':
     try:
         full_planner = FullPlannerManager()
         full_planner.initialize()
-        full_planner.run_train()
+        full_planner.run_test()
 
     except rospy.ROSInterruptException:
         pass
