@@ -65,8 +65,8 @@ class CustomScenario:
         
         self.world.set_weather(find_weather_presets()[2][0])
 
-        # self.scenarios_town04 = [[[40],3,4,100,20], [[40],3,4,100,20], [[39],3,4,100,20], [[38],3,4,150,20]]#, [[46],-2,-3,100,10]]
-        self.scenarios_town04 = [[[46],-2,-3,100,10]]
+        self.scenarios_town04 = [[[40],3,4,100,20], [[39],3,4,100,20], [[38],3,4,150,20], [[46],-2,-3,100,10], [[47],-2,-3,50,10]]
+        # self.scenarios_town04 = [[[46],-2,-3,100,10]]
         self.scenarios_town05 = [[[21,22],-1,-2,0,10], [[37], -2, -3, 25, 0]]
         self.scenarios_town03 = [[[8,7,6], 4, 5, 0, 0]]
         
@@ -78,7 +78,7 @@ class CustomScenario:
         # brak
         
         
-    def reset(self, warm_start=False, warm_start_duration=10):
+    def reset(self, warm_start=False, warm_start_duration=5):
                 
         self.target_speed = 15       
         self.spawn_roads, self.left_lane_id, self.curr_lane_id, self.ego_spawn_idx, self.vehicle_init_speed = self.scenarios_town04[np.random.randint(0,len(self.scenarios_town04))]

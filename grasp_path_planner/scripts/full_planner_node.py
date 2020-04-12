@@ -682,7 +682,7 @@ class RLManager:
             cur_vehicle_state.vehicle_location.x = 0
             cur_vehicle_state.vehicle_location.y = 0
             cur_vehicle_state.vehicle_location.theta = 0
-            cur_vehicle_state.vehicle_speed = 0#data.cur_vehicle_state.vehicle_speed
+            cur_vehicle_state.vehicle_speed = data.cur_vehicle_state.vehicle_speed
             self.append_vehicle_state(env_state, cur_vehicle_state)
             self.append_vehicle_state(env_state_global, data.cur_vehicle_state)
             for _, vehicle in enumerate(data.adjacent_lane_vehicles):
@@ -741,7 +741,7 @@ class RLManager:
         result_state.vehicle_location.theta = theta-cur_vehicle.vehicle_location.theta
         # calculate and set relative speed
         res_vel = np.array([vx-cvx,vy-cvy])
-        result_state.vehicle_speed = np.linalg.norm(res_vel)
+        result_state.vehicle_speed = speed#np.linalg.norm(res_vel)
         # print("ADJ-----------------")
         # print(adj_vehicle)
         # print("CUR-----------------")
@@ -763,13 +763,13 @@ class FullPlannerManager:
     def run_train(self):
         env = CustomEnv(self.path_planner, self.behavior_planner)
         env = make_vec_env(lambda: env, n_envs=1)
-        # model = DQN(CustomPolicy, env, verbose=1, learning_starts=256, batch_size=256, exploration_fraction=0.1, target_network_update_freq=100, tensorboard_log=dir_path+'/Logs/')
+        model = DQN(CustomPolicy, env, verbose=1, learning_starts=256, batch_size=256, exploration_fraction=0.9, target_network_update_freq=100, tensorboard_log=dir_path+'/Logs/')
         # model = DQN(MlpPolicy, env, verbose=1, learning_starts=64,  target_network_update_freq=50, tensorboard_log='./Logs/')
-        model = DQN.load(dir_path+"/DQN_Model_CARLA_Local_multi2.zip",env=env,exploration_fraction=0.1,tensorboard_log='./Logs/')
-        model.learn(total_timesteps=5000)
+        # model = DQN.load(dir_path+"/DQN_Model_CARLA_Local_multi2.zip",env=env,exploration_fraction=0.1,tensorboard_log='./Logs/')
+        model.learn(total_timesteps=10000)
         # model = PPO2(MlpPolicy, env, verbose=1,tensorboard_log="./Logs/")
         # model.learn(total_timesteps=20000)
-        model.save(dir_path+"/DQN_Model_CARLA_Local_multi3.zip")
+        model.save(dir_path+"/DQN_CARLA_10k.zip")
 
     def run_test(self):
         env = CustomEnv(self.path_planner, self.behavior_planner)
@@ -796,7 +796,7 @@ if __name__ == '__main__':
     try:
         full_planner = FullPlannerManager()
         full_planner.initialize()
-        full_planner.run_test()
+        full_planner.run_train()
 
     except rospy.ROSInterruptException:
         pass
