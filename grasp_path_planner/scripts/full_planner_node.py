@@ -58,6 +58,7 @@ TRAJ_PARAM = {'look_up_distance' : 0 ,\
 
 N_DISCRETE_ACTIONS = 4
 CONVERT_TO_LOCAL = True
+INVERT_ANGLES = True
 dir_path = os.path.dirname(os.path.realpath(__file__))
 
 class RLDecision(Enum):
@@ -611,8 +612,15 @@ class CustomEnv(gym.Env):
         self.rl_manager = rl_manager
         self.to_local = CONVERT_TO_LOCAL
 
+    def invert_angles(self,env_desc):
+        for vehicle in env_desc.adjacent_lane_vehicles:
+            vehicle.vehicle_location.theta*=-1
+        env_desc.back_vehicle_state.vehicle_location.theta*=-1
+        env_desc.front_vehicle_state.vehicle_location.theta*=-1
+        env_desc.cur_vehicle_state.vehicle_location.theta*=-1
+        return
+
     def step(self, action):
-        print("Here")
         # reset sb_event flag if previously set in previous action
         decision = self.rl_manager.convertDecision(action)
         env_desc, end_of_action = self.path_planner.performAction(decision)
@@ -622,6 +630,8 @@ class CustomEnv(gym.Env):
 
         while not end_of_action:
             env_desc, end_of_action = self.path_planner.performAction(decision)
+            if INVERT_ANGLES:
+                self.invert_angles(env_desc)
             self.rl_manager.reward_manager.update(env_desc,action)
             done = self.rl_manager.terminate(env_desc)
             end_of_action = end_of_action or done
@@ -925,14 +935,18 @@ class RLManager:
         cvx = cur_vehicle.vehicle_speed*np.cos(cur_vehicle.vehicle_location.theta)
         cvy = cur_vehicle.vehicle_speed*np.sin(cur_vehicle.vehicle_location.theta)
         # make homogeneous transform
-        H = np.eye(3)
-        H[-1,-1] = 1
-        H[0,-1] = -cur_vehicle.vehicle_location.x
-        H[1,-1] = -cur_vehicle.vehicle_location.y
-        H[0,0] = np.cos(-cur_vehicle.vehicle_location.theta)
-        H[0,1] = np.sin(-cur_vehicle.vehicle_location.theta)
-        H[1,0] = -np.sin(-cur_vehicle.vehicle_location.theta)
-        H[1,1] = np.cos(-cur_vehicle.vehicle_location.theta)
+        H_Rot = np.eye(3)
+        H_Rot[-1,-1] = 1
+        H_Rot[0,-1] = 0
+        H_Rot[1,-1] = 0
+        H_Rot[0,0] = np.cos(cur_vehicle.vehicle_location.theta)
+        H_Rot[0,1] = -np.sin(cur_vehicle.vehicle_location.theta)
+        H_Rot[1,0] = np.sin(-cur_vehicle.vehicle_location.theta)
+        H_Rot[1,1] = np.cos(-cur_vehicle.vehicle_location.theta)
+        H_trans = np.eye(3)
+        H_trans[0,-1] = -cur_vehicle.vehicle_location.x
+        H_trans[1,-1] = -cur_vehicle.vehicle_location.y
+        H = np.matmul(H_Rot,H_trans)
         # calculate and set relative position
         res = np.matmul(H, np.array([x,y,1]).reshape(3,1))
         result_state.vehicle_location.x = res[0,0]
@@ -942,12 +956,12 @@ class RLManager:
         # calculate and set relative speed
         res_vel = np.array([vx-cvx,vy-cvy])
         result_state.vehicle_speed = speed # np.linalg.norm(res_vel)
-        # print("ADJ-----------------")
-        # print(adj_vehicle)
-        # print("CUR-----------------")
-        # print(cur_vehicle)
-        # print("RESULT--------------")
-        # print(result_state)
+        print("ADJ-----------------")
+        print(adj_vehicle)
+        print("CUR-----------------")
+        print(cur_vehicle)
+        print("RESULT--------------")
+        print(result_state)
         # time.sleep(5)
         return result_state
 
@@ -996,7 +1010,7 @@ if __name__ == '__main__':
     try:
         full_planner = FullPlannerManager()
         full_planner.initialize()
-        full_planner.run_test()
+        full_planner.run_train()
 
     except rospy.ROSInterruptException:
         pass
