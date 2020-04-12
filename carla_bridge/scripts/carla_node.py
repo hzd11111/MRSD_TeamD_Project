@@ -253,6 +253,7 @@ class CarlaManager:
             
         # Ego vehicle	
         vehicle_ego = self.getVehicleState(self.ego_vehicle)
+        # print("######################### Ego:", vehicle_ego.vehicle_location.theta)
         
         # Front vehicle	
         if(front_vehicle == None):

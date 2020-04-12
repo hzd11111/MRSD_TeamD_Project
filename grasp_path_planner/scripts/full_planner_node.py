@@ -580,8 +580,13 @@ class CustomEnv(gym.Env):
         return env_state, reward, done, {}
 
     def reset(self):
+
         env_desc = self.path_planner.resetSim()
-        env_state = self.rl_manager.makeStateVector(env_desc, self.to_local)
+        
+        env_copy = None
+        if INVERT_ANGLES:
+            env_copy = self.invert_angles(env_desc)
+        env_state = self.rl_manager.makeStateVector(env_copy, self.to_local)
         return env_state
         # return observation  # reward, done, info can't be included
 
@@ -702,11 +707,11 @@ class RLManager:
             self.append_vehicle_state(env_state, dummy)
             i+=1
         
-        print('###############################')
-        print("Global:", env_state_global)
-        print("Transformed:", env_state)
+        # print('###############################')
+        # print("Global:", env_state_global)
+        # print("Transformed:", env_state)
        
-        print('###############################')
+        # print('###############################')
         return env_state
 
     def convert_to_local(self, cur_vehicle, adj_vehicle):
