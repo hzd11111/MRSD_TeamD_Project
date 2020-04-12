@@ -7,6 +7,7 @@ distro=os.getenv("ROS_DISTRO")
 sys.path.remove("/opt/ros/"+distro+"/lib/python2.7/dist-packages")
 sys.path.append("/opt/ros/"+distro+"/lib/python2.7/dist-packages")
 import copy
+from abc import ABC, abstractmethod
 # to remove tensorflow warnings
 import warnings
 warnings.filterwarnings("ignore")
@@ -67,6 +68,9 @@ class RLDecision(Enum):
     SWITCH_LANE = 1
     NO_ACTION = 4
 
+class Scenario(Enum):
+    LANE_CHANGE=0
+    PEDESTRIAN=1
 
 class VecTemp:
     def __init__(self, x=0, y=0):
@@ -676,13 +680,10 @@ class PathPlannerManager:
         self.prev_env_desc = self.sim_service_interface(req).env
         return self.prev_env_desc
 
-
-# Reward calculation functionality
-class Reward(object):
+# Parent Reward Class
+class Reward(ABC):
     '''
-    ^x
-    |
-    |---->y
+    Implements positional costs and basic required interfaces for all rewards
     '''
     def __init__(self):
         self.min_vel = 15
@@ -775,6 +776,34 @@ class Reward(object):
                 closest = distance
         return closest
 
+    def position_cost(self):
+        r_inv = 1/self.max_reward
+        cost = max(0,1/(self.closest_dist+r_inv)-1/(self.closest_dist+r_inv))
+        return self.k_pos*cost
+
+    @abstractmethod
+    def update(self,desc,action):
+        return
+
+    @abstractmethod
+    def get_reward(self,desc,action):
+        return
+    
+    @abstractmethod
+    def reset(self):
+        self.closest_dist=1e5
+
+# Reward calculation functionality
+class LaneChangeReward(Reward):
+    '''
+    ^x
+    |
+    |---->y
+    '''
+    def __init__(self):
+        super().__init__()
+    
+    # ---------------------------------HELPERS-----------------------------------------#
     def get_velocity_error(self,veh_speed):
         if veh_speed < self.min_vel:
             return self.p_vel*abs(veh_speed-self.min_vel)
@@ -782,14 +811,7 @@ class Reward(object):
             return self.p_vel*abs(veh_speed-self.max_vel)
         else:
             return 0
-
-    def update(self,desc,action):
-        cur_dist = self.get_closest_distance(desc)
-        if self.closest_dist > cur_dist:
-            self.closest_dist=cur_dist
-        
-        self.cum_vel_err+=self.get_velocity_error(desc.cur_vehicle_state.vehicle_speed)
-
+    
     def vel_cost(self):
         return self.k_vel*self.cum_vel_err
 
@@ -816,6 +838,7 @@ class Reward(object):
         self.cum_vel_err=0
         return reward
 
+    # ---------------------------------INTERFACES-----------------------------------------#
     def get_reward(self,desc,action):
         if action==RLDecision.SWITCH_LANE.value:
             # call lane change reward function
@@ -830,14 +853,81 @@ class Reward(object):
             # call decelerate reward function
             return self.speed_reward(desc,action)
     
+    def update(self,desc,action):
+        cur_dist = self.get_closest_distance(desc)
+        if self.closest_dist > cur_dist:
+            self.closest_dist=cur_dist
+        self.cum_vel_err+=self.get_velocity_error(desc.cur_vehicle_state.vehicle_speed)
+
+    def reset(self):
+        self.closest_dist=1e5
+
+class PedestrianReward(Reward):
+    def __init__(self):
+        super().__init__()
+    # ---------------------------------HELPERS-----------------------------------------#
+    def speed_reward(self,desc, action):
+        reward=0
+        # check if pedestrian collided
+        if desc.reward.collision:
+            reward=-self.max_reward
+            return reward
+        # check if pedestrian avoided
+        elif desc.reward.done:
+            reward=self.max_reward
+        # add costs of overspeeding
+        reward-=self.vel_cost()
+        reward-=self.position_cost()
+        return reward
+
+    def vel_cost(self):
+        return self.k_vel*self.cum_vel_err
+    
+    def position_cost(self):
+        r_inv = 1/self.max_reward
+        cost = max(0,1/(self.closest_dist+r_inv)-1/(self.closest_dist+r_inv))
+        return self.k_pos*cost
+        
+    def get_velocity_error(self,veh_speed):
+        if veh_speed > self.max_vel:
+            return self.p_vel*abs(veh_speed-self.max_vel)
+        else:
+            return 0
+    # ---------------------------------INTERFACES-----------------------------------------#
+    def get_reward(self,desc,action):
+        if action==RLDecision.CONSTANT_SPEED.value:
+            # call constant speed reward functon
+            return self.speed_reward(desc,action)
+        elif action==RLDecision.ACCELERATE.value:
+            # call accelerate reward function
+            return self.speed_reward(desc,action)
+        elif action==RLDecision.DECELERATE.value:
+            # call decelerate reward function
+            return self.speed_reward(desc,action)
+        # reset closest distance at each action end
+        self.reset()
+    
+    def update(self,desc,action):
+        dist = self.get_closest_distance(desc)
+        if self.closest_dist > cur_dist:
+            self.closest_dist=cur_dist
+        self.cum_vel_err+=self.get_velocity_error(desc.cur_vehicle_state.vehicle_speed)
+
     def reset(self):
         self.closest_dist=1e5
 
 
+def reward_selector(event):
+    if event is Scenario.PEDESTRIAN:
+        return PedestrianReward()
+    elif event is Scenario.LANE_CHANGE:
+        return LaneChangeReward()
+
+
 class RLManager:
-    def __init__(self):
+    def __init__(self, event):
         self.eps_time = 40
-        self.reward_manager = Reward()
+        self.reward_manager = reward_selector(event)
 
     def convertDecision(self, action):
         if action == RLDecision.CONSTANT_SPEED.value:
@@ -953,9 +1043,9 @@ class RLManager:
 
 
 class FullPlannerManager:
-    def __init__(self):
+    def __init__(self,event):
         self.path_planner = PathPlannerManager()
-        self.behavior_planner = RLManager()
+        self.behavior_planner = RLManager(event)
 
     def initialize(self):
         self.path_planner.initialize()
@@ -994,7 +1084,7 @@ class FullPlannerManager:
 
 if __name__ == '__main__':
     try:
-        full_planner = FullPlannerManager()
+        full_planner = FullPlannerManager(Scenario.LANE_CHANGE)
         full_planner.initialize()
         full_planner.run_test()
 
