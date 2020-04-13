@@ -27,6 +27,7 @@ from grasp_path_planner.msg import RewardInfo
 from grasp_path_planner.msg import EnvironmentState
 from grasp_path_planner.msg import RLCommand
 from grasp_path_planner.msg import PathPlan
+from grasp_path_planner.msg import Pedestrian
 from grasp_path_planner.srv import SimService, SimServiceResponse, SimServiceRequest
 # RL packages
 import gym
@@ -688,6 +689,7 @@ class PathPlannerManager:
         reset_msg.sent_time = rospy.Time.now()
         req = SimServiceRequest()
         req.path_plan = reset_msg
+        print(req)
         self.prev_env_desc = self.sim_service_interface(req).env
         return self.prev_env_desc
 
