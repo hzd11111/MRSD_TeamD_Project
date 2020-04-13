@@ -191,8 +191,7 @@ class CustomPedestrianPolicy(DQNPolicy):
             for i in range(1):
                 embed_list.append(
                     self.embedding_net(tf.concat([out_ph[:, :4], out_ph[:, (i + 1) * 4:(i + 2) * 4]], axis=1)))
-            stacked_out = tf.stack(embed_list, axis=1)
-            q_out = self.q_net(stacked_out,ac_space.n)
+            q_out = self.q_net(embed_list[0],ac_space.n)
         self.q_values = q_out
         self._setup_init()
 
@@ -228,10 +227,12 @@ class CustomEnv(gym.Env):
         N_ACTIONS=0
         if event==Scenario.PEDESTRIAN:
             N_ACTIONS=3
+            self.action_space = spaces.Discrete(N_ACTIONS)
+            self.observation_space = spaces.Box(low = -1000, high=1000, shape = (1,8))
         elif event==Scenario.LANE_CHANGE:
             N_ACTIONS=4
-        self.action_space = spaces.Discrete(N_ACTIONS)
-        self.observation_space = spaces.Box(low = -1000, high=1000, shape = (1,24))
+            self.action_space = spaces.Discrete(N_ACTIONS)
+            self.observation_space = spaces.Box(low = -1000, high=1000, shape = (1,24))
         self.path_planner = path_planner
         self.rl_manager = rl_manager
         self.to_local = CONVERT_TO_LOCAL
@@ -350,38 +351,60 @@ class RLManager:
         '''
         create a state vector from the message recieved
         '''
-        i=0
-        env_state = []
-        if not local:
-            self.append_vehicle_state(env_state, data.cur_vehicle_state)
-            # self.append_vehicle_state(env_state, data.back_vehicle_state)
-            # self.append_vehicle_state(env_state, data.front_vehicle_state)
-            for _, vehicle in enumerate(data.adjacent_lane_vehicles):
-                if i < 5:
-                    self.append_vehicle_state(env_state, vehicle)
-                else:
-                    break
+        if self.event==Scenario.LANE_CHANGE:
+            i=0
+            env_state = []
+            if not local:
+                self.append_vehicle_state(env_state, data.cur_vehicle_state)
+                # self.append_vehicle_state(env_state, data.back_vehicle_state)
+                # self.append_vehicle_state(env_state, data.front_vehicle_state)
+                for _, vehicle in enumerate(data.adjacent_lane_vehicles):
+                    if i < 5:
+                        self.append_vehicle_state(env_state, vehicle)
+                    else:
+                        break
+                    i+=1
+            else:
+                cur_vehicle_state = VehicleState()
+                cur_vehicle_state.vehicle_location.x = 0
+                cur_vehicle_state.vehicle_location.y = 0
+                cur_vehicle_state.vehicle_location.theta = 0
+                cur_vehicle_state.vehicle_speed = data.cur_vehicle_state.vehicle_speed
+                self.append_vehicle_state(env_state, cur_vehicle_state)
+                for _, vehicle in enumerate(data.adjacent_lane_vehicles):
+                    converted_state = convert_to_local(data.cur_vehicle_state, vehicle)
+                    if i < 5:
+                        self.append_vehicle_state(env_state, converted_state)
+                    else:
+                        break
+                    i+=1
+            dummy = VehicleState()
+            dummy.vehicle_location.x = 100
+            dummy.vehicle_location.y = 100
+            dummy.vehicle_location.theta = 0
+            dummy.vehicle_speed = 0
+            while i<5:
+                self.append_vehicle_state(env_state, dummy)
                 i+=1
-        else:
-            cur_vehicle_state = VehicleState()
-            cur_vehicle_state.vehicle_location.x = 0
-            cur_vehicle_state.vehicle_location.y = 0
-            cur_vehicle_state.vehicle_location.theta = 0
-            cur_vehicle_state.vehicle_speed = data.cur_vehicle_state.vehicle_speed
-            self.append_vehicle_state(env_state, cur_vehicle_state)
-            for _, vehicle in enumerate(data.adjacent_lane_vehicles):
-                converted_state = convert_to_local(data.cur_vehicle_state, vehicle)
-                if i < 5:
-                    self.append_vehicle_state(env_state, converted_state)
-                else:
-                    break
-                i+=1
-        dummy = VehicleState()
-        dummy.vehicle_location.x = 100
-        dummy.vehicle_location.y = 100
-        dummy.vehicle_location.theta = 0
-        dummy.vehicle_speed = 0
-        while i<5:
-            self.append_vehicle_state(env_state, dummy)
-            i+=1
-        return env_state
+            return env_state
+        elif self.event==Scenario.PEDESTRIAN:
+            env_state = []
+            if not local:
+                self.append_vehicle_state(env_state, data.cur_vehicle_state)
+                ped_vehicle = VehicleState()
+                ped_vehicle.vehicle_location = data.nearest_pedestrian.pedestrian_location
+                ped_vehicle.pedestrian_speed = data.nearest_pedestrian.pedestrian_speed
+                self.append_vehicle_state(env_state, ped_vehicle)
+            else:
+                cur_vehicle_state = VehicleState()
+                cur_vehicle_state.vehicle_location.x = 0
+                cur_vehicle_state.vehicle_location.y = 0
+                cur_vehicle_state.vehicle_location.theta = 0
+                cur_vehicle_state.vehicle_speed = data.cur_vehicle_state.vehicle_speed
+                self.append_vehicle_state(env_state, cur_vehicle_state)
+                ped_vehicle = VehicleState()
+                ped_vehicle.vehicle_location = data.nearest_pedestrian.pedestrian_location
+                ped_vehicle.vehicle_speed = data.nearest_pedestrian.pedestrian_speed
+                converted_state = convert_to_local(data.cur_vehicle_state, ped_vehicle)
+                self.append_vehicle_state(env_state, converted_state)
+            return env_state

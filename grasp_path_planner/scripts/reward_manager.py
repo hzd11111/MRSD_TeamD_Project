@@ -364,7 +364,6 @@ class PedestrianReward(Reward):
             closest = abs(np.dot(point, ego_lines[2]))
         elif region == 8:
             closest = np.linalg.norm(point-np.array(ego_bb[2]+[1]))
-
         # print("Closest distance is ",closest)
         # print("Cur Vehicle", desc.cur_vehicle_state)
         # print("Pedestrian", desc.nearest_pedestrian)
