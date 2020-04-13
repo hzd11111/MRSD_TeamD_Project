@@ -33,7 +33,7 @@ class FullPlannerManager:
         self.path_planner.initialize()
 
     def run_train(self):
-        env = CustomEnv(self.path_planner, self.behavior_planner)
+        env = CustomEnv(self.path_planner, self.behavior_planner, event)
         env = make_vec_env(lambda: env, n_envs=1)
         model = DQN(CustomPolicy, env, verbose=1, learning_starts=256, batch_size=256, exploration_fraction=0.9, target_network_update_freq=100, tensorboard_log=dir_path+'/Logs/')
         # model = DQN(MlpPolicy, env, verbose=1, learning_starts=64,  target_network_update_freq=50, tensorboard_log='./Logs/')
@@ -66,7 +66,11 @@ class FullPlannerManager:
 
 if __name__ == '__main__':
     try:
-        full_planner = FullPlannerManager(Scenario.LANE_CHANGE)
+        event = Scenario.PEDESTRIAN
+        if event==Scenario.PEDESTRIAN:
+            full_planner = FullPlannerManager(Scenario.PEDESTRIAN)
+        elif event == Scenario.LANE_CHANGE:
+            full_planner = FullPlannerManager(Scenario.LANE_CHANGE)
         full_planner.initialize()
         full_planner.run_train()
 

@@ -4,14 +4,23 @@ class Scenario(Enum):
     LANE_CHANGE=0
     PEDESTRIAN=1
 
+# class RLDecision(Enum):
+#     CONSTANT_SPEED = 0
+#     ACCELERATE = 2
+#     DECELERATE = 3
+#     SWITCH_LANE = 1
+#     NO_ACTION = 4
+
+
 class RLDecision(Enum):
     CONSTANT_SPEED = 0
-    ACCELERATE = 2
-    DECELERATE = 3
-    SWITCH_LANE = 1
+    ACCELERATE = 1
+    DECELERATE = 2
+    SWITCH_LANE = 3
     NO_ACTION = 4
 
 N_DISCRETE_ACTIONS = 4
 CONVERT_TO_LOCAL = True
 SIM_SERVICE_NAME = "simulator"
 NODE_NAME = "full_grasp_planner"
+INVERT_ANGLES=True

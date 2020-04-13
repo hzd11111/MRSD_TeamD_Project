@@ -2,6 +2,7 @@
 # ROS Packages
 import rospy
 import numpy as np
+import copy
 from geometry_msgs.msg import Pose2D
 from std_msgs.msg import String
 from grasp_path_planner.msg import LanePoint
@@ -56,12 +57,12 @@ class CustomPolicy(DQNPolicy):
             out = tf_layers.fully_connected(out, num_outputs=64, activation_fn=tf.nn.relu)
         return out
 
-    def q_net(self, input_vec):
+    def q_net(self, input_vec, out_num):
         out = input_vec
         with tf.variable_scope("action_value"):
             out = tf_layers.fully_connected(out, num_outputs=64, activation_fn=tf.nn.relu)
             out = tf_layers.fully_connected(out, num_outputs=128, activation_fn=tf.nn.relu)
-            out = tf_layers.fully_connected(out, num_outputs=4, activation_fn=tf.nn.tanh)
+            out = tf_layers.fully_connected(out, num_outputs=out_num, activation_fn=tf.nn.tanh)
         return out
 
     def __init__(self, sess, ob_space, ac_space, n_env, n_steps, n_batch, reuse=False,
@@ -77,7 +78,7 @@ class CustomPolicy(DQNPolicy):
                     self.embedding_net(tf.concat([out_ph[:, :4], out_ph[:, (i + 1) * 4:(i + 2) * 4]], axis=1)))
             stacked_out = tf.stack(embed_list, axis=1)
             max_out = tf.reduce_max(stacked_out, axis=1)
-            q_out = self.q_net(max_out)
+            q_out = self.q_net(max_out,ac_space.n)
         self.q_values = q_out
         self._setup_init()
 
@@ -105,40 +106,61 @@ class CustomEnv(gym.Env):
 
     metadata = {'render.modes': ['human']}
 
-    def __init__(self, path_planner, rl_manager):
+    def __init__(self, path_planner, rl_manager,event):
         super(CustomEnv, self).__init__()
         # Define action and observation space
         # They must be gym.spaces objects
         # Example when using discrete actions:
-        self.action_space = spaces.Discrete(N_DISCRETE_ACTIONS)
+        N_ACTIONS=0
+        if event==Scenario.PEDESTRIAN:
+            N_ACTIONS=3
+        elif event==Scenario.LANE_CHANGE:
+            N_ACTIONS=4
+        self.action_space = spaces.Discrete(N_ACTIONS)
         self.observation_space = spaces.Box(low = -1000, high=1000, shape = (1,24))
         self.path_planner = path_planner
         self.rl_manager = rl_manager
         self.to_local = CONVERT_TO_LOCAL
 
+    def invert_angles(self,env_desc):
+        env_copy = copy.deepcopy(env_desc)
+        for vehicle in env_copy.adjacent_lane_vehicles:
+            vehicle.vehicle_location.theta*=-1
+        env_copy.back_vehicle_state.vehicle_location.theta*=-1
+        env_copy.front_vehicle_state.vehicle_location.theta*=-1
+        env_copy.cur_vehicle_state.vehicle_location.theta*=-1
+        return env_copy
+
     def step(self, action):
-        print("Here")
         # reset sb_event flag if previously set in previous action
         decision = self.rl_manager.convertDecision(action)
         env_desc, end_of_action = self.path_planner.performAction(decision)
-        self.rl_manager.reward_manager.update(env_desc,action)
-        done = self.rl_manager.terminate(env_desc)
+        env_copy = env_desc
+        if INVERT_ANGLES:
+            env_copy = self.invert_angles(env_desc)
+        self.rl_manager.reward_manager.update(env_copy,action)
+        done = self.rl_manager.terminate(env_copy)
         end_of_action = end_of_action or done
-
         while not end_of_action:
             env_desc, end_of_action = self.path_planner.performAction(decision)
-            self.rl_manager.reward_manager.update(env_desc,action)
-            done = self.rl_manager.terminate(env_desc)
+            env_copy = env_desc
+            if INVERT_ANGLES:
+                env_copy = self.invert_angles(env_desc)
+            self.rl_manager.reward_manager.update(env_copy,action)
+            done = self.rl_manager.terminate(env_copy)
             end_of_action = end_of_action or done
-
-        env_state = self.rl_manager.makeStateVector(env_desc, self.to_local)
-        reward = self.rl_manager.reward_manager.get_reward(env_desc,action)
+        env_state = self.rl_manager.makeStateVector(env_copy, self.to_local)
+        reward = self.rl_manager.reward_manager.get_reward(env_copy,action)
+        print("REWARD",reward)
         return env_state, reward, done, {}
 
     def reset(self):
         self.rl_manager.reward_manager.reset()
         env_desc = self.path_planner.resetSim()
-        env_state = self.rl_manager.makeStateVector(env_desc, self.to_local)
+        env_copy = env_desc
+        if INVERT_ANGLES:
+            env_copy = self.invert_angles(env_desc)
+        env_state = self.rl_manager.makeStateVector(env_copy, self.to_local)
         return env_state
         # return observation  # reward, done, info can't be included
 
@@ -240,14 +262,18 @@ class RLManager:
         cvx = cur_vehicle.vehicle_speed*np.cos(cur_vehicle.vehicle_location.theta)
         cvy = cur_vehicle.vehicle_speed*np.sin(cur_vehicle.vehicle_location.theta)
         # make homogeneous transform
-        H = np.eye(3)
-        H[-1,-1] = 1
-        H[0,-1] = -cur_vehicle.vehicle_location.x
-        H[1,-1] = -cur_vehicle.vehicle_location.y
-        H[0,0] = np.cos(-cur_vehicle.vehicle_location.theta)
-        H[0,1] = np.sin(-cur_vehicle.vehicle_location.theta)
-        H[1,0] = -np.sin(-cur_vehicle.vehicle_location.theta)
-        H[1,1] = np.cos(-cur_vehicle.vehicle_location.theta)
+        H_Rot = np.eye(3)
+        H_Rot[-1,-1] = 1
+        H_Rot[0,-1] = 0
+        H_Rot[1,-1] = 0
+        H_Rot[0,0] = np.cos(cur_vehicle.vehicle_location.theta)
+        H_Rot[0,1] = -np.sin(cur_vehicle.vehicle_location.theta)
+        H_Rot[1,0] = np.sin(cur_vehicle.vehicle_location.theta)
+        H_Rot[1,1] = np.cos(cur_vehicle.vehicle_location.theta)
+        H_trans = np.eye(3)
+        H_trans[0,-1] = -cur_vehicle.vehicle_location.x
+        H_trans[1,-1] = -cur_vehicle.vehicle_location.y
+        H = np.matmul(H_Rot,H_trans)
         # calculate and set relative position
         res = np.matmul(H, np.array([x,y,1]).reshape(3,1))
         result_state.vehicle_location.x = res[0,0]

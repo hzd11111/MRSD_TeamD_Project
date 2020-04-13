@@ -209,7 +209,7 @@ class PedestrianReward(Reward):
             reward=-self.max_reward
             return reward
         # check if pedestrian avoided
-        elif desc.reward.done:
+        elif desc.reward.end_of_action:
             reward=self.max_reward
         # add costs of overspeeding
         reward-=self.vel_cost()
@@ -231,6 +231,7 @@ class PedestrianReward(Reward):
             return 0
     # ---------------------------------INTERFACES-----------------------------------------#
     def get_reward(self,desc,action):
+        print("Action",action)
         if action==RLDecision.CONSTANT_SPEED.value:
             # call constant speed reward functon
             return self.speed_reward(desc,action)
