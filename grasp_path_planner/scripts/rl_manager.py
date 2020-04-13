@@ -3,6 +3,7 @@
 import rospy
 import numpy as np
 import copy
+import time
 from geometry_msgs.msg import Pose2D
 from std_msgs.msg import String
 from grasp_path_planner.msg import LanePoint
@@ -32,6 +33,50 @@ from stable_baselines.deepq.policies import DQNPolicy
 # other packages
 from reward_manager import reward_selector, Reward, LaneChangeReward, PedestrianReward
 from settings import *
+
+# Convert to local
+def convert_to_local(cur_vehicle, adj_vehicle):
+        result_state = VehicleState()
+        x = adj_vehicle.vehicle_location.x
+        y = adj_vehicle.vehicle_location.y
+        theta = adj_vehicle.vehicle_location.theta
+        speed = adj_vehicle.vehicle_speed
+        vx = speed*np.cos(theta)
+        vy = speed*np.sin(theta)
+        # get current_vehicle_speeds
+        cvx = cur_vehicle.vehicle_speed*np.cos(cur_vehicle.vehicle_location.theta)
+        cvy = cur_vehicle.vehicle_speed*np.sin(cur_vehicle.vehicle_location.theta)
+        # make homogeneous transform
+        H_Rot = np.eye(3)
+        H_Rot[-1,-1] = 1
+        H_Rot[0,-1] = 0
+        H_Rot[1,-1] = 0
+        H_Rot[0,0] = np.cos(cur_vehicle.vehicle_location.theta)
+        H_Rot[0,1] = -np.sin(cur_vehicle.vehicle_location.theta)
+        H_Rot[1,0] = np.sin(cur_vehicle.vehicle_location.theta)
+        H_Rot[1,1] = np.cos(cur_vehicle.vehicle_location.theta)
+        H_trans = np.eye(3)
+        H_trans[0,-1] = -cur_vehicle.vehicle_location.x
+        H_trans[1,-1] = -cur_vehicle.vehicle_location.y
+        H = np.matmul(H_Rot,H_trans)
+        # calculate and set relative position
+        res = np.matmul(H, np.array([x,y,1]).reshape(3,1))
+        result_state.vehicle_location.x = res[0,0]
+        result_state.vehicle_location.y = res[1,0]
+        # calculate and set relative orientation
+        result_state.vehicle_location.theta = theta-cur_vehicle.vehicle_location.theta
+        # calculate and set relative speed
+        res_vel = np.array([vx-cvx,vy-cvy])
+        result_state.vehicle_speed = speed # np.linalg.norm(res_vel)
+        # print("ADJ-----------------")
+        # print(adj_vehicle)
+        # print("CUR-----------------")
+        # print(cur_vehicle)
+        # print("RESULT--------------")
+        # print(result_state)
+        # time.sleep(5)
+        return result_state
+
 # make a custom policy
 class CustomPolicy(DQNPolicy):
     """
@@ -152,8 +197,14 @@ class CustomEnv(gym.Env):
             end_of_action = end_of_action or done
         env_state = self.rl_manager.makeStateVector(env_copy, self.to_local)
         reward = self.rl_manager.reward_manager.get_reward(env_copy,action)
+        # for sending success signal during testing
+        success = env_desc.reward.collision or \
+                    env_desc.reward.time_elapsed > self.rl_manager.eps_time
+        info = {}
+        info["success"] = success
         print("REWARD",reward)
-        return env_state, reward, done, {}
+        time.sleep(2)
+        return env_state, reward, done, info
 
     def reset(self):
         self.rl_manager.reward_manager.reset()
@@ -176,6 +227,7 @@ class RLManager:
     def __init__(self, event):
         self.eps_time = 40
         self.reward_manager = reward_selector(event)
+        self.event = event
 
     def convertDecision(self, action):
         if action == RLDecision.CONSTANT_SPEED.value:
@@ -190,9 +242,24 @@ class RLManager:
             print("Bug in decision conversion")
 
     def terminate(self, env_desc):
-        return env_desc.reward.collision or \
-            env_desc.reward.path_planner_terminate or \
-                env_desc.reward.time_elapsed > self.eps_time
+        if self.event == Scenario.LANE_CHANGE:
+            return env_desc.reward.collision or \
+                env_desc.reward.path_planner_terminate or \
+                    env_desc.reward.time_elapsed > self.eps_time
+        elif self.event == Scenario.PEDESTRIAN:
+            # return true if vehicle has moved past the vehicle
+            ped_vehicle = VehicleState()
+            relative_pose = ped_vehicle
+            if env_desc.nearest_pedestrian.exist:
+                ped_vehicle.vehicle_location = env_desc.nearest_pedestrian.pedestrian_location
+                ped_vehicle.vehicle_speed = env_desc.nearest_pedestrian.pedestrian_speed
+                relative_pose = convert_to_local(env_desc.cur_vehicle_state,ped_vehicle)
+                if relative_pose.vehicle_location.x < -1:
+                    return True
+            # usual conditions
+            return env_desc.reward.collision or \
+                env_desc.reward.path_planner_terminate or \
+                    env_desc.reward.time_elapsed > self.eps_time
 
     def rewardCalculation(self, env_desc):
         reward = 0
@@ -235,7 +302,7 @@ class RLManager:
             cur_vehicle_state.vehicle_speed = data.cur_vehicle_state.vehicle_speed
             self.append_vehicle_state(env_state, cur_vehicle_state)
             for _, vehicle in enumerate(data.adjacent_lane_vehicles):
-                converted_state = self.convert_to_local(data.cur_vehicle_state, vehicle)
+                converted_state = convert_to_local(data.cur_vehicle_state, vehicle)
                 if i < 5:
                     self.append_vehicle_state(env_state, converted_state)
                 else:
@@ -250,45 +317,3 @@ class RLManager:
             self.append_vehicle_state(env_state, dummy)
             i+=1
         return env_state
-
-    def convert_to_local(self, cur_vehicle, adj_vehicle):
-        result_state = VehicleState()
-        x = adj_vehicle.vehicle_location.x
-        y = adj_vehicle.vehicle_location.y
-        theta = adj_vehicle.vehicle_location.theta
-        speed = adj_vehicle.vehicle_speed
-        vx = speed*np.cos(theta)
-        vy = speed*np.sin(theta)
-        # get current_vehicle_speeds
-        cvx = cur_vehicle.vehicle_speed*np.cos(cur_vehicle.vehicle_location.theta)
-        cvy = cur_vehicle.vehicle_speed*np.sin(cur_vehicle.vehicle_location.theta)
-        # make homogeneous transform
-        H_Rot = np.eye(3)
-        H_Rot[-1,-1] = 1
-        H_Rot[0,-1] = 0
-        H_Rot[1,-1] = 0
-        H_Rot[0,0] = np.cos(cur_vehicle.vehicle_location.theta)
-        H_Rot[0,1] = -np.sin(cur_vehicle.vehicle_location.theta)
-        H_Rot[1,0] = np.sin(cur_vehicle.vehicle_location.theta)
-        H_Rot[1,1] = np.cos(cur_vehicle.vehicle_location.theta)
-        H_trans = np.eye(3)
-        H_trans[0,-1] = -cur_vehicle.vehicle_location.x
-        H_trans[1,-1] = -cur_vehicle.vehicle_location.y
-        H = np.matmul(H_Rot,H_trans)
-        # calculate and set relative position
-        res = np.matmul(H, np.array([x,y,1]).reshape(3,1))
-        result_state.vehicle_location.x = res[0,0]
-        result_state.vehicle_location.y = res[1,0]
-        # calculate and set relative orientation
-        result_state.vehicle_location.theta = theta-cur_vehicle.vehicle_location.theta
-        # calculate and set relative speed
-        res_vel = np.array([vx-cvx,vy-cvy])
-        result_state.vehicle_speed = speed # np.linalg.norm(res_vel)
-        # print("ADJ-----------------")
-        # print(adj_vehicle)
-        # print("CUR-----------------")
-        # print(cur_vehicle)
-        # print("RESULT--------------")
-        # print(result_state)
-        # time.sleep(5)
-        return result_state

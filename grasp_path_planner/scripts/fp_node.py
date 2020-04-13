@@ -57,10 +57,10 @@ class FullPlannerManager:
                 action, _ = model.predict(obs)
 
                 print(action)
-                obs, reward, done, _ = env.step(action)
+                obs, reward, done, info = env.step(action)
                 print("Reward",reward)
             count += 1
-            if reward == 1:
+            if info[0]["success"]:
                 success += 1
         print("Success Rate ", success / count, success, count)
 

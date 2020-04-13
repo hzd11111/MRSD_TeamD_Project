@@ -11,10 +11,54 @@ from grasp_path_planner.msg import VehicleState
 from grasp_path_planner.msg import RewardInfo
 from grasp_path_planner.msg import EnvironmentState
 from grasp_path_planner.msg import RLCommand
+from grasp_path_planner.msg import Pedestrian
 from grasp_path_planner.msg import PathPlan
 from grasp_path_planner.srv import SimService, SimServiceResponse, SimServiceRequest
 # other packages
 from settings import *
+
+# Convert to local
+def convert_to_local(cur_vehicle, adj_vehicle):
+        result_state = VehicleState()
+        x = adj_vehicle.vehicle_location.x
+        y = adj_vehicle.vehicle_location.y
+        theta = adj_vehicle.vehicle_location.theta
+        speed = adj_vehicle.vehicle_speed
+        vx = speed*np.cos(theta)
+        vy = speed*np.sin(theta)
+        # get current_vehicle_speeds
+        cvx = cur_vehicle.vehicle_speed*np.cos(cur_vehicle.vehicle_location.theta)
+        cvy = cur_vehicle.vehicle_speed*np.sin(cur_vehicle.vehicle_location.theta)
+        # make homogeneous transform
+        H_Rot = np.eye(3)
+        H_Rot[-1,-1] = 1
+        H_Rot[0,-1] = 0
+        H_Rot[1,-1] = 0
+        H_Rot[0,0] = np.cos(cur_vehicle.vehicle_location.theta)
+        H_Rot[0,1] = -np.sin(cur_vehicle.vehicle_location.theta)
+        H_Rot[1,0] = np.sin(cur_vehicle.vehicle_location.theta)
+        H_Rot[1,1] = np.cos(cur_vehicle.vehicle_location.theta)
+        H_trans = np.eye(3)
+        H_trans[0,-1] = -cur_vehicle.vehicle_location.x
+        H_trans[1,-1] = -cur_vehicle.vehicle_location.y
+        H = np.matmul(H_Rot,H_trans)
+        # calculate and set relative position
+        res = np.matmul(H, np.array([x,y,1]).reshape(3,1))
+        result_state.vehicle_location.x = res[0,0]
+        result_state.vehicle_location.y = res[1,0]
+        # calculate and set relative orientation
+        result_state.vehicle_location.theta = theta-cur_vehicle.vehicle_location.theta
+        # calculate and set relative speed
+        res_vel = np.array([vx-cvx,vy-cvy])
+        result_state.vehicle_speed = speed # np.linalg.norm(res_vel)
+        # print("ADJ-----------------")
+        # print(adj_vehicle)
+        # print("CUR-----------------")
+        # print(cur_vehicle)
+        # print("RESULT--------------")
+        # print(result_state)
+        # time.sleep(5)
+        return result_state
 
 # Parent Reward Class
 class Reward(ABC):
@@ -80,11 +124,15 @@ class Reward(ABC):
             NPC_bb.append([[cx+l/2,cy-w/2], [cx+l/2, cy+w/2], [cx-l/2, cy+w/2], [cx-l/2, cy-w/2]])
             normals=[]
             for i in range(0,4):
-                x1,y1 = NPC_bb[-1][i%4]
-                x2,y2 = NPC_bb[-1][(i+1)%4]
-                b = (x2-x1)
-                a = -(y2-y1)
-                c = (x1*(y2-y1)-(x2-x1)*y1)
+                if i<2:
+                    x1,y1 = NPC_bb[i%4]
+                    x2,y2 = NPC_bb[(i+1)%4]
+                else:
+                    x2,y2 = NPC_bb[i%4]
+                    x1,y1 = NPC_bb[(i+1)%4]
+                a = (y2-y1)
+                b = -(x2-x1)
+                c = (y1*(x2-x1)-(y2-y1)*x1)
                 norm = np.linalg.norm([a,b])
                 a, b, c = a/norm, b/norm, c/norm
                 normals.append([a,b,c])
@@ -96,8 +144,12 @@ class Reward(ABC):
         l,w = desc.cur_vehicle_state.length, desc.cur_vehicle_state.width
         ego_bb = [[cx+l/2,cy-w/2], [cx+l/2, cy+w/2], [cx-l/2, cy+w/2], [cx-l/2, cy-w/2]]
         for i in range(0,4):
-            x1,y1 = ego_bb[i%4]
-            x2,y2 = ego_bb[(i+1)%4]
+            if i<2:
+                x1,y1 = ego_bb[i%4]
+                x2,y2 = ego_bb[(i+1)%4]
+            else:
+                x2,y2 = ego_bb[i%4]
+                x1,y1 = ego_bb[(i+1)%4]
             a = (y2-y1)
             b = -(x2-x1)
             c = (y1*(x2-x1)-(y2-y1)*x1)
@@ -204,16 +256,29 @@ class PedestrianReward(Reward):
     # ---------------------------------HELPERS-----------------------------------------#
     def speed_reward(self,desc, action):
         reward=0
+        ped_vehicle = VehicleState()
+        relative_pose = ped_vehicle
+        if desc.nearest_pedestrian.exist:
+            ped_vehicle.vehicle_location = desc.nearest_pedestrian.pedestrian_location
+            ped_vehicle.vehicle_speed = desc.nearest_pedestrian.pedestrian_speed
+            relative_pose = convert_to_local(desc.cur_vehicle_state,ped_vehicle)
+            # print("CUR")
+            # print(desc.cur_vehicle_state)
+            # print("PED")
+            # print(ped_vehicle)
+            # print("RELATIVE")
+            # print(relative_pose)
         # check if pedestrian collided
         if desc.reward.collision:
             reward=-self.max_reward
             return reward
         # check if pedestrian avoided
-        elif desc.reward.end_of_action:
+        elif desc.nearest_pedestrian.exist and relative_pose.vehicle_location.x < -1:
             reward=self.max_reward
         # add costs of overspeeding
         reward-=self.vel_cost()
         reward-=self.position_cost()
+        self.reset()
         return reward
 
     def vel_cost(self):
@@ -229,6 +294,82 @@ class PedestrianReward(Reward):
             return self.p_vel*abs(veh_speed-self.max_vel)
         else:
             return 0
+    
+    def get_closest_distance(self,desc):
+        '''
+        1          2 (+)         3
+            +-------------+
+            |        (-)  |
+        4(-)|(+)   0   (-)| (+)  5
+            |      (+)    |
+            +-------------+
+        6          7 (-)         8
+        '''
+        x = desc.nearest_pedestrian.pedestrian_location.x
+        y = desc.nearest_pedestrian.pedestrian_location.x
+        point=np.array([x,y,1])
+        cx,cy = desc.cur_vehicle_state.vehicle_location.x, desc.cur_vehicle_state.vehicle_location.y
+        radius = desc.nearest_pedestrian.radius
+        l,w = desc.cur_vehicle_state.length, desc.cur_vehicle_state.width
+        # bloat th corners
+        l+=2*radius
+        w+=2*radius
+        ego_bb = [[cx+l/2,cy-w/2], [cx+l/2, cy+w/2], [cx-l/2, cy+w/2], [cx-l/2, cy-w/2]]
+        ego_lines = []
+        mapping = {
+            (0,0,1,1):0,
+            (1,0,1,0):1,
+            (1,0,1,1):2,
+            (1,1,1,1):3,
+            (0,0,1,0):4,
+            (0,1,1,1):5,
+            (0,0,0,0):6,
+            (0,0,0,1):7,
+            (0,1,0,1):8
+        }
+        key = []
+        for i in range(0,4):
+            if i<2:
+                x1,y1 = ego_bb[i%4]
+                x2,y2 = ego_bb[(i+1)%4]
+            else:
+                x2,y2 = ego_bb[i%4]
+                x1,y1 = ego_bb[(i+1)%4]
+            a = (y2-y1)
+            b = -(x2-x1)
+            c = (y1*(x2-x1)-(y2-y1)*x1)
+            norm = np.linalg.norm([a,b])
+            a, b, c = a/norm, b/norm, c/norm
+            ego_lines.append([a,b,c])
+            dist = a*x+b*y+c
+            k = 0 if dist < 0 else 1
+            key.append(k)
+        region = mapping[tuple(key)]
+        closest = None
+        if region == 0:
+            closest = 0
+        elif region == 1:
+            closest = np.linalg.norm(point-np.array(ego_bb[0]+[1]))
+        elif region == 2:
+            closest = np.dot(point, ego_lines[0])
+        elif region == 3:
+            closest = np.linalg.norm(point-np.array(ego_bb[1]+[1]))
+        elif region == 4:
+            closest = abs(np.dot(point, ego_lines[3]))
+        elif region == 5:
+            closest = np.dot(point, ego_lines[1])
+        elif region == 6:
+            closest = np.linalg.norm(point-np.array(ego_bb[3]+[1]))
+        elif region == 7:
+            closest = abs(np.dot(point, ego_lines[2]))
+        elif region == 8:
+            closest = np.linalg.norm(point-np.array(ego_bb[2]+[1]))
+
+        # print("Closest distance is ",closest)
+        # print("Cur Vehicle", desc.cur_vehicle_state)
+        # print("Pedestrian", desc.nearest_pedestrian)
+        return closest
+
     # ---------------------------------INTERFACES-----------------------------------------#
     def get_reward(self,desc,action):
         print("Action",action)
@@ -242,12 +383,12 @@ class PedestrianReward(Reward):
             # call decelerate reward function
             return self.speed_reward(desc,action)
         # reset closest distance at each action end
-        self.reset()
     
     def update(self,desc,action):
-        cur_dist = self.get_closest_distance(desc)
-        if self.closest_dist > cur_dist:
-            self.closest_dist=cur_dist
+        if desc.nearest_pedestrian.exist:
+            cur_dist = self.get_closest_distance(desc)
+            if self.closest_dist > cur_dist:
+                self.closest_dist=cur_dist
         self.cum_vel_err+=self.get_velocity_error(desc.cur_vehicle_state.vehicle_speed)
 
     def reset(self):
