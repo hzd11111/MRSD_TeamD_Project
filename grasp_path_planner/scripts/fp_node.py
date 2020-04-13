@@ -17,7 +17,7 @@ from stable_baselines.common.env_checker import check_env
 from stable_baselines.common.cmd_util import make_vec_env
 # Other Packages
 from path_planner import PathPlannerManager
-from rl_manager import RLManager, CustomEnv, CustomPolicy
+from rl_manager import RLManager, CustomEnv, CustomLaneChangePolicy, CustomPedestrianPolicy
 from settings import *
 
 # -----------------------------------Global------------------------------------------------------#
@@ -28,6 +28,7 @@ class FullPlannerManager:
     def __init__(self,event):
         self.path_planner = PathPlannerManager()
         self.behavior_planner = RLManager(event)
+        self.event = event
 
     def initialize(self):
         self.path_planner.initialize()
@@ -35,18 +36,22 @@ class FullPlannerManager:
     def run_train(self):
         env = CustomEnv(self.path_planner, self.behavior_planner, event)
         env = make_vec_env(lambda: env, n_envs=1)
-        model = DQN(CustomPolicy, env, verbose=1, learning_starts=256, batch_size=256, exploration_fraction=0.9, target_network_update_freq=100, tensorboard_log=dir_path+'/Logs/')
-        # model = DQN(MlpPolicy, env, verbose=1, learning_starts=64,  target_network_update_freq=50, tensorboard_log='./Logs/')
-        # model = DQN.load("DQN_Model_SimpleSim_30k",env=env,exploration_fraction=0.1,tensorboard_log='./Logs/')
+        model = None
+        if self.event == Scenario.LANE_CHANGE:
+            model = DQN(CustomLaneChangePolicy, env, verbose=1, learning_starts=256, batch_size=256, exploration_fraction=0.9, target_network_update_freq=100, tensorboard_log=dir_path+'/Logs/')
+            # model = DQN(MlpPolicy, env, verbose=1, learning_starts=64,  target_network_update_freq=50, tensorboard_log='./Logs/')
+            # model = DQN.load("DQN_Model_SimpleSim_30k",env=env,exploration_fraction=0.1,tensorboard_log='./Logs/')
+        if self.event == Scenario.PEDESTRIAN:
+            model = DQN(CustomLaneChangePolicy, env, verbose=1, learning_starts=256, batch_size=256, exploration_fraction=0.9, target_network_update_freq=100, tensorboard_log=dir_path+'/Logs/Ped')
         model.learn(total_timesteps=10000)
         # model = PPO2(MlpPolicy, env, verbose=1,tensorboard_log="./Logs/")
         # model.learn(total_timesteps=20000)
-        model.save(dir_path+"/Models/DQN_Model_SimpleSim_Local")
+        model.save(dir_path+"/Models/DQN_Model_SimpleSim_Ped")
 
     def run_test(self):
-        env = CustomEnv(self.path_planner, self.behavior_planner)
+        env = CustomEnv(self.path_planner, self.behavior_planner, event)
         env = make_vec_env(lambda: env, n_envs=1)
-        model = DQN.load(dir_path+"/Models/DQN_Model_CARLA_10k.zip")
+        model = DQN.load(dir_path+"/Models/DQN_Model_SimpleSim.zip")
         obs = env.reset()
         count = 0
         success = 0
@@ -66,13 +71,13 @@ class FullPlannerManager:
 
 if __name__ == '__main__':
     try:
-        event = Scenario.PEDESTRIAN
+        event = Scenario.LANE_CHANGE
         if event==Scenario.PEDESTRIAN:
             full_planner = FullPlannerManager(Scenario.PEDESTRIAN)
         elif event == Scenario.LANE_CHANGE:
             full_planner = FullPlannerManager(Scenario.LANE_CHANGE)
         full_planner.initialize()
-        full_planner.run_train()
+        full_planner.run_test()
 
     except rospy.ROSInterruptException:
         pass

@@ -69,7 +69,7 @@ class Reward(ABC):
         self.min_vel = 15
         self.max_vel = 20
         self.min_dist = 0.5
-        self.k_vel = 1
+        self.k_vel = 0.01
         self.p_vel = 0.01
         self.k_pos = 1
         self.k_col = -10
@@ -125,11 +125,11 @@ class Reward(ABC):
             normals=[]
             for i in range(0,4):
                 if i<2:
-                    x1,y1 = NPC_bb[i%4]
-                    x2,y2 = NPC_bb[(i+1)%4]
+                    x1,y1 = NPC_bb[-1][i%4]
+                    x2,y2 = NPC_bb[-1][(i+1)%4]
                 else:
-                    x2,y2 = NPC_bb[i%4]
-                    x1,y1 = NPC_bb[(i+1)%4]
+                    x2,y2 = NPC_bb[-1][i%4]
+                    x1,y1 = NPC_bb[-1][(i+1)%4]
                 a = (y2-y1)
                 b = -(x2-x1)
                 c = (y1*(x2-x1)-(y2-y1)*x1)
