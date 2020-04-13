@@ -275,7 +275,7 @@ class PedestrianReward(Reward):
         if desc.reward.collision:
             return -self.max_reward
         # check if pedestrian avoided
-        elif desc.nearest_pedestrian.exist and relative_pose.vehicle_location.x < -5:
+        elif desc.nearest_pedestrian.exist and relative_pose.vehicle_location.x < -1:
             reward=self.max_reward
         # add costs of overspeeding
         reward-=self.vel_cost()

@@ -322,7 +322,7 @@ class RLManager:
                 ped_vehicle.vehicle_location = env_desc.nearest_pedestrian.pedestrian_location
                 ped_vehicle.vehicle_speed = env_desc.nearest_pedestrian.pedestrian_speed
                 relative_pose = convert_to_local(env_desc.cur_vehicle_state,ped_vehicle)
-                if relative_pose.vehicle_location.x < -5:
+                if relative_pose.vehicle_location.x < -1:
                     return True
             # usual conditions
             return env_desc.reward.collision or \
