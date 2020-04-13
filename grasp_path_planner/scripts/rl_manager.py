@@ -9,6 +9,7 @@ from grasp_path_planner.msg import LanePoint
 from grasp_path_planner.msg import Lane
 from grasp_path_planner.msg import VehicleState
 from grasp_path_planner.msg import RewardInfo
+from grasp_path_planner.msg import Pedestrian
 from grasp_path_planner.msg import EnvironmentState
 from grasp_path_planner.msg import RLCommand
 from grasp_path_planner.msg import PathPlan
