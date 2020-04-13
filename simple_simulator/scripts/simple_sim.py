@@ -822,7 +822,7 @@ class SimpleSimulator:
 
 if __name__ == '__main__':
     try:
-        simple_sim = SimpleSimulator(0.01, True)
+        simple_sim = SimpleSimulator(0.1, True)
         simple_sim.initialize()
         simple_sim.spin()
     except rospy.ROSInterruptException:

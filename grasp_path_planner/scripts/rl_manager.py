@@ -167,7 +167,6 @@ class CustomPedestrianPolicy(DQNPolicy):
     def embedding_net(self, input_vec):
         out = input_vec
         with tf.variable_scope("embedding_network", reuse=tf.AUTO_REUSE):
-            out = tf_layers.fully_connected(out, num_outputs=8, activation_fn=tf.nn.relu)
             out = tf_layers.fully_connected(out, num_outputs=16, activation_fn=tf.nn.relu)
             out = tf_layers.fully_connected(out, num_outputs=32, activation_fn=tf.nn.relu)
         return out
@@ -176,7 +175,7 @@ class CustomPedestrianPolicy(DQNPolicy):
         out = input_vec
         with tf.variable_scope("action_value"):
             out = tf_layers.fully_connected(out, num_outputs=32, activation_fn=tf.nn.relu)
-            out = tf_layers.fully_connected(out, num_outputs=64, activation_fn=tf.nn.relu)
+            out = tf_layers.fully_connected(out, num_outputs=16, activation_fn=tf.nn.relu)
             out = tf_layers.fully_connected(out, num_outputs=out_num, activation_fn=tf.nn.tanh)
         return out
 
@@ -323,7 +322,7 @@ class RLManager:
                 ped_vehicle.vehicle_location = env_desc.nearest_pedestrian.pedestrian_location
                 ped_vehicle.vehicle_speed = env_desc.nearest_pedestrian.pedestrian_speed
                 relative_pose = convert_to_local(env_desc.cur_vehicle_state,ped_vehicle)
-                if relative_pose.vehicle_location.x < -1:
+                if relative_pose.vehicle_location.x < -5:
                     return True
             # usual conditions
             return env_desc.reward.collision or \

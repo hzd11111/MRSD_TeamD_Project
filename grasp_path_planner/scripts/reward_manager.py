@@ -166,7 +166,7 @@ class Reward(ABC):
 
     def position_cost(self):
         r_inv = 1/self.max_reward
-        cost = max(0,1/(self.closest_dist+r_inv)-1/(self.closest_dist+r_inv))
+        cost = max(0,1/(self.closest_dist+r_inv)-1/(self.min_dist+r_inv))
         return self.k_pos*cost
 
     @abstractmethod
@@ -190,7 +190,6 @@ class LaneChangeReward(Reward):
     '''
     def __init__(self):
         super().__init__()
-        self.position_lb = 1
     # ---------------------------------HELPERS-----------------------------------------#
     def get_velocity_error(self,veh_speed):
         if veh_speed < self.min_vel:
@@ -205,7 +204,7 @@ class LaneChangeReward(Reward):
 
     def position_cost(self):
         r_inv = 1/self.max_reward
-        cost = max(0,1/(self.closest_dist+r_inv)-1/(self.position_lb+r_inv))
+        cost = max(0,1/(self.closest_dist+r_inv)-1/(self.min_dist+r_inv))
         return self.k_pos*cost
     
     def lane_change_reward(self,desc,action):
@@ -249,14 +248,17 @@ class LaneChangeReward(Reward):
 
     def reset(self):
         self.closest_dist=1e5
+        self.cum_vel_err=0
 
 class PedestrianReward(Reward):
     def __init__(self):
         super().__init__()
+        self.max_reward = 1
+
     # ---------------------------------HELPERS-----------------------------------------#
     def speed_reward(self,desc, action):
         reward=0
-        self.position_lb = desc.nearest_pedestrian.radius
+        self.min_dist = desc.nearest_pedestrian.radius
         ped_vehicle = VehicleState()
         relative_pose = ped_vehicle
         if desc.nearest_pedestrian.exist:
@@ -271,9 +273,9 @@ class PedestrianReward(Reward):
             # print(relative_pose)
         # check if pedestrian collided
         if desc.reward.collision:
-            return-self.max_reward
+            return -self.max_reward
         # check if pedestrian avoided
-        elif desc.nearest_pedestrian.exist and relative_pose.vehicle_location.x < -1:
+        elif desc.nearest_pedestrian.exist and relative_pose.vehicle_location.x < -5:
             reward=self.max_reward
         # add costs of overspeeding
         reward-=self.vel_cost()
@@ -286,7 +288,7 @@ class PedestrianReward(Reward):
     
     def position_cost(self):
         r_inv = 1/self.max_reward
-        cost = max(0,1/(self.closest_dist+r_inv)-1/(self.position_lb+r_inv))
+        cost = max(0,1/(self.closest_dist+r_inv)-1/(self.min_dist+r_inv))
         return self.k_pos*cost
         
     def get_velocity_error(self,veh_speed):
@@ -392,6 +394,7 @@ class PedestrianReward(Reward):
 
     def reset(self):
         self.closest_dist=1e5
+        self.cum_vel_err=0
 
 
 def reward_selector(event):
