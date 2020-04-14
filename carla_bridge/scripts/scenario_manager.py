@@ -65,9 +65,9 @@ class CustomScenario:
         
         self.world.set_weather(find_weather_presets()[2][0])
 
-        self.scenarios_town04 = [[[40],3,4,100,20], [[39],3,4,100,20], [[38],3,4,150,20], [[46],-2,-3,100,10], [[47],-2,-3,50,10]]
+        self.scenarios_town04 = [[[40],3,4,100,20], [[39],3,4,100,20], [[46],-2,-3,100,10], [[47],-2,-3,50,10]]
         # self.scenarios_town04 = [[[46],-2,-3,100,10]]
-        self.scenarios_town05 = [[[21,22],-1,-2,0,10], [[37], -2, -3, 25, 0]]
+        self.scenarios_town05 = [[[37], -2, -3, 350, 20]]#[[[21,22],-1,-2,0,10]], [[37], -2, -3, 0, 0]]
         self.scenarios_town03 = [[[8,7,6], 4, 5, 0, 0]]
         
   
@@ -75,7 +75,7 @@ class CustomScenario:
         # self.client.load_world('Town04')
         # brak
         # self.client.set_timeout(2)
-        # brak
+        # # brak
         
         
     def reset(self, warm_start=False, warm_start_duration=5):
@@ -167,7 +167,8 @@ class CustomScenario:
             
             # self.traffic_manager.vehicle_percentage_speed_difference(v, np.random.randint(40,50))
             self.traffic_manager.auto_lane_change(v,False)
-            self.traffic_manager.ignore_lights_percentage(v, 100)
+            self.traffic_manager.ignore_lights_percentage(v,100)
+            self.traffic_manager.ignore_signs_percentage(v,100)
         
         
         ################# Spawn Ego ##########################

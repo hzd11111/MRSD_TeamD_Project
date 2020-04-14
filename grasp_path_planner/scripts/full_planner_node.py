@@ -40,6 +40,9 @@ from stable_baselines.deepq.policies import MlpPolicy
 from stable_baselines.deepq.policies import DQNPolicy
 from stable_baselines.common.env_checker import check_env
 from stable_baselines.common.cmd_util import make_vec_env
+from stable_baselines.common.callbacks import CheckpointCallback
+checkpoint_callback = CheckpointCallback(save_freq=1000, save_path='./Logs/exp1',
+                                         name_prefix='dqn_min20')
 
 SIM_SERVICE_NAME = "simulator"
 NODE_NAME = "full_grasp_planner"
@@ -51,7 +54,7 @@ TRAJ_PARAM = {'look_up_distance' : 0 ,\
     'action_duration' : 0.5,\
     'accelerate_amt' : 5,\
     'decelerate_amt' : 5,\
-    'min_speed' : 0
+    'min_speed' : 15
 }
 
 N_DISCRETE_ACTIONS = 4
@@ -341,7 +344,7 @@ class TrajGenerator:
         new_path_plan = PathPlan()
         new_path_plan.tracking_pose = closest_pose.pose
         new_path_plan.reset_sim = False
-        new_path_plan.tracking_speed = max(0,
+        new_path_plan.tracking_speed = max(self.traj_parameters['min_speed'],
                                            self.start_speed - action_progress * self.traj_parameters['decelerate_amt'])
         new_path_plan.end_of_action = end_of_action
         new_path_plan.action_progress = action_progress
@@ -560,6 +563,7 @@ class CustomEnv(gym.Env):
 
 
     def step(self, action):
+        # print("Step called")
         # reset sb_event flag if previously set in previous action
         decision = self.rl_manager.convertDecision(action)
         env_desc, end_of_action = self.path_planner.performAction(decision)
@@ -768,10 +772,10 @@ class FullPlannerManager:
     def run_train(self):
         env = CustomEnv(self.path_planner, self.behavior_planner)
         env = make_vec_env(lambda: env, n_envs=1)
-        model = DQN(CustomPolicy, env, verbose=1, learning_starts=256, batch_size=256, exploration_fraction=0.9, target_network_update_freq=100, tensorboard_log=dir_path+'/Logs/')
+        model = DQN(CustomPolicy, env, verbose=1, learning_starts=256, batch_size=256, exploration_fraction=0.9, target_network_update_freq=100, tensorboard_log=dir_path+'/Logs/', learning_rate=0.0001)
         # model = DQN(MlpPolicy, env, verbose=1, learning_starts=64,  target_network_update_freq=50, tensorboard_log='./Logs/')
         # model = DQN.load(dir_path+"/DQN_Model_CARLA_Local_multi2.zip",env=env,exploration_fraction=0.1,tensorboard_log='./Logs/')
-        model.learn(total_timesteps=10000)
+        model.learn(total_timesteps=10000, callback=checkpoint_callback)
         # model = PPO2(MlpPolicy, env, verbose=1,tensorboard_log="./Logs/")
         # model.learn(total_timesteps=20000)
         model.save(dir_path+"/DQN_CARLA_10k.zip")
@@ -779,7 +783,7 @@ class FullPlannerManager:
     def run_test(self):
         env = CustomEnv(self.path_planner, self.behavior_planner)
         env = make_vec_env(lambda: env, n_envs=1)
-        model = DQN.load(dir_path+"/DQN_Model_local_CARLA_10k.zip")
+        model = DQN.load(dir_path+"/DQN_CARLA_10k.zip")
         obs = env.reset()
         count = 0
         success = 0
@@ -788,7 +792,6 @@ class FullPlannerManager:
             print("Count ", count, "Success ", success)
             while not done:
                 action, _ = model.predict(obs)
-
                 print(action)
                 obs, reward, done, _ = env.step(action)
                 print("Reward",reward)

@@ -188,8 +188,8 @@ class CarlaManager:
                 #     current_speed_limit = v.get_speed_limit()
                 #     # current_speed = np.sqrt(v.get_velocity().x**2 + v.get_velocity().y**2 + v.get_velocity().z**2) * 3.6
                 #     new_limit_percentage = 100 - (self.speed_limit * 100)/float(current_speed_limit)
-                #     print(n, ":", np.sqrt(v.get_velocity().x**2 + v.get_velocity().y**2 + v.get_velocity().z**2) * 3.6, nearest_waypoint.road_id, current_speed_limit, new_limit_percentage)
-                #     self.tm.traffic_manager.vehicle_percentage_speed_difference(v, 90)
+                #     # print(n, ":", np.sqrt(v.get_velocity().x**2 + v.get_velocity().y**2 + v.get_velocity().z**2) * 3.6, nearest_waypoint.road_id, current_speed_limit, new_limit_percentage)
+                #     self.tm.traffic_manager.vehicle_percentage_speed_difference(v, new_limit_percentage)
                 #     # time.sleep(2)
 
                      
