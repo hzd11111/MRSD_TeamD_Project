@@ -1019,6 +1019,5 @@ if __name__ == '__main__':
         full_planner.run_train()
         full_planner.run_test()
 
-
     except rospy.ROSInterruptException:
         pass
