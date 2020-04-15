@@ -264,7 +264,11 @@ class CustomEnv(gym.Env):
             done = self.rl_manager.terminate(env_copy)
             end_of_action = end_of_action or done
         env_state = self.rl_manager.makeStateVector(env_copy, self.to_local)
-        reward = self.rl_manager.reward_manager.get_reward(env_copy,action)
+        reward = None
+        if OLD_REWARD:
+            reward = self.rl_manager.rewardCalculation(env_copy)
+        else:
+            reward = self.rl_manager.reward_manager.get_reward(env_copy,action)
         # for sending success signal during testing
         success = not( env_desc.reward.collision or \
                     env_desc.reward.time_elapsed > self.rl_manager.eps_time)
