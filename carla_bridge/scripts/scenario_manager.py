@@ -56,7 +56,6 @@ class CustomScenario:
         self.client = client
         self.traffic_manager = self.client.get_trafficmanager(8000)
         self.traffic_manager.set_global_distance_to_leading_vehicle(2)    
-        # self.traffic_manager.global_percentage_speed_difference()
 
         self.world = self.client.get_world()
         self.carla_handler = carla_handler
@@ -99,8 +98,7 @@ class CustomScenario:
             blueprints = [x for x in blueprints if not x.id.endswith('cybertruck')]
             blueprints = [x for x in blueprints if not x.id.endswith('t2')]
 
-        # num_vehicles = np.random.randint(5,15)
-        # waypoints = self.world.get_map().generate_waypoints(distance=np.random.randint(5,10))
+
         num_vehicles = np.random.randint(12,15)
         waypoints = self.world.get_map().generate_waypoints(distance=np.random.randint(15,30))
         road_waypoints = []
@@ -108,13 +106,11 @@ class CustomScenario:
             if(waypoint.road_id in self.spawn_roads and waypoint.lane_id  == self.left_lane_id):
                 road_waypoints.append(waypoint)
         number_of_spawn_points = len(road_waypoints)
-        # print("get", len(road_waypoints), "on road 12 with lane id 0")
+
         if num_vehicles < number_of_spawn_points:
-            # print("randomize distance in between cars")
             random.shuffle(road_waypoints)
         elif num_vehicles > number_of_spawn_points:
             msg = 'requested %d vehicles, but could only find %d spawn points'
-            # logging.warning(msg, num_vehicles, number_of_spawn_points)
             num_vehicles = number_of_spawn_points
 
         
@@ -143,7 +139,6 @@ class CustomScenario:
             transform.location.z += 0.1
             yaw = transform.rotation.yaw *  np.pi / 180 
             batch.append(SpawnActor(blueprint, transform).then(ApplyVelocity(FutureActor, carla.Vector3D(self.vehicle_init_speed*np.cos(yaw), self.vehicle_init_speed*np.sin(yaw),0))).then(SetAutopilot(FutureActor, True)))
-            # batch.append(SpawnActor(blueprint, transform).then(SetAutopilot(FutureActor, True)))
 
         for response in self.client.apply_batch_sync(batch, synchronous_master):
             if response.error:
@@ -177,9 +172,7 @@ class CustomScenario:
         ego_list = []
         # ego_spawn_pt = np.random.randint(100,200)
         filtered_waypoints = self.carla_handler.filter_waypoints(self.carla_handler.get_waypoints(1), road_id=self.spawn_roads[0], lane_id=self.curr_lane_id)
-        # filtered_waypoints_left = self.carla_handler.filter_waypoints(self.carla_handler.get_waypoints(1), road_id=self.spawn_road, lane_id=3)
 
-        # self.carla_handler.draw_waypoints(filtered_waypoints_left, road_id=self.spawn_road, section_id=None, life_time=10.0)
         spawn_point = filtered_waypoints[self.ego_spawn_idx].transform # Select random point from filtered waypoint list #TODO Initialization Scheme Design
         spawn_point.location.z = spawn_point.location.z + 0.1 # To avoid collision during spawn
         vehicle_blueprint = self.carla_handler.blueprint_library.filter('model3')[0]
@@ -187,13 +180,10 @@ class CustomScenario:
         yaw = spawn_point.rotation.yaw *  np.pi / 180
         
         ego_list.append(SpawnActor(vehicle_blueprint, spawn_point).then(ApplyVelocity(FutureActor, carla.Vector3D(self.vehicle_init_speed*np.cos(yaw), self.vehicle_init_speed*np.sin(yaw),0))).then(SetAutopilot(FutureActor, True)))
-        # ego_list.append(SpawnActor(vehicle_blueprint, spawn_point).then(SetAutopilot(FutureActor, True)))
         response = self.client.apply_batch_sync(ego_list, synchronous_master)
         ego_vehicle_ID = response[0].actor_id
         ego_vehicle = self.world.get_actors([ego_vehicle_ID])[0]
         self.traffic_manager.ignore_lights_percentage(ego_vehicle, 100)
-        # self.traffic_manager.vehicle_percentage_speed_difference(ego_vehicle, 100)
-        # self.ego_vehicle, ego_vehicle_ID = self.carla_handler.spawn_vehicle(spawn_point=spawn_point)
         
         for n, v in enumerate(my_vehicles):
             # self.traffic_manager.distance_to_leading_vehicle(v, 1)
