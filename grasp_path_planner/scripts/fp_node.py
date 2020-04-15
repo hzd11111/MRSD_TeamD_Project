@@ -51,7 +51,7 @@ class FullPlannerManager:
     def run_test(self):
         env = CustomEnv(self.path_planner, self.behavior_planner, event)
         env = make_vec_env(lambda: env, n_envs=1)
-        model = DQN.load(dir_path+"/Models/DQN_Model_SimpleSim_30k.zip")
+        model = DQN.load(dir_path+"/Models/DQN_Model_SimpleSim_Ped.zip")
         obs = env.reset()
         count = 0
         success = 0
@@ -71,7 +71,7 @@ class FullPlannerManager:
 
 if __name__ == '__main__':
     try:
-        event = Scenario.LANE_CHANGE
+        event = Scenario.PEDESTRIAN
         if event==Scenario.PEDESTRIAN:
             full_planner = FullPlannerManager(Scenario.PEDESTRIAN)
         elif event == Scenario.LANE_CHANGE:

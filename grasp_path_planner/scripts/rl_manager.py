@@ -228,6 +228,7 @@ class CustomEnv(gym.Env):
             N_ACTIONS=3
             self.action_space = spaces.Discrete(N_ACTIONS)
             self.observation_space = spaces.Box(low = -1000, high=1000, shape = (1,8))
+            print("Here")
         elif event==Scenario.LANE_CHANGE:
             N_ACTIONS=4
             self.action_space = spaces.Discrete(N_ACTIONS)
@@ -265,7 +266,7 @@ class CustomEnv(gym.Env):
             end_of_action = end_of_action or done
         env_state = self.rl_manager.makeStateVector(env_copy, self.to_local)
         reward = None
-        if OLD_REWARD:
+        if OLD_REWARD and self.rl_manager.event==Scenario.LANE_CHANGE:
             reward = self.rl_manager.rewardCalculation(env_copy)
         else:
             reward = self.rl_manager.reward_manager.get_reward(env_copy,action)
