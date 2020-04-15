@@ -10,6 +10,17 @@ scenario_config_test = {
 }
 
 
+        tmp = self.last_time
+        self.last_time = time.time()
+        print("Time diff:", self.last_time - tmp)
+
+32.219657128989084
+Time diff: 0.06474447250366211
+32.219657128989084
+Time diff: 0.06423830986022949
+32.219657128989084
+Time diff: 0.06282472610473633
+
 
 [  
    0, 0, 0, 0,
