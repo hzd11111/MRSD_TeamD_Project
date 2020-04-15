@@ -27,6 +27,7 @@ from grasp_path_planner.msg import RewardInfo
 from grasp_path_planner.msg import EnvironmentState
 from grasp_path_planner.msg import RLCommand
 from grasp_path_planner.msg import PathPlan
+from grasp_path_planner.msg import Pedestrian
 from grasp_path_planner.srv import SimService, SimServiceResponse, SimServiceRequest
 # RL packages
 import gym
@@ -647,7 +648,12 @@ class CustomEnv(gym.Env):
 
         env_state = self.rl_manager.makeStateVector(env_desc, self.to_local)
         reward = self.rl_manager.reward_manager.get_reward(env_desc,action)
-        return env_state, reward, done, {}
+        print("Reward",reward)
+        print("Current Speed",env_desc.cur_vehicle_state.vehicle_speed)
+        info = {"success":False}
+        if not (env_desc.reward.collision or env_desc.reward.time_elapsed > self.rl_manager.eps_time):
+            info["success"]=True
+        return env_state, reward, done, info
 
     def reset(self):
         self.rl_manager.reward_manager.reset()
@@ -696,6 +702,7 @@ class PathPlannerManager:
         reset_msg.sent_time = rospy.Time.now()
         req = SimServiceRequest()
         req.path_plan = reset_msg
+        print(req)
         self.prev_env_desc = self.sim_service_interface(req).env
         return self.prev_env_desc
 
@@ -712,7 +719,7 @@ class Reward(object):
         self.max_vel = 20
         self.min_dist = 0.5
         self.k_vel = 1
-        self.p_vel = 0.01
+        self.p_vel = 0.1
         self.k_pos = 1
         self.k_col = -10
         self.k_succ = 20
@@ -826,7 +833,7 @@ class Reward(object):
             return -self.max_reward
         else:
             reward=0
-            reward+=self.max_reward
+            reward+=self.max_reward+10
             reward-=self.vel_cost()
             reward-=self.position_cost()
             return reward
@@ -999,18 +1006,30 @@ class FullPlannerManager:
     def run_train(self):
         env = CustomEnv(self.path_planner, self.behavior_planner)
         env = make_vec_env(lambda: env, n_envs=1)
+<<<<<<< HEAD
         model = DQN(CustomPolicy, env, verbose=1, learning_starts=256, batch_size=256, exploration_fraction=0.9, target_network_update_freq=100, tensorboard_log=dir_path+'/Logs/', learning_rate=0.0001)
+=======
+        model = DQN(CustomPolicy, env, verbose=1, learning_starts=256, batch_size=256, exploration_fraction=0.5, target_network_update_freq=100, tensorboard_log=dir_path+'/Logs/')
+>>>>>>> master
         # model = DQN(MlpPolicy, env, verbose=1, learning_starts=64,  target_network_update_freq=50, tensorboard_log='./Logs/')
         # model = DQN.load("/home/mayank/Mayank/GRASP_ws/src/MRSD_TeamD_Project/models/dqn_intermediate_min15_7000_steps.zip",env=env,exploration_fraction=0.5,tensorboard_log=dir_path+'/Logs/', learning_rate=0.0001, verbose=1, learning_starts=256, batch_size=256, target_network_update_freq=100)
         model.learn(total_timesteps=20000, callback=checkpoint_callback)
         # model = PPO2(MlpPolicy, env, verbose=1,tensorboard_log="./Logs/")
         # model.learn(total_timesteps=20000)
+<<<<<<< HEAD
         model.save(dir_path+"/DQN_CARLA_10k.zip")
+=======
+        model.save(dir_path+"/DQN_Model_SimpleSim_Local_Reward")
+>>>>>>> master
 
     def run_test(self):
         env = CustomEnv(self.path_planner, self.behavior_planner)
         env = make_vec_env(lambda: env, n_envs=1)
+<<<<<<< HEAD
         model = DQN.load(dir_path+"/DQN_CARLA_20k_15min_crowded.zip")
+=======
+        model = DQN.load(dir_path+"/DQN_Model_SimpleSim_Local_Reward")
+>>>>>>> master
         obs = env.reset()
         count = 0
         success = 0
@@ -1020,10 +1039,10 @@ class FullPlannerManager:
             while not done:
                 action, _ = model.predict(obs)
                 print(action)
-                obs, reward, done, _ = env.step(action)
+                obs, reward, done, info = env.step(action)
                 print("Reward",reward)
             count += 1
-            if reward == 1:
+            if info[0]["success"]:
                 success += 1
         print("Success Rate ", success / count, success, count)
 
@@ -1032,6 +1051,7 @@ if __name__ == '__main__':
         full_planner = FullPlannerManager()
         full_planner.initialize()
         full_planner.run_train()
+        full_planner.run_test()
 
     except rospy.ROSInterruptException:
         pass
