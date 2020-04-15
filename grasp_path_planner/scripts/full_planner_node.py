@@ -625,14 +625,6 @@ class CustomEnv(gym.Env):
         return env_copy
 
 
-    def invert_angles(self,env_desc):
-        for vehicle in env_desc.adjacent_lane_vehicles:
-            vehicle.vehicle_location.theta*=-1
-        env_desc.back_vehicle_state.vehicle_location.theta*=-1
-        env_desc.front_vehicle_state.vehicle_location.theta*=-1
-        env_desc.cur_vehicle_state.vehicle_location.theta*=-1
-        return
-
     def step(self, action):
         # print("Step called")
         # reset sb_event flag if previously set in previous action
