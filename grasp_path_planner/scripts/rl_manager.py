@@ -253,7 +253,8 @@ class CustomEnv(gym.Env):
         env_copy = env_desc
         if INVERT_ANGLES:
             env_copy = self.invert_angles(env_desc)
-        self.rl_manager.reward_manager.update(env_copy,action)
+        if not OLD_REWARD:
+            self.rl_manager.reward_manager.update(env_copy,action)
         done = self.rl_manager.terminate(env_copy)
         end_of_action = end_of_action or done
         while not end_of_action:
@@ -261,7 +262,8 @@ class CustomEnv(gym.Env):
             env_copy = env_desc
             if INVERT_ANGLES:
                 env_copy = self.invert_angles(env_desc)
-            self.rl_manager.reward_manager.update(env_copy,action)
+            if not OLD_REWARD:
+                self.rl_manager.reward_manager.update(env_copy,action)
             done = self.rl_manager.terminate(env_copy)
             end_of_action = end_of_action or done
         env_state = self.rl_manager.makeStateVector(env_copy, self.to_local)
@@ -280,7 +282,8 @@ class CustomEnv(gym.Env):
         return env_state, reward, done, info
 
     def reset(self):
-        self.rl_manager.reward_manager.reset()
+        if not OLD_REWARD:
+            self.rl_manager.reward_manager.reset()
         env_desc = self.path_planner.resetSim()
         env_copy = env_desc
         if INVERT_ANGLES:
