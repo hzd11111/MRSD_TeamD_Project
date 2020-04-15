@@ -54,7 +54,7 @@ TRAJ_PARAM = {'look_up_distance' : 0 ,\
     'action_duration' : 0.5,\
     'accelerate_amt' : 5,\
     'decelerate_amt' : 5,\
-    'min_speed' : 15
+    'min_speed' : 20
 }
 
 N_DISCRETE_ACTIONS = 4
@@ -783,7 +783,7 @@ class FullPlannerManager:
     def run_test(self):
         env = CustomEnv(self.path_planner, self.behavior_planner)
         env = make_vec_env(lambda: env, n_envs=1)
-        model = DQN.load(dir_path+"/DQN_CARLA_20k_15min_crowded.zip")
+        model = DQN.load(dir_path+"/DQN_20min.zip")
         obs = env.reset()
         count = 0
         success = 0
