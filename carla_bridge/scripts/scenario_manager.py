@@ -43,6 +43,8 @@ from grasp_path_planner.msg import RewardInfo
 from grasp_path_planner.msg import EnvironmentState
 from grasp_path_planner.msg import PathPlan
 
+from dynamic_pedestrian import DynamicPedestrian
+
 
 def find_weather_presets():
     rgx = re.compile('.+?(?:(?<=[a-z])(?=[A-Z])|(?<=[A-Z])(?=[A-Z][a-z])|$)')
@@ -62,14 +64,17 @@ class CustomScenario:
         self.vehicles_list = []
         print("Scenario Manager Initialized...")
         
+        self.pedestrian_controller = DynamicPedestrian(self.world)
+        
         self.world.set_weather(find_weather_presets()[2][0])
 
         self.scenarios_town04 = [[[40],3,4,100,20], [[39],3,4,100,20], [[46],-2,-3,100,10], [[47],-2,-3,50,10]]
-        # self.scenarios_town04 = [[[46],-2,-3,100,10]]
+        self.scenarios_town04 = [[[40],3,4,100,10]]
         self.scenarios_town05 = [[[37], -2, -3, 350, 20]]#[[[21,22],-1,-2,0,10]], [[37], -2, -3, 0, 0]]
         self.scenarios_town03 = [[[8,7,6], 4, 5, 0, 0]]
         
-  
+        self.pedestrian_mode = False
+
         # self.client.set_timeout(20)
         # self.client.load_world('Town05')
         # brak
@@ -81,13 +86,16 @@ class CustomScenario:
                 
         self.target_speed = 15       
         self.spawn_roads, self.left_lane_id, self.curr_lane_id, self.ego_spawn_idx, self.vehicle_init_speed = self.scenarios_town04[np.random.randint(0,len(self.scenarios_town04))]
-        # 
-        
+        #         
         
         self.traffic_manager.set_synchronous_mode(True)
 
         self.vehicles_list = []
         synchronous_master = True
+        
+        if(self.pedestrian_mode == True):
+            self.pedestrian_controller.road_id = self.spawn_roads[0] #TODO
+            self.pedestrian_controller.lane_id = self.curr_lane_id
         
         blueprints = self.world.get_blueprint_library().filter('vehicle.*')
 
@@ -98,8 +106,10 @@ class CustomScenario:
             blueprints = [x for x in blueprints if not x.id.endswith('cybertruck')]
             blueprints = [x for x in blueprints if not x.id.endswith('t2')]
 
-
-        num_vehicles = np.random.randint(12,15)
+        if(self.pedestrian_mode == True):
+            num_vehicles = 0
+        else:
+            num_vehicles = np.random.randint(12,15)
         waypoints = self.world.get_map().generate_waypoints(distance=np.random.randint(15,30))
         road_waypoints = []
         for waypoint in waypoints:
@@ -206,6 +216,8 @@ class CustomScenario:
                 self.world.wait_for_tick()                
         
         self.client.apply_batch_sync([SetAutopilot(ego_vehicle, False)], synchronous_master)
+        
+            
         print("Bombs away....")
         return ego_vehicle, my_vehicles, self.target_speed
         

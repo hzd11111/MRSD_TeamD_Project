@@ -98,6 +98,9 @@ class CarlaManager:
         self.last_call_reset = False
         
         self.speed_limit = None
+        
+        self.pedestrian = None
+        self.pedestrian_wait_frames = 10
   
     def getVehicleState(self, actor):
 
@@ -152,7 +155,6 @@ class CarlaManager:
     def pathRequest(self, data):
         
         reset_sim = False
-        # print("RESET CALLEDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDDD")
         if self.first_frame_generated:
             data = data.path_plan
             
@@ -180,6 +182,20 @@ class CarlaManager:
                 ### Apply Control ###
                 self.ego_vehicle.apply_control(self.vehicle_controller.run_step(tracking_speed, tracking_pose))
                 
+                #### Pedestrian Spawning
+                if(self.pedestrian is None):
+                    current_ego_speed = np.sqrt(self.ego_vehicle.get_velocity().x**2 + self.ego_vehicle.get_velocity().y**2) * 3.6
+                    if(current_ego_speed > 20):
+                        self.tm.pedestrian_controller.waypoints_list = self.carla_handler.get_next_waypoints(self.carla_handler.world_map.get_waypoint(self.ego_vehicle.get_location(), project_to_road=True), None, k=100)
+                        self.pedestrian = self.tm.pedestrian_controller.random_spawn()
+                        print("Pedestrian Spawned")
+                else:
+                    if(self.pedestrian_wait_frames != 0):
+                        self.pedestrian_wait_frames -= 1
+                    else:
+                        self.tm.pedestrian_controller.cross_road()
+                                
+                    
                 # ### Maintain Speed ###
                 # for n,v in enumerate(self.tm.world.get_actors().filter('vehicle.*')):
                     
@@ -302,6 +318,14 @@ class CarlaManager:
 
         for actor in self.tm.world.get_actors().filter('vehicle.*'):
             actor.destroy()
+            
+        for actor in self.tm.world.get_actors().filter('walker.*'):
+            actor.destroy()
+            
+        if(self.pedestrian is not None):
+            self.tm.pedestrian_controller.destroy()
+            self.pedestrian = None
+            self.pedestrian_wait_frames = 10
                 
         self.vehicles_list = []
         print("All actors destroyed..\n") 
@@ -323,7 +347,6 @@ class CarlaManager:
         try:
     
             self.ego_vehicle, self.vehicles_list, self.speed_limit = self.tm.reset()
-            
             ## Handing over control
             del self.collision_sensor
             self.collision_sensor = self.carla_handler.world.spawn_actor(self.carla_handler.world.get_blueprint_library().find('sensor.other.collision'),
