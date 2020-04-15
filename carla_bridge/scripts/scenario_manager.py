@@ -55,7 +55,7 @@ class CustomScenario:
         
         self.client = client
         self.traffic_manager = self.client.get_trafficmanager(8000)
-        self.traffic_manager.set_global_distance_to_leading_vehicle(0.5)    
+        self.traffic_manager.set_global_distance_to_leading_vehicle(2)    
         # self.traffic_manager.global_percentage_speed_difference()
 
         self.world = self.client.get_world()
@@ -99,8 +99,10 @@ class CustomScenario:
             blueprints = [x for x in blueprints if not x.id.endswith('cybertruck')]
             blueprints = [x for x in blueprints if not x.id.endswith('t2')]
 
-        num_vehicles = np.random.randint(5,15)
-        waypoints = self.world.get_map().generate_waypoints(distance=np.random.randint(5,10))
+        # num_vehicles = np.random.randint(5,15)
+        # waypoints = self.world.get_map().generate_waypoints(distance=np.random.randint(5,10))
+        num_vehicles = np.random.randint(12,15)
+        waypoints = self.world.get_map().generate_waypoints(distance=np.random.randint(15,30))
         road_waypoints = []
         for waypoint in waypoints:
             if(waypoint.road_id in self.spawn_roads and waypoint.lane_id  == self.left_lane_id):
@@ -194,7 +196,7 @@ class CustomScenario:
         # self.ego_vehicle, ego_vehicle_ID = self.carla_handler.spawn_vehicle(spawn_point=spawn_point)
         
         for n, v in enumerate(my_vehicles):
-            self.traffic_manager.distance_to_leading_vehicle(v, 1)
+            # self.traffic_manager.distance_to_leading_vehicle(v, 1)
             # self.traffic_manager.vehicle_percentage_speed_difference(v, 100)
             self.traffic_manager.collision_detection(v, ego_vehicle, False)
 

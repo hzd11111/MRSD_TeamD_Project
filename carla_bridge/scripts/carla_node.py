@@ -228,6 +228,7 @@ class CarlaManager:
         #     print(wp.transform.location.x, wp.transform.location.y)
         
         pedestrians_on_current_road = self.carla_handler.get_pedestrian_information(self.ego_vehicle)
+        
         ####
         
         ####

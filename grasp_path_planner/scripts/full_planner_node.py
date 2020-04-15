@@ -265,7 +265,7 @@ class TrajGenerator:
         new_path_plan = PathPlan()
         new_path_plan.tracking_pose = closest_pose.pose
         new_path_plan.reset_sim = False
-        new_path_plan.tracking_speed = self.start_speed
+        new_path_plan.tracking_speed = max(self.traj_parameters['min_speed'],self.start_speed)
         new_path_plan.end_of_action = end_of_action
         new_path_plan.action_progress = action_progress
         new_path_plan.path_planner_terminate = False
@@ -305,7 +305,7 @@ class TrajGenerator:
         new_path_plan = PathPlan()
         new_path_plan.tracking_pose = closest_pose.pose
         new_path_plan.reset_sim = False
-        new_path_plan.tracking_speed = self.start_speed + action_progress * self.traj_parameters['accelerate_amt']
+        new_path_plan.tracking_speed = max(self.traj_parameters['min_speed'],self.start_speed + action_progress * self.traj_parameters['accelerate_amt'])
         new_path_plan.end_of_action = end_of_action
         new_path_plan.action_progress = action_progress
         new_path_plan.path_planner_terminate = False
@@ -783,7 +783,7 @@ class FullPlannerManager:
     def run_test(self):
         env = CustomEnv(self.path_planner, self.behavior_planner)
         env = make_vec_env(lambda: env, n_envs=1)
-        model = DQN.load(dir_path+"/DQN_20min.zip")
+        model = DQN.load(dir_path+"/DQN_CARLA_20k_15min_crowded.zip")
         obs = env.reset()
         count = 0
         success = 0
@@ -804,7 +804,7 @@ if __name__ == '__main__':
     try:
         full_planner = FullPlannerManager()
         full_planner.initialize()
-        full_planner.run_train()
+        full_planner.run_test()
 
     except rospy.ROSInterruptException:
         pass
