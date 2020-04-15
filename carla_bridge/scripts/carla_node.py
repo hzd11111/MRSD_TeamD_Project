@@ -40,6 +40,7 @@ from grasp_path_planner.msg import LanePoint
 from grasp_path_planner.msg import LanePoint
 from grasp_path_planner.msg import Lane
 from grasp_path_planner.msg import VehicleState
+from grasp_path_planner.msg import Pedestrian
 from grasp_path_planner.msg import RewardInfo
 from grasp_path_planner.msg import EnvironmentState
 from grasp_path_planner.msg import PathPlan
@@ -120,23 +121,22 @@ class CarlaManager:
 
         return vehicle
     
-    def getPedestrianState(self, actor):
+    def getPedestrianState(self, actor, pedestrian_radius=0.3):
 
         ## TODO: Processing them like vehicles for now
         if(actor == None):
             return None
 
-        vehicle = VehicleState()
-        vehicle.vehicle_location.x = actor.get_transform().location.x
-        vehicle.vehicle_location.y = actor.get_transform().location.y
-        vehicle.vehicle_location.theta = actor.get_transform().rotation.yaw * np.pi / 180 #CHECK : Changed this to radians. 
-        vehicle.vehicle_speed = np.sqrt(actor.get_velocity().x**2 + actor.get_velocity().y**2 + actor.get_velocity().z**2) * 3.6
-        
-        vehicle_bounding_box = actor.bounding_box.extent
-        vehicle.length = vehicle_bounding_box.x*2
-        vehicle.width = vehicle_bounding_box.y*2
+        pedestrian_state = Pedestrian()
+        pedestrian_state.exist = True
+        pedestrian_state.pedestrian_location.x = actor.get_transform().location.x
+        pedestrian_state.pedestrian_location.y = actor.get_transform().location.y
+        pedestrian_state.pedestrian_location.theta = actor.get_transform().rotation.yaw * np.pi / 180 #CHECK : Changed this to radians. 
+        pedestrian_state.radius = pedestrian_radius
+        pedestrian_state.pedestrian_acceleration = 0
+        pedestrian_state.pedestrian_speed = np.sqrt(actor.get_velocity().x**2 + actor.get_velocity().y**2 + actor.get_velocity().z**2) * 3.6
 
-        return vehicle
+        return pedestrian_state
   
     def getLanePoints(self, waypoints, flip=False):
 
@@ -307,6 +307,13 @@ class CarlaManager:
         reward_info.end_of_action = self.end_of_action
         reward_info.path_planner_terminate = self.path_planner_terminate
         env_state.reward = reward_info
+        
+        ## Pedestrian
+        if (self.pedestrian is not None):
+            publish_msg.nearest_pedestrian = self.getClosest([self.getPedestrianState(actor) for actor in pedestrians_on_current_road], vehicle_ego, 1)
+        else:
+            publish_msg.nearest_pedestrian = Pedestrian()
+            publish_msg.nearest_pedestrian.exist = False
 
         if(reset_sim):
             self.last_call_reset = True
@@ -476,9 +483,9 @@ class CarlaManager:
         rate = rospy.Rate(10)
 
         # publish environment state
-        self.env_msg = env_state
-        self.env_pub.publish(env_state)
-        rate.sleep()
+        # self.env_msg = env_state
+        # self.env_pub.publish(env_state)
+        # rate.sleep()
 
     def spin(self):
         print("Start Ros Spin")	

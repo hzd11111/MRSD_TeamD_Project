@@ -46,7 +46,7 @@ class FullPlannerManager:
         model.learn(total_timesteps=10000)
         # model = PPO2(MlpPolicy, env, verbose=1,tensorboard_log="./Logs/")
         # model.learn(total_timesteps=20000)
-        model.save(dir_path+"/Models/DQN_Model_SimpleSim_Ped")
+        model.save(dir_path+"/Models/DQN_Model_CARLA_Ped")
 
     def run_test(self):
         env = CustomEnv(self.path_planner, self.behavior_planner, event)
@@ -71,13 +71,13 @@ class FullPlannerManager:
 
 if __name__ == '__main__':
     try:
-        event = Scenario.LANE_CHANGE
+        event = Scenario.PEDESTRIAN
         if event==Scenario.PEDESTRIAN:
             full_planner = FullPlannerManager(Scenario.PEDESTRIAN)
         elif event == Scenario.LANE_CHANGE:
             full_planner = FullPlannerManager(Scenario.LANE_CHANGE)
         full_planner.initialize()
-        full_planner.run_test()
+        full_planner.run_train()
 
     except rospy.ROSInterruptException:
         pass
