@@ -41,8 +41,8 @@ from stable_baselines.deepq.policies import DQNPolicy
 from stable_baselines.common.env_checker import check_env
 from stable_baselines.common.cmd_util import make_vec_env
 from stable_baselines.common.callbacks import CheckpointCallback
-checkpoint_callback = CheckpointCallback(save_freq=1000, save_path='./Logs/exp1',
-                                         name_prefix='dqn_min20')
+checkpoint_callback = CheckpointCallback(save_freq=1000, save_path='/home/mayank/Mayank/GRASP_ws/src/MRSD_TeamD_Project/models/',
+                                         name_prefix='dqn_intermediate_min15')
 
 SIM_SERVICE_NAME = "simulator"
 NODE_NAME = "full_grasp_planner"
@@ -774,8 +774,8 @@ class FullPlannerManager:
         env = make_vec_env(lambda: env, n_envs=1)
         model = DQN(CustomPolicy, env, verbose=1, learning_starts=256, batch_size=256, exploration_fraction=0.9, target_network_update_freq=100, tensorboard_log=dir_path+'/Logs/', learning_rate=0.0001)
         # model = DQN(MlpPolicy, env, verbose=1, learning_starts=64,  target_network_update_freq=50, tensorboard_log='./Logs/')
-        # model = DQN.load(dir_path+"/DQN_Model_CARLA_Local_multi2.zip",env=env,exploration_fraction=0.1,tensorboard_log='./Logs/')
-        model.learn(total_timesteps=10000, callback=checkpoint_callback)
+        # model = DQN.load("/home/mayank/Mayank/GRASP_ws/src/MRSD_TeamD_Project/models/dqn_intermediate_min15_7000_steps.zip",env=env,exploration_fraction=0.5,tensorboard_log=dir_path+'/Logs/', learning_rate=0.0001, verbose=1, learning_starts=256, batch_size=256, target_network_update_freq=100)
+        model.learn(total_timesteps=20000, callback=checkpoint_callback)
         # model = PPO2(MlpPolicy, env, verbose=1,tensorboard_log="./Logs/")
         # model.learn(total_timesteps=20000)
         model.save(dir_path+"/DQN_CARLA_10k.zip")
@@ -783,7 +783,7 @@ class FullPlannerManager:
     def run_test(self):
         env = CustomEnv(self.path_planner, self.behavior_planner)
         env = make_vec_env(lambda: env, n_envs=1)
-        model = DQN.load(dir_path+"/DQN_CARLA_10k.zip")
+        model = DQN.load(dir_path+"/DQN_20min.zip")
         obs = env.reset()
         count = 0
         success = 0
