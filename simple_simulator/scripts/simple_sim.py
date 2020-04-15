@@ -26,11 +26,14 @@ EGO_MARKER_TOPIC_NAME = 'ego_vehicle_marker'
 VEHICLE_MARKER_TOPIC_NAME = "vehicle_markers"
 TRACKING_POSE_TOPIC_NAME = "vehicle_tracking_pose"
 COLLISION_TOPIC_NAME = "collision_marker"
+FUTURE_POSE_TOPIC_NAME = 'trajectory'
 
 SIM_SERVICE_NAME = "simulator"
 
 NUM_NEXT_LANE_VEHICLES = 5
-LANE_DISCRETIZATION  = 0.1
+LANE_DISCRETIZATION  = 1.0
+LANE_PASS_LOWER_BOUND = -5.
+LANE_PASS_UPPER_BOUND = 50.
 
 class LaneSim:
     def __init__(self, starting_x, starting_y, starting_theta, length, width):
@@ -42,11 +45,24 @@ class LaneSim:
         self.ros_lane = False
         self.lock = threading.Lock()
 
-    def convert2ROS(self):
+    def convert2ROS(self, vehicle_x=-1):
         self.lock.acquire()
-        if self.ros_lane == False:
-            self.ros_lane = Lane()
+
+        self.ros_lane = Lane()
+        if vehicle_x < 0:
             for lane_len in np.arange(0,self.length,LANE_DISCRETIZATION):
+                lane_pt = LanePoint()
+                lane_pt.pose.x = self.starting_x + lane_len * np.cos(self.starting_theta)
+                lane_pt.pose.y = self.starting_y + lane_len * np.sin(self.starting_theta)
+                lane_pt.pose.theta = self.starting_theta
+                lane_pt.width = self.width
+                self.ros_lane.lane.append(lane_pt)
+        else:
+            starting_x = vehicle_x + LANE_PASS_LOWER_BOUND
+            ending_x = vehicle_x + LANE_PASS_UPPER_BOUND
+            starting_len = (starting_x - self.starting_x) / np.cos(self.starting_theta) #TODO: Fix
+            ending_len = (ending_x - self.starting_x) / np.cos(self.starting_theta) #TODO:FIX
+            for lane_len in np.arange(starting_len,ending_len,LANE_DISCRETIZATION):
                 lane_pt = LanePoint()
                 lane_pt.pose.x = self.starting_x + lane_len * np.cos(self.starting_theta)
                 lane_pt.pose.y = self.starting_y + lane_len * np.sin(self.starting_theta)
@@ -66,6 +82,7 @@ class Vehicle:
         self.theta = 0
         self.speed = 0
         self.lane = lane_num
+        self.acceleration = 0
 
     def place(self, x, y, theta):
         self.x = x
@@ -76,8 +93,12 @@ class Vehicle:
         self.x += self.speed * np.cos(self.theta) * duration
         self.y += self.speed * np.sin(self.theta) * duration
 
-    def setSpeed(self, speed):
+    def setSpeed(self, speed, time_step = 0):
+        if time_step > 0.00001:
+            self.acceleration = (speed - self.speed) / time_step
         self.speed = speed
+
+
 
     def convert2ROS(self):
 
@@ -104,6 +125,7 @@ class SimpleSimulator:
         self.timestamp = 0
         self.first_run = 1
         self.tracking_pose = None
+        self.future_poses = []
         self.visualization_mode = visualization_mode
         self.first_frame_generated = False
         self.path_planner_terminate = False
@@ -113,6 +135,7 @@ class SimpleSimulator:
 
         self.env_msg = None
         self.lane_marker = None
+        self.future_poses_marker = None
         self.ego_marker = None
         self.vehicle_marker = None
         self.tracking_pose_marker = None
@@ -126,6 +149,7 @@ class SimpleSimulator:
         self.path_sub = None
         self.tracking_pub = None
         self.collision_pub = None
+        self.future_poses_pub = None
 
         # id
         self.id = 0
@@ -147,6 +171,7 @@ class SimpleSimulator:
         self.vehicle_pub = rospy.Publisher(VEHICLE_MARKER_TOPIC_NAME, MarkerArray, queue_size=QUEUE_SIZE)
         self.tracking_pub = rospy.Publisher(TRACKING_POSE_TOPIC_NAME, Marker, queue_size=QUEUE_SIZE)
         self.collision_pub = rospy.Publisher(COLLISION_TOPIC_NAME, Marker, queue_size = QUEUE_SIZE)
+        self.future_poses_pub = rospy.Publisher(FUTURE_POSE_TOPIC_NAME, MarkerArray, queue_size = QUEUE_SIZE)
 
         # initialize subscriber
         self.path_sub = rospy.Subscriber(PATH_PLAN_TOPIC_NAME, PathPlan, self.pathCallback)
@@ -186,7 +211,8 @@ class SimpleSimulator:
                 self.controlling_vehicle.theta = np.arctan2((tracking_pose.y - self.controlling_vehicle.y), \
                                                             tracking_pose.x - self.controlling_vehicle.x)
                 self.tracking_pose = msg.tracking_pose
-                self.controlling_vehicle.setSpeed(tracking_speed)
+                self.future_poses = msg.future_poses
+                self.controlling_vehicle.setSpeed(tracking_speed, self.time_step)
                 self.renderScene()
         else:
             self.first_frame_generated = True
@@ -221,7 +247,7 @@ class SimpleSimulator:
             self.controlling_vehicle.theta = np.arctan2((tracking_pose.y - self.controlling_vehicle.y),\
                                                         tracking_pose.x - self.controlling_vehicle.x)
             self.tracking_pose = msg.tracking_pose
-
+            self.future_poses = msg.future_poses
             self.controlling_vehicle.setSpeed(tracking_speed)
             self.lock.release()
             self.renderScene()
@@ -255,6 +281,8 @@ class SimpleSimulator:
                 self.tracking_pub.publish(self.tracking_pose_marker)
             if self.collision_marker:
                 self.collision_pub.publish(self.collision_marker)
+            if self.future_poses_marker:
+                self.future_poses_pub.publish(self.future_poses_marker)
 
         self.lock.release()
 
@@ -323,12 +351,12 @@ class SimpleSimulator:
         publish_msg = EnvironmentState()
 
         # current lane
-        publish_msg.current_lane = self.lanes[self.cur_lane].convert2ROS()
+        publish_msg.current_lane = self.lanes[self.cur_lane].convert2ROS(self.controlling_vehicle.x)
 
         # next lane
         next_lane = self.cur_lane - 1
         if next_lane >= 0:
-            publish_msg.next_lane = self.lanes[next_lane].convert2ROS()
+            publish_msg.next_lane = self.lanes[next_lane].convert2ROS(self.controlling_vehicle.x)
 
         # vehicles
         closest_next_lane_vehicles = []
@@ -591,7 +619,7 @@ class SimpleSimulator:
             self.lane_marker = MarkerArray()
 
             for l in self.lanes:
-                for leng in range(0, l.length,1):
+                for leng in range(0, l.length,20):
                     marker = Marker()
                     marker.header.frame_id = "map"
                     marker.header.stamp = rospy.Time.now()
@@ -609,6 +637,29 @@ class SimpleSimulator:
                     marker.id=marker_id
                     marker_id += 1
                     self.lane_marker.markers.append(marker)
+
+            # future tracking poses
+            self.future_poses_marker = MarkerArray()
+
+
+            for pose in self.future_poses:
+                marker = Marker()
+                marker.header.frame_id = "map"
+                marker.header.stamp = rospy.Time.now()
+                marker.type = marker.SPHERE
+                marker.action = marker.ADD
+                marker.scale.x = 0.3
+                marker.scale.y = 0.3
+                marker.scale.z = 0.3
+                marker.color.a = 1.0
+                marker.color.b = 1.0
+                marker.pose.orientation.w = 1.0
+                marker.pose.position.x = pose.x
+                marker.pose.position.y = -pose.y
+                marker.pose.position.z = 3.0
+                marker.id=marker_id
+                marker_id += 1
+                self.future_poses_marker.markers.append(marker)
             self.lock.release()
 
     def renderScene(self):
@@ -622,10 +673,11 @@ class SimpleSimulator:
 
     def resetScene(self, num_vehicles=[5, 0], num_lanes=2, lane_width_m=[3, 3], lane_length_m=500, \
                    max_vehicle_gaps_vehicle_len=7, min_vehicle_gaps_vehicle_len=1, \
-                   vehicle_width=2, vehicle_length=4, starting_lane=-1, initial_speed=8):
-        initial_speed = initial_speed + random.uniform(-0.5 * initial_speed, 1.2 * initial_speed)
+                   vehicle_width=2, vehicle_length=4, starting_lane=-1, initial_speed=4.167):
+        initial_speed = initial_speed + random.uniform(0, 1.33 * initial_speed)
         self.timestamp = 0
         self.first_run = 1
+        self.future_poses = []
         self.vehicles = []
         self.controlling_vehicle = None
         self.lanes = []

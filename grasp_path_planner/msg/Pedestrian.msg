@@ -1,0 +1,5 @@
+geometry_msgs/Pose2D pedestrian_location
+float64 pedestrian_speed
+float64 pedestrian_acceleration
+float64 radius
+bool exist
