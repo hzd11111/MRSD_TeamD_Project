@@ -121,7 +121,7 @@ class CarlaManager:
 
         return vehicle
     
-    def getPedestrianState(self, actor, pedestrian_radius=0.3):
+    def getPedestrianState(self, actor, pedestrian_radius=0.5):
 
         ## TODO: Processing them like vehicles for now
         if(actor == None):
@@ -155,9 +155,9 @@ class CarlaManager:
     
     def pathRequest(self, data):
         
-        tmp = self.last_time
-        self.last_time = time.time()
-        print("Time diff:", self.last_time - tmp)
+        # tmp = self.last_time
+        # self.last_time = time.time()
+        # print("Time diff:", self.last_time - tmp)
         
         reset_sim = False
         if self.first_frame_generated:
@@ -191,8 +191,8 @@ class CarlaManager:
                 if(self.tm.pedestrian_mode == True):
                     if(self.pedestrian is None):
                         current_ego_speed = np.sqrt(self.ego_vehicle.get_velocity().x**2 + self.ego_vehicle.get_velocity().y**2) * 3.6
-                        if(current_ego_speed > 20):
-                            self.tm.pedestrian_controller.waypoints_list = self.carla_handler.get_next_waypoints(self.carla_handler.world_map.get_waypoint(self.ego_vehicle.get_location(), project_to_road=True), None, k=100)
+                        if(current_ego_speed > 35):
+                            self.tm.pedestrian_controller.waypoints_list = self.carla_handler.get_next_waypoints(self.carla_handler.world_map.get_waypoint(self.ego_vehicle.get_location(), project_to_road=True), None, k=45)[15:]
                             self.pedestrian = self.tm.pedestrian_controller.random_spawn()
                             print("Pedestrian Spawned")
                     else:
@@ -310,10 +310,10 @@ class CarlaManager:
         
         ## Pedestrian
         if (self.pedestrian is not None):
-            publish_msg.nearest_pedestrian = self.getClosest([self.getPedestrianState(actor) for actor in pedestrians_on_current_road], vehicle_ego, 1)
+            env_state.nearest_pedestrian = self.getClosestPedestrian([self.getPedestrianState(actor) for actor in [self.pedestrian]], vehicle_ego, 1)[0]
         else:
-            publish_msg.nearest_pedestrian = Pedestrian()
-            publish_msg.nearest_pedestrian.exist = False
+            env_state.nearest_pedestrian = Pedestrian()
+            env_state.nearest_pedestrian.exist = False
 
         if(reset_sim):
             self.last_call_reset = True
@@ -382,6 +382,15 @@ class CarlaManager:
         sorted_idx = np.argsort(distances)[:n]
         
         return [adjacent_lane_vehicles[i] for i in sorted_idx]
+    
+    def getClosestPedestrian(self, pedestrians, ego_vehicle, n=1):
+        ego_x = ego_vehicle.vehicle_location.x
+        ego_y = ego_vehicle.vehicle_location.y
+        
+        distances = [((ego_x - pedestrians[i].pedestrian_location.x)**2 + (ego_y - pedestrians[i].pedestrian_location.y)**2) for i in range(len(pedestrians))]
+        sorted_idx = np.argsort(distances)[:n]
+        
+        return [pedestrians[i] for i in sorted_idx]
                 
                 
     def initialize(self):
@@ -466,6 +475,14 @@ class CarlaManager:
         env_state.max_num_vehicles = self.max_num_vehicles
         env_state.speed_limit = 20
         # env_state.id = self.id
+        
+        ## Pedestrian
+        if (self.pedestrian is not None):
+            env_state.nearest_pedestrian = self.getClosestPedestrian([self.getPedestrianState(actor) for actor in [self.pedestrian]], vehicle_ego, 1)[0]
+        else:
+            env_state.nearest_pedestrian = Pedestrian()
+            env_state.nearest_pedestrian.exist = False
+            
         
         reward_info = RewardInfo()
         reward_info.time_elapsed = self.timestamp
