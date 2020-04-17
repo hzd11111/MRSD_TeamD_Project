@@ -68,7 +68,7 @@ class CustomScenario:
         
         self.world.set_weather(find_weather_presets()[2][0])
 
-        self.scenarios_town04 = [[[40],3,4,100,20], [[39],3,4,100,20], [[46],-2,-3,100,10], [[47],-2,-3,50,10]]
+        # self.scenarios_town04 = [[[40],3,4,100,20], [[39],3,4,100,20], [[46],-2,-3,100,10], [[47],-2,-3,50,10]]
         self.scenarios_town04 = [[[40],3,4,100,30]]
         self.scenarios_town05 = [[[37], -2, -3, 350, 20]]#[[[21,22],-1,-2,0,10]], [[37], -2, -3, 0, 0]]
         self.scenarios_town03 = [[[8,7,6], 4, 5, 0, 0]]

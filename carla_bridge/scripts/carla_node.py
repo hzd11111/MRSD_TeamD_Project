@@ -167,7 +167,22 @@ class CarlaManager:
             tracking_pose = data.tracking_pose
             tracking_speed = data.tracking_speed# / 3.6
             reset_sim = data.reset_sim
-
+            future_poses = data.future_poses
+            
+            # ego_location = self.ego_vehicle.get_location()
+            # future_loc = carla.Location(x=ego_location.x, y=ego_location.y, z=ego_location.z + 1)
+            # self.carla_handler.world.debug.draw_string(future_loc, str(tracking_speed), draw_shadow=False,
+            #                 color=carla.Color(r=0, g=0, b=255), life_time=0.05,
+            #                 persistent_lines=False)
+            
+            
+            
+            for future_pose in future_poses:
+                future_loc = carla.Location(x=future_pose.x, y=future_pose.y, z=self.ego_vehicle.get_location().z)
+                self.carla_handler.world.debug.draw_string(future_loc, 'O', draw_shadow=False,
+                                color=carla.Color(r=255, g=0, b=0), life_time=0.05,
+                                persistent_lines=True)
+            
             
             self.end_of_action = data.end_of_action
             self.action_progress = data.action_progress
@@ -216,10 +231,13 @@ class CarlaManager:
                      
 
                 ### Visualize requested waypoint ###
-                tracking_loc = carla.Location(x=tracking_pose.x, y=tracking_pose.y, z=self.ego_vehicle.get_location().z)
-                self.carla_handler.world.debug.draw_string(tracking_loc, 'O', draw_shadow=False,
-                                                    color=carla.Color(r=255, g=0, b=0), life_time=1,
-                                                    persistent_lines=True)
+                # tracking_loc = carla.Location(x=tracking_pose.x, y=tracking_pose.y, z=self.ego_vehicle.get_location().z)
+                # self.carla_handler.world.debug.draw_string(tracking_loc, 'O', draw_shadow=False,
+                #                                     color=carla.Color(r=148, g=0, b=211), life_time=1,
+                #                                     persistent_lines=True)
+                
+
+                    
                 
                 #### Check Sync ###
                 flag = 0
@@ -236,10 +254,10 @@ class CarlaManager:
             self.resetEnv()
             
         ### Extract State Information
-        nearest_waypoint = self.carla_handler.world_map.get_waypoint(self.ego_vehicle.get_location(), project_to_road=True)
-        self.carla_handler.world.debug.draw_string(self.ego_vehicle.get_location(), 'O', draw_shadow=False,
-                                                            color=carla.Color(r=0, g=0, b=255), life_time=1,
-                                                            persistent_lines=True)
+        # nearest_waypoint = self.carla_handler.world_map.get_waypoint(self.ego_vehicle.get_location(), project_to_road=True)
+        # self.carla_handler.world.debug.draw_string(self.ego_vehicle.get_location(), 'O', draw_shadow=False,
+        #                                                     color=carla.Color(r=0, g=0, b=255), life_time=1,
+        #                                                     persistent_lines=True)
         
         
         state_information = self.carla_handler.get_state_information_new(self.ego_vehicle, self.original_lane)
@@ -294,10 +312,18 @@ class CarlaManager:
         env_state.back_vehicle_state = vehicle_rear
         env_state.current_lane = lane_cur
         env_state.next_lane = lane_left
-        env_state.adjacent_lane_vehicles = self.getClosest([self.getVehicleState(actor) for actor in actors_in_left_lane], vehicle_ego, self.max_num_vehicles)
+        env_state.adjacent_lane_vehicles, _ = self.getClosest([self.getVehicleState(actor) for actor in actors_in_left_lane], vehicle_ego, self.max_num_vehicles)
         env_state.speed_limit = self.speed_limit
 
         # print(env_state.cur_vehicle_state.vehicle_location.theta)
+        for idx in _:
+            tmp_vehicle = actors_in_left_lane[idx]
+            tmp_transform = tmp_vehicle.get_transform()
+            tmp_bounding_box = tmp_vehicle.bounding_box
+            tmp_bounding_box.location += tmp_transform.location
+            self.carla_handler.world.debug.draw_box(tmp_bounding_box, tmp_transform.rotation, life_time=0.05, color=carla.Color(r=128, g=0, b=128))
+        
+        
         
         reward_info = RewardInfo()
         reward_info.time_elapsed = self.timestamp
@@ -311,6 +337,10 @@ class CarlaManager:
         ## Pedestrian
         if (self.pedestrian is not None):
             env_state.nearest_pedestrian = self.getClosestPedestrian([self.getPedestrianState(actor) for actor in [self.pedestrian]], vehicle_ego, 1)[0]
+            tmp_transform = self.pedestrian.get_transform()
+            tmp_bounding_box = self.pedestrian.bounding_box
+            tmp_bounding_box.location += tmp_transform.location
+            self.carla_handler.world.debug.draw_box(tmp_bounding_box, tmp_transform.rotation, life_time=0.05, color=carla.Color(r=128, g=0, b=128))
         else:
             env_state.nearest_pedestrian = Pedestrian()
             env_state.nearest_pedestrian.exist = False
@@ -381,7 +411,7 @@ class CarlaManager:
         distances = [((ego_x - adjacent_lane_vehicles[i].vehicle_location.x)**2 + (ego_y - adjacent_lane_vehicles[i].vehicle_location.y)**2) for i in range(len(adjacent_lane_vehicles))]
         sorted_idx = np.argsort(distances)[:n]
         
-        return [adjacent_lane_vehicles[i] for i in sorted_idx]
+        return [adjacent_lane_vehicles[i] for i in sorted_idx], sorted_idx
     
     def getClosestPedestrian(self, pedestrians, ego_vehicle, n=1):
         ego_x = ego_vehicle.vehicle_location.x
@@ -469,7 +499,7 @@ class CarlaManager:
         env_state.cur_vehicle_state = vehicle_ego
         env_state.front_vehicle_state = vehicle_front
         env_state.back_vehicle_state = vehicle_rear
-        env_state.adjacent_lane_vehicles = self.getClosest([self.getVehicleState(actor) for actor in actors_in_left_lane], vehicle_ego, self.max_num_vehicles) #TODO : Only considering left lane for now. Need to make this more general 
+        env_state.adjacent_lane_vehicles,_ = self.getClosest([self.getVehicleState(actor) for actor in actors_in_left_lane], vehicle_ego, self.max_num_vehicles) #TODO : Only considering left lane for now. Need to make this more general 
         env_state.current_lane = self.lane_cur
         env_state.next_lane = self.lane_left
         env_state.max_num_vehicles = self.max_num_vehicles
@@ -498,11 +528,6 @@ class CarlaManager:
             self.id = 0
 
         rate = rospy.Rate(10)
-
-        # publish environment state
-        # self.env_msg = env_state
-        # self.env_pub.publish(env_state)
-        # rate.sleep()
 
     def spin(self):
         print("Start Ros Spin")	

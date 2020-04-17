@@ -24,7 +24,7 @@ TRAJ_PARAM = {'look_up_distance' : 0 ,\
     'action_duration' : 0.5,\
     'accelerate_amt' : 5,\
     'decelerate_amt' : 5,\
-    'min_speed' : 0
+    'min_speed' : 20
 }
 
 class VecTemp:
@@ -50,7 +50,7 @@ class VecTemp:
         return VecTemp(self.x - other.x, self.y - other.y)
 
     def dot(self, other):
-        upper = self.x * other.x + self.y + other.y
+        upper = self.x * other.x + self.y * other.y
         lower = self.norm() * other.norm()
         if lower <= 0.00001:
             return 1
