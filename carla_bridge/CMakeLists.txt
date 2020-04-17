@@ -159,7 +159,6 @@ include_directories(
 # See http://ros.org/doc/api/catkin/html/adv_user_guide/variables.html
 
 catkin_install_python(PROGRAMS
-  scripts/demo_environment_state_extraction.py
   DESTINATION ${CATKIN_PACKAGE_BIN_DESTINATION}
 )
 

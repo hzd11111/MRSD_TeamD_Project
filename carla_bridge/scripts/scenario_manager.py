@@ -18,6 +18,7 @@ import rospy
 import copy
 import random
 import threading
+import re
 
 sys.path.append("/home/mayank/Carla/CARLA_0.9.8/PythonAPI/carla/dist/carla-0.9.8-py3.6-linux-x86_64.egg")
 
@@ -42,24 +43,59 @@ from grasp_path_planner.msg import RewardInfo
 from grasp_path_planner.msg import EnvironmentState
 from grasp_path_planner.msg import PathPlan
 
+from dynamic_pedestrian import DynamicPedestrian
+
+
+def find_weather_presets():
+    rgx = re.compile('.+?(?:(?<=[a-z])(?=[A-Z])|(?<=[A-Z])(?=[A-Z][a-z])|$)')
+    name = lambda x: ' '.join(m.group(0) for m in rgx.finditer(x))
+    presets = [x for x in dir(carla.WeatherParameters) if re.match('[A-Z].+', x)]
+    return [(getattr(carla.WeatherParameters, x), name(x)) for x in presets]
 
 class CustomScenario:
     def __init__(self, client, carla_handler):
         
         self.client = client
         self.traffic_manager = self.client.get_trafficmanager(8000)
-        self.traffic_manager.set_global_distance_to_leading_vehicle(2.0)    
+        self.traffic_manager.set_global_distance_to_leading_vehicle(2)    
+
         self.world = self.client.get_world()
         self.carla_handler = carla_handler
         self.vehicles_list = []
         print("Scenario Manager Initialized...")
         
-    def reset(self, warm_start=False, warm_start_duration=10):
+        self.pedestrian_controller = DynamicPedestrian(self.world)
+        
+        self.world.set_weather(find_weather_presets()[2][0])
+
+        self.scenarios_town04 = [[[40],3,4,100,20], [[39],3,4,100,20], [[46],-2,-3,100,10], [[47],-2,-3,50,10]]
+        self.scenarios_town04 = [[[40],3,4,100,30]]
+        self.scenarios_town05 = [[[37], -2, -3, 350, 20]]#[[[21,22],-1,-2,0,10]], [[37], -2, -3, 0, 0]]
+        self.scenarios_town03 = [[[8,7,6], 4, 5, 0, 0]]
+        
+        self.pedestrian_mode = True
+
+        # self.client.set_timeout(20)
+        # self.client.load_world('Town05')
+        # brak
+        # self.client.set_timeout(2)
+        # # brak
+        
+        
+    def reset(self, warm_start=False, warm_start_duration=5):
                 
+        self.target_speed = 15       
+        self.spawn_roads, self.left_lane_id, self.curr_lane_id, self.ego_spawn_idx, self.vehicle_init_speed = self.scenarios_town04[np.random.randint(0,len(self.scenarios_town04))]
+        #         
+        
         self.traffic_manager.set_synchronous_mode(True)
 
         self.vehicles_list = []
         synchronous_master = True
+        
+        if(self.pedestrian_mode == True):
+            self.pedestrian_controller.road_id = self.spawn_roads[0] #TODO
+            self.pedestrian_controller.lane_id = self.curr_lane_id
         
         blueprints = self.world.get_blueprint_library().filter('vehicle.*')
 
@@ -70,20 +106,21 @@ class CustomScenario:
             blueprints = [x for x in blueprints if not x.id.endswith('cybertruck')]
             blueprints = [x for x in blueprints if not x.id.endswith('t2')]
 
-        num_vehicles = 15
-        waypoints = self.world.get_map().generate_waypoints(distance=1)
+        if(self.pedestrian_mode == True):
+            num_vehicles = 0
+        else:
+            num_vehicles = np.random.randint(12,15)
+        waypoints = self.world.get_map().generate_waypoints(distance=np.random.randint(15,30))
         road_waypoints = []
         for waypoint in waypoints:
-            if(waypoint.road_id == 40 and waypoint.lane_id == 4):
+            if(waypoint.road_id in self.spawn_roads and waypoint.lane_id  == self.left_lane_id):
                 road_waypoints.append(waypoint)
         number_of_spawn_points = len(road_waypoints)
-        print("get", len(road_waypoints), "on road 12 with lane id 0")
+
         if num_vehicles < number_of_spawn_points:
-            print("randomize distance in between cars")
             random.shuffle(road_waypoints)
         elif num_vehicles > number_of_spawn_points:
             msg = 'requested %d vehicles, but could only find %d spawn points'
-            # logging.warning(msg, num_vehicles, number_of_spawn_points)
             num_vehicles = number_of_spawn_points
 
         
@@ -91,6 +128,7 @@ class CustomScenario:
         SpawnActor = carla.command.SpawnActor
         SetAutopilot = carla.command.SetAutopilot
         FutureActor = carla.command.FutureActor
+        ApplyVelocity = carla.command.ApplyVelocity
 
         # --------------
         # Spawn vehicles
@@ -109,8 +147,8 @@ class CustomScenario:
             blueprint.set_attribute('role_name', 'autopilot')
             transform = t.transform
             transform.location.z += 0.1
-            batch.append(SpawnActor(blueprint, transform).then(SetAutopilot(FutureActor, True)))
-            
+            yaw = transform.rotation.yaw *  np.pi / 180 
+            batch.append(SpawnActor(blueprint, transform).then(ApplyVelocity(FutureActor, carla.Vector3D(self.vehicle_init_speed*np.cos(yaw), self.vehicle_init_speed*np.sin(yaw),0))).then(SetAutopilot(FutureActor, True)))
 
         for response in self.client.apply_batch_sync(batch, synchronous_master):
             if response.error:
@@ -122,26 +160,48 @@ class CustomScenario:
         my_vehicles = self.world.get_actors(self.vehicles_list)
 
         for n, v in enumerate(my_vehicles):
-            # c = v.get_physics_control()
-            # c.max_rpm = args.max_vehicles_speed * 133 
-            # v.apply_physics_control(c)
-            # if n == 0:
-            #     print("vehicles' speed limit:", v.get_speed_limit())
+            
+                
+                    
+            # nearest_waypoint = self.carla_handler.world_map.get_waypoint(v.get_location(), project_to_road=True)                    
+            # current_speed_limit = v.get_speed_limit()
+            # # current_speed = np.sqrt(v.get_velocity().x**2 + v.get_velocity().y**2 + v.get_velocity().z**2) * 3.6
+            # new_limit_percentage = 100 - (self.target_speed * 100)/float(current_speed_limit)
+            # print(n, ":", np.sqrt(v.get_velocity().x**2 + v.get_velocity().y**2 + v.get_velocity().z**2) * 3.6, nearest_waypoint.road_id, current_speed_limit, new_limit_percentage)
+            # self.traffic_manager.vehicle_percentage_speed_difference(v, new_limit_percentage)
+            # # time.sleep(2)
+
+            
+            # self.traffic_manager.vehicle_percentage_speed_difference(v, np.random.randint(40,50))
             self.traffic_manager.auto_lane_change(v,False)
+            self.traffic_manager.ignore_lights_percentage(v,100)
+            self.traffic_manager.ignore_signs_percentage(v,100)
         
         
         ################# Spawn Ego ##########################
         ego_list = []
         # ego_spawn_pt = np.random.randint(100,200)
-        filtered_waypoints = self.carla_handler.filter_waypoints(self.carla_handler.get_waypoints(1), road_id=40, lane_id=5)
-        spawn_point = filtered_waypoints[150].transform # Select random point from filtered waypoint list #TODO Initialization Scheme Design
+        filtered_waypoints = self.carla_handler.filter_waypoints(self.carla_handler.get_waypoints(1), road_id=self.spawn_roads[0], lane_id=self.curr_lane_id)
+
+        spawn_point = filtered_waypoints[self.ego_spawn_idx].transform # Select random point from filtered waypoint list #TODO Initialization Scheme Design
         spawn_point.location.z = spawn_point.location.z + 0.1 # To avoid collision during spawn
         vehicle_blueprint = self.carla_handler.blueprint_library.filter('model3')[0]
-        ego_list.append(SpawnActor(vehicle_blueprint, spawn_point).then(SetAutopilot(FutureActor, True)))
+        
+        yaw = spawn_point.rotation.yaw *  np.pi / 180
+        
+        ego_list.append(SpawnActor(vehicle_blueprint, spawn_point).then(ApplyVelocity(FutureActor, carla.Vector3D(self.vehicle_init_speed*np.cos(yaw), self.vehicle_init_speed*np.sin(yaw),0))).then(SetAutopilot(FutureActor, True)))
         response = self.client.apply_batch_sync(ego_list, synchronous_master)
         ego_vehicle_ID = response[0].actor_id
         ego_vehicle = self.world.get_actors([ego_vehicle_ID])[0]
-        # self.ego_vehicle, ego_vehicle_ID = self.carla_handler.spawn_vehicle(spawn_point=spawn_point)
+        self.traffic_manager.ignore_lights_percentage(ego_vehicle, 100)
+        
+        for n, v in enumerate(my_vehicles):
+            # self.traffic_manager.distance_to_leading_vehicle(v, 1)
+            # self.traffic_manager.vehicle_percentage_speed_difference(v, 100)
+            self.traffic_manager.collision_detection(v, ego_vehicle, False)
+
+        
+        
         print("Ego spawned!")    
         
         
@@ -153,8 +213,11 @@ class CustomScenario:
             if synchronous_master:
                 self.world.tick()
             else:
-                self.world.wait_for_tick()        
+                self.world.wait_for_tick()                
         
+        self.client.apply_batch_sync([SetAutopilot(ego_vehicle, False)], synchronous_master)
+        
+            
         print("Bombs away....")
-        return ego_vehicle
+        return ego_vehicle, my_vehicles, self.target_speed
         

@@ -21,7 +21,7 @@ TRAJ_PARAM = {'look_up_distance' : 0 ,\
     'lane_change_time_constant' : 1.05,\
     'lane_change_time_disc' : 0.4,\
     'action_time_disc' : 0.2,\
-    'action_duration' : 2,\
+    'action_duration' : 0.5,\
     'accelerate_amt' : 5,\
     'decelerate_amt' : 5,\
     'min_speed' : 0
@@ -222,7 +222,7 @@ class TrajGenerator:
         new_path_plan = PathPlan()
         new_path_plan.tracking_pose = closest_pose.pose
         new_path_plan.reset_sim = False
-        new_path_plan.tracking_speed = self.start_speed
+        new_path_plan.tracking_speed = max(self.traj_parameters['min_speed'],self.start_speed)
         new_path_plan.end_of_action = end_of_action
         new_path_plan.action_progress = action_progress
         new_path_plan.path_planner_terminate = False
@@ -277,7 +277,7 @@ class TrajGenerator:
         new_path_plan = PathPlan()
         new_path_plan.tracking_pose = closest_pose.pose
         new_path_plan.reset_sim = False
-        new_path_plan.tracking_speed = self.start_speed + action_progress * self.traj_parameters['accelerate_amt']
+        new_path_plan.tracking_speed = max(self.traj_parameters['min_speed'],self.start_speed + action_progress * self.traj_parameters['accelerate_amt'])
         new_path_plan.end_of_action = end_of_action
         new_path_plan.action_progress = action_progress
         new_path_plan.path_planner_terminate = False
@@ -333,7 +333,7 @@ class TrajGenerator:
         new_path_plan = PathPlan()
         new_path_plan.tracking_pose = closest_pose.pose
         new_path_plan.reset_sim = False
-        new_path_plan.tracking_speed = max(0,
+        new_path_plan.tracking_speed = max(self.traj_parameters['min_speed'],
                                            self.start_speed - action_progress * self.traj_parameters['decelerate_amt'])
         new_path_plan.end_of_action = end_of_action
         new_path_plan.action_progress = action_progress

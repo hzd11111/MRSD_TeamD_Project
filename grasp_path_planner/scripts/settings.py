@@ -24,4 +24,4 @@ CONVERT_TO_LOCAL = True
 SIM_SERVICE_NAME = "simulator"
 NODE_NAME = "full_grasp_planner"
 INVERT_ANGLES=True
-OLD_REWARD=True
+OLD_REWARD=False

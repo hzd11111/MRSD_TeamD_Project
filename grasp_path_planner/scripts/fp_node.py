@@ -42,16 +42,16 @@ class FullPlannerManager:
             # model = DQN(MlpPolicy, env, verbose=1, learning_starts=64,  target_network_update_freq=50, tensorboard_log='./Logs/')
             # model = DQN.load("DQN_Model_SimpleSim_30k",env=env,exploration_fraction=0.1,tensorboard_log='./Logs/')
         if self.event == Scenario.PEDESTRIAN:
-            model = DQN(CustomPedestrianPolicy, env, verbose=1, learning_starts=256, batch_size=256, exploration_fraction=0.5, target_network_update_freq=100, tensorboard_log=dir_path+'/Logs/Ped')
-        model.learn(total_timesteps=10000)
+            model = DQN(CustomPedestrianPolicy, env, verbose=1, learning_starts=256, batch_size=256, exploration_fraction=0.9, target_network_update_freq=100, tensorboard_log=dir_path+'/Logs/Ped', gamma=0.93, learning_rate=0.0001)
+        model.learn(total_timesteps=20000)
         # model = PPO2(MlpPolicy, env, verbose=1,tensorboard_log="./Logs/")
         # model.learn(total_timesteps=20000)
-        model.save(dir_path+"/Models/DQN_Model_SimpleSim_Ped")
+        model.save(dir_path+"/Models/DQN_Model_CARLA_Ped")
 
     def run_test(self):
         env = CustomEnv(self.path_planner, self.behavior_planner, event)
         env = make_vec_env(lambda: env, n_envs=1)
-        model = DQN.load(dir_path+"/Models/DQN_Model_SimpleSim_Ped.zip")
+        model = DQN.load(dir_path+"/Models/DQN_Model_CARLA_Ped")
         obs = env.reset()
         count = 0
         success = 0
@@ -77,7 +77,7 @@ if __name__ == '__main__':
         elif event == Scenario.LANE_CHANGE:
             full_planner = FullPlannerManager(Scenario.LANE_CHANGE)
         full_planner.initialize()
-        full_planner.run_test()
+        full_planner.run_train()
 
     except rospy.ROSInterruptException:
         pass

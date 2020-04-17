@@ -42,6 +42,9 @@ from stable_baselines.deepq.policies import MlpPolicy
 from stable_baselines.deepq.policies import DQNPolicy
 from stable_baselines.common.env_checker import check_env
 from stable_baselines.common.cmd_util import make_vec_env
+from stable_baselines.common.callbacks import CheckpointCallback
+checkpoint_callback = CheckpointCallback(save_freq=1000, save_path='/home/mayank/Mayank/GRASP_ws/src/MRSD_TeamD_Project/models/',
+                                         name_prefix='dqn_intermediate_min15')
 
 SIM_SERVICE_NAME = "simulator"
 NODE_NAME = "full_grasp_planner"
@@ -54,7 +57,7 @@ TRAJ_PARAM = {'look_up_distance' : 0 ,\
     'action_duration' : 2,\
     'accelerate_amt' : 5,\
     'decelerate_amt' : 5,\
-    'min_speed' : 0
+    'min_speed' : 15
 }
 
 N_DISCRETE_ACTIONS = 4
@@ -93,7 +96,7 @@ class VecTemp:
         return VecTemp(self.x - other.x, self.y - other.y)
 
     def dot(self, other):
-        upper = self.x * other.x + self.y + other.y
+        upper = self.x * other.x + self.y * other.y
         lower = self.norm() * other.norm()
         if lower <= 0.00001:
             return 1
@@ -265,7 +268,7 @@ class TrajGenerator:
         new_path_plan = PathPlan()
         new_path_plan.tracking_pose = closest_pose.pose
         new_path_plan.reset_sim = False
-        new_path_plan.tracking_speed = self.start_speed
+        new_path_plan.tracking_speed = max(self.traj_parameters['min_speed'],self.start_speed)
         new_path_plan.end_of_action = end_of_action
         new_path_plan.action_progress = action_progress
         new_path_plan.path_planner_terminate = False
@@ -320,7 +323,7 @@ class TrajGenerator:
         new_path_plan = PathPlan()
         new_path_plan.tracking_pose = closest_pose.pose
         new_path_plan.reset_sim = False
-        new_path_plan.tracking_speed = self.start_speed + action_progress * self.traj_parameters['accelerate_amt']
+        new_path_plan.tracking_speed = max(self.traj_parameters['min_speed'],self.start_speed + action_progress * self.traj_parameters['accelerate_amt'])
         new_path_plan.end_of_action = end_of_action
         new_path_plan.action_progress = action_progress
         new_path_plan.path_planner_terminate = False
@@ -376,7 +379,7 @@ class TrajGenerator:
         new_path_plan = PathPlan()
         new_path_plan.tracking_pose = closest_pose.pose
         new_path_plan.reset_sim = False
-        new_path_plan.tracking_speed = max(0,
+        new_path_plan.tracking_speed = max(self.traj_parameters['min_speed'],
                                            self.start_speed - action_progress * self.traj_parameters['decelerate_amt'])
         new_path_plan.end_of_action = end_of_action
         new_path_plan.action_progress = action_progress
@@ -612,16 +615,19 @@ class CustomEnv(gym.Env):
         self.path_planner = path_planner
         self.rl_manager = rl_manager
         self.to_local = CONVERT_TO_LOCAL
-
+        
     def invert_angles(self,env_desc):
-        for vehicle in env_desc.adjacent_lane_vehicles:
+        env_copy = copy.deepcopy(env_desc)
+        for vehicle in env_copy.adjacent_lane_vehicles:
             vehicle.vehicle_location.theta*=-1
-        env_desc.back_vehicle_state.vehicle_location.theta*=-1
-        env_desc.front_vehicle_state.vehicle_location.theta*=-1
-        env_desc.cur_vehicle_state.vehicle_location.theta*=-1
-        return
+        env_copy.back_vehicle_state.vehicle_location.theta*=-1
+        env_copy.front_vehicle_state.vehicle_location.theta*=-1
+        env_copy.cur_vehicle_state.vehicle_location.theta*=-1
+        return env_copy
+
 
     def step(self, action):
+        # print("Step called")
         # reset sb_event flag if previously set in previous action
         decision = self.rl_manager.convertDecision(action)
         env_desc, end_of_action = self.path_planner.performAction(decision)
@@ -636,6 +642,9 @@ class CustomEnv(gym.Env):
             self.rl_manager.reward_manager.update(env_desc,action)
             done = self.rl_manager.terminate(env_desc)
             end_of_action = end_of_action or done
+        env_copy = None
+        if INVERT_ANGLES:
+            env_copy = self.invert_angles(env_desc)
 
         env_state = self.rl_manager.makeStateVector(env_desc, self.to_local)
         reward = self.rl_manager.reward_manager.get_reward(env_desc,action)
@@ -649,7 +658,11 @@ class CustomEnv(gym.Env):
     def reset(self):
         self.rl_manager.reward_manager.reset()
         env_desc = self.path_planner.resetSim()
-        env_state = self.rl_manager.makeStateVector(env_desc, self.to_local)
+        
+        env_copy = None
+        if INVERT_ANGLES:
+            env_copy = self.invert_angles(env_desc)
+        env_state = self.rl_manager.makeStateVector(env_copy, self.to_local)
         return env_state
         # return observation  # reward, done, info can't be included
 
@@ -896,6 +909,7 @@ class RLManager:
         '''
         i=0
         env_state = []
+        env_state_global = []
         if not local:
             self.append_vehicle_state(env_state, data.cur_vehicle_state)
             # self.append_vehicle_state(env_state, data.back_vehicle_state)
@@ -913,10 +927,12 @@ class RLManager:
             cur_vehicle_state.vehicle_location.theta = 0
             cur_vehicle_state.vehicle_speed = data.cur_vehicle_state.vehicle_speed
             self.append_vehicle_state(env_state, cur_vehicle_state)
+            self.append_vehicle_state(env_state_global, data.cur_vehicle_state)
             for _, vehicle in enumerate(data.adjacent_lane_vehicles):
                 converted_state = self.convert_to_local(data.cur_vehicle_state, vehicle)
                 if i < 5:
                     self.append_vehicle_state(env_state, converted_state)
+                    self.append_vehicle_state(env_state_global, vehicle)
                 else:
                     break
                 i+=1
@@ -928,6 +944,12 @@ class RLManager:
         while i<5:
             self.append_vehicle_state(env_state, dummy)
             i+=1
+        
+        # print('###############################')
+        # print("Global:", env_state_global)
+        # print("Transformed:", env_state)
+       
+        # print('###############################')
         return env_state
 
     def convert_to_local(self, cur_vehicle, adj_vehicle):
@@ -984,18 +1006,30 @@ class FullPlannerManager:
     def run_train(self):
         env = CustomEnv(self.path_planner, self.behavior_planner)
         env = make_vec_env(lambda: env, n_envs=1)
+<<<<<<< HEAD
+        model = DQN(CustomPolicy, env, verbose=1, learning_starts=256, batch_size=256, exploration_fraction=0.9, target_network_update_freq=100, tensorboard_log=dir_path+'/Logs/', learning_rate=0.0001)
+=======
         model = DQN(CustomPolicy, env, verbose=1, learning_starts=256, batch_size=256, exploration_fraction=0.5, target_network_update_freq=100, tensorboard_log=dir_path+'/Logs/')
+>>>>>>> master
         # model = DQN(MlpPolicy, env, verbose=1, learning_starts=64,  target_network_update_freq=50, tensorboard_log='./Logs/')
-        # model = DQN.load("DQN_Model_SimpleSim_30k",env=env,exploration_fraction=0.1,tensorboard_log='./Logs/')
-        model.learn(total_timesteps=10000)
+        # model = DQN.load("/home/mayank/Mayank/GRASP_ws/src/MRSD_TeamD_Project/models/dqn_intermediate_min15_7000_steps.zip",env=env,exploration_fraction=0.5,tensorboard_log=dir_path+'/Logs/', learning_rate=0.0001, verbose=1, learning_starts=256, batch_size=256, target_network_update_freq=100)
+        model.learn(total_timesteps=20000, callback=checkpoint_callback)
         # model = PPO2(MlpPolicy, env, verbose=1,tensorboard_log="./Logs/")
         # model.learn(total_timesteps=20000)
+<<<<<<< HEAD
+        model.save(dir_path+"/DQN_CARLA_10k.zip")
+=======
         model.save(dir_path+"/DQN_Model_SimpleSim_Local_Reward")
+>>>>>>> master
 
     def run_test(self):
         env = CustomEnv(self.path_planner, self.behavior_planner)
         env = make_vec_env(lambda: env, n_envs=1)
+<<<<<<< HEAD
+        model = DQN.load(dir_path+"/DQN_CARLA_20k_15min_crowded.zip")
+=======
         model = DQN.load(dir_path+"/DQN_Model_SimpleSim_Local_Reward")
+>>>>>>> master
         obs = env.reset()
         count = 0
         success = 0

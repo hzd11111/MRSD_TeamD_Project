@@ -240,8 +240,8 @@ class SimpleSimulator:
     def pathRequest(self, msg):
         new_time = rospy.Time.now()
 
-        if self.prev_time:
-            print "Iteration Duration: ", (new_time - self.prev_time).nsecs * 1e-6
+        # if self.prev_time:
+        #     print "Iteration Duration: ", (new_time - self.prev_time).nsecs * 1e-6
         self.prev_time = new_time
         if self.first_frame_generated:
             msg = msg.path_plan
