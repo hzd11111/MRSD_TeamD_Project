@@ -1006,30 +1006,23 @@ class FullPlannerManager:
     def run_train(self):
         env = CustomEnv(self.path_planner, self.behavior_planner)
         env = make_vec_env(lambda: env, n_envs=1)
-<<<<<<< HEAD
         model = DQN(CustomPolicy, env, verbose=1, learning_starts=256, batch_size=256, exploration_fraction=0.9, target_network_update_freq=100, tensorboard_log=dir_path+'/Logs/', learning_rate=0.0001)
-=======
-        model = DQN(CustomPolicy, env, verbose=1, learning_starts=256, batch_size=256, exploration_fraction=0.5, target_network_update_freq=100, tensorboard_log=dir_path+'/Logs/')
->>>>>>> master
+
         # model = DQN(MlpPolicy, env, verbose=1, learning_starts=64,  target_network_update_freq=50, tensorboard_log='./Logs/')
         # model = DQN.load("/home/mayank/Mayank/GRASP_ws/src/MRSD_TeamD_Project/models/dqn_intermediate_min15_7000_steps.zip",env=env,exploration_fraction=0.5,tensorboard_log=dir_path+'/Logs/', learning_rate=0.0001, verbose=1, learning_starts=256, batch_size=256, target_network_update_freq=100)
         model.learn(total_timesteps=20000, callback=checkpoint_callback)
         # model = PPO2(MlpPolicy, env, verbose=1,tensorboard_log="./Logs/")
         # model.learn(total_timesteps=20000)
-<<<<<<< HEAD
+
         model.save(dir_path+"/DQN_CARLA_10k.zip")
-=======
-        model.save(dir_path+"/DQN_Model_SimpleSim_Local_Reward")
->>>>>>> master
+
 
     def run_test(self):
         env = CustomEnv(self.path_planner, self.behavior_planner)
         env = make_vec_env(lambda: env, n_envs=1)
-<<<<<<< HEAD
+
         model = DQN.load(dir_path+"/DQN_CARLA_20k_15min_crowded.zip")
-=======
-        model = DQN.load(dir_path+"/DQN_Model_SimpleSim_Local_Reward")
->>>>>>> master
+
         obs = env.reset()
         count = 0
         success = 0
