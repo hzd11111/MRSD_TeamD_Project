@@ -1,7 +1,7 @@
 <launch>
-	<node name = "full_planning_node" pkg="grasp_path_planner" type="fp_node.py" output="screen"/>
+	<!-- <node name = "full_planning_node" pkg="grasp_path_planner" type="fp_node.py" output="screen"/> -->
 	<!--node name = "path_planning_node" pkg="grasp_path_planner" type="path_planner_node" output="screen"/ -->
 	<!--node name = "sb_rl_node" pkg="sb_rl_node" type="sb_rl_node.py" output="screen"/-->
-	<!-- <node name = "demo_node" pkg="simple_simulator" type="simple_sim.py" output="screen"/>
+	<node name = "demo_node" pkg="simple_simulator" type="simple_sim.py" output="screen"/>
     <node pkg="rviz" type="rviz" name="rviz"/> --> -->
 </launch>

@@ -20,20 +20,45 @@ from stable_baselines.common.cmd_util import make_vec_env
 from path_planner import PathPlannerManager
 from rl_manager import RLManager, CustomEnv, CustomLaneChangePolicy, CustomPedestrianPolicy
 from settings import *
-import json
+# For Visualisation
+import matplotlib.pyplot as plt
+import matplotlib.animation as animation
+# Threading
+from threading import Thread, Lock
 # -----------------------------------Global------------------------------------------------------#
 dir_path = os.path.dirname(os.path.realpath(__file__))
+animation_lock = Lock()
+action_probs = None
+if CURRENT_SCENARIO == Scenario.PEDESTRIAN:
+    action_probs = [0,0,0]
+else:
+    action_probs = [0,0,0,0]
+fig = plt.figure()
+ax = fig.add_subplot(1,1,1)
+ani_obj = None
 # -----------------------------------Code------------------------------------------------------#
 
+def animate_callback(x):
+    global action_probs
+    print("ENTERED CALLBACK")
+    print(action_probs)
+    ax.clear()
+    animation_lock.acquire()
+    if CURRENT_SCENARIO == Scenario.LANE_CHANGE:
+        ax.bar(x=[1,2,3,4], height = action_probs, tick_label=["constant","accelerate","decelerate","lane_change"])
+    else:
+        ax.bar(x=[1,2,3], height = action_probs, tick_label=["constant","accelerate","decelerate"])
+    animation_lock.release()
+
+def animate():
+    animation.FuncAnimation(fig, animate_callback, interval=1000)
+    plt.show()
 
 class FullPlannerManager:
     def __init__(self,event):
         self.path_planner = PathPlannerManager()
         self.behavior_planner = RLManager(event)
         self.event = event
-
-    def write_probs(self,prob_list):
-            np.savez(dir_path+"/action_probs.npz", action_probs=prob_list)
 
     def initialize(self):
         self.path_planner.initialize()
@@ -51,6 +76,7 @@ class FullPlannerManager:
         model.save(dir_path+"/Models/DQN_Model_CARLA_Ped")
 
     def run_test(self):
+        global action_probs
         env = CustomEnv(self.path_planner, self.behavior_planner, event)
         env = make_vec_env(lambda: env, n_envs=1)
         if(self.event == Scenario.LANE_CHANGE):
@@ -66,8 +92,9 @@ class FullPlannerManager:
             while not done:
                 action, _ = model.predict(obs)
                 vals = model.action_probability(obs)
+                animation_lock.acquire()
                 action_probs = list(vals[0])
-                self.write_probs(action_probs)
+                animation_lock.release()
                 print(action_probs)
                 print(action)
                 obs, reward, done, info = env.step(action)
@@ -85,7 +112,11 @@ if __name__ == '__main__':
         elif event == Scenario.LANE_CHANGE:
             full_planner = FullPlannerManager(Scenario.LANE_CHANGE)
         full_planner.initialize()
-        full_planner.run_test()
+        thread = Thread(target=full_planner.run_test)
+        thread.start()
+        ani_obj = animation.FuncAnimation(fig, animate_callback, interval=100)
+        plt.show()
+        # full_planner.run_test()
 
     except rospy.ROSInterruptException:
         pass
