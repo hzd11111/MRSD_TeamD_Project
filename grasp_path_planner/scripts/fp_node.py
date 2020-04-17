@@ -9,6 +9,7 @@ distro=os.getenv("ROS_DISTRO")
 sys.path.remove("/opt/ros/"+distro+"/lib/python2.7/dist-packages")
 sys.path.append("/opt/ros/"+distro+"/lib/python2.7/dist-packages")
 import rospy
+import numpy as np
 # RL packages
 import gym
 from stable_baselines import DQN,PPO2
@@ -19,16 +20,20 @@ from stable_baselines.common.cmd_util import make_vec_env
 from path_planner import PathPlannerManager
 from rl_manager import RLManager, CustomEnv, CustomLaneChangePolicy, CustomPedestrianPolicy
 from settings import *
-
+import json
 # -----------------------------------Global------------------------------------------------------#
 dir_path = os.path.dirname(os.path.realpath(__file__))
 # -----------------------------------Code------------------------------------------------------#
+
 
 class FullPlannerManager:
     def __init__(self,event):
         self.path_planner = PathPlannerManager()
         self.behavior_planner = RLManager(event)
         self.event = event
+
+    def write_probs(self,prob_list):
+            np.savez(dir_path+"/action_probs.npz", action_probs=prob_list)
 
     def initialize(self):
         self.path_planner.initialize()
@@ -60,7 +65,10 @@ class FullPlannerManager:
             print("Count ", count, "Success ", success)
             while not done:
                 action, _ = model.predict(obs)
-
+                vals = model.action_probability(obs)
+                action_probs = list(vals[0])
+                self.write_probs(action_probs)
+                print(action_probs)
                 print(action)
                 obs, reward, done, info = env.step(action)
                 print("Reward",reward)
@@ -71,13 +79,13 @@ class FullPlannerManager:
 
 if __name__ == '__main__':
     try:
-        event = Scenario.PEDESTRIAN
+        event = CURRENT_SCENARIO
         if event==Scenario.PEDESTRIAN:
             full_planner = FullPlannerManager(Scenario.PEDESTRIAN)
         elif event == Scenario.LANE_CHANGE:
             full_planner = FullPlannerManager(Scenario.LANE_CHANGE)
         full_planner.initialize()
-        full_planner.run_train()
+        full_planner.run_test()
 
     except rospy.ROSInterruptException:
         pass

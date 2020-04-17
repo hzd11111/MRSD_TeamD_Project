@@ -34,6 +34,7 @@ from stable_baselines.deepq.policies import DQNPolicy
 from reward_manager import reward_selector, Reward, LaneChangeReward, PedestrianReward
 from settings import *
 
+
 # Convert to local
 def convert_to_local(cur_vehicle, adj_vehicle):
         result_state = VehicleState()

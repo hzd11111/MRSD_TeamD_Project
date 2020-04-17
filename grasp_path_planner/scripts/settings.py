@@ -25,3 +25,5 @@ SIM_SERVICE_NAME = "simulator"
 NODE_NAME = "full_grasp_planner"
 INVERT_ANGLES=True
 OLD_REWARD=False
+
+CURRENT_SCENARIO = Scenario.PEDESTRIAN
