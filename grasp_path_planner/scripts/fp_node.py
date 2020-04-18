@@ -51,7 +51,7 @@ class FullPlannerManager:
         if(self.event == Scenario.LANE_CHANGE):
             model = DQN.load(dir_path+"/DQN_20min")
         if(self.event == Scenario.PEDESTRIAN):
-            model = DQN.load(dir_path+"/Models/DQN_Model_CARLA_Ped")
+            model = DQN.load(dir_path+"/Models/DQN_Model_CARLA_Ped2")
         obs = env.reset()
         count = 0
         success = 0
@@ -77,7 +77,7 @@ if __name__ == '__main__':
         elif event == Scenario.LANE_CHANGE:
             full_planner = FullPlannerManager(Scenario.LANE_CHANGE)
         full_planner.initialize()
-        full_planner.run_train()
+        full_planner.run_test()
 
     except rospy.ROSInterruptException:
         pass

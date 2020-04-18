@@ -76,7 +76,7 @@ class DynamicPedestrian():
                 wp_loc = self.closest_waypoint.transform.location
                 self.offset = prev_waypoint.lane_width/4 * 2.5
                 loc   = np.array([wp_loc.x, wp_loc.y, wp_loc.z]) - perp_vector*self.offset
-                self.z_spawn_height = self.closest_waypoint.transform.location.z + 1
+                self.z_spawn_height = self.closest_waypoint.transform.location.z + 0.5
 
                 self.spawn_location = carla.Location(loc[0], loc[1], self.z_spawn_height)
                 

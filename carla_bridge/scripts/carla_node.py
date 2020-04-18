@@ -101,7 +101,7 @@ class CarlaManager:
         self.speed_limit = None
         
         self.pedestrian = None
-        self.pedestrian_wait_frames = 10
+        self.pedestrian_wait_frames = 0
         self.last_time = time.time()
   
     def getVehicleState(self, actor):
@@ -205,16 +205,21 @@ class CarlaManager:
                 #### Pedestrian Spawning
                 if(self.tm.pedestrian_mode == True):
                     if(self.pedestrian is None):
-                        current_ego_speed = np.sqrt(self.ego_vehicle.get_velocity().x**2 + self.ego_vehicle.get_velocity().y**2) * 3.6
-                        if(current_ego_speed > 35):
-                            self.tm.pedestrian_controller.waypoints_list = self.carla_handler.get_next_waypoints(self.carla_handler.world_map.get_waypoint(self.ego_vehicle.get_location(), project_to_road=True), None, k=45)[15:]
+                        current_ego_speed = np.sqrt(self.ego_vehicle.get_velocity().x**2 + self.ego_vehicle.get_velocity().y**2 + self.ego_vehicle.get_velocity().z**2) * 3.6
+                        if(current_ego_speed > 25):
+                            self.tm.pedestrian_controller.waypoints_list = self.carla_handler.get_next_waypoints(self.carla_handler.world_map.get_waypoint(self.ego_vehicle.get_location(), project_to_road=True), None, k=45)[17:19]
                             self.pedestrian = self.tm.pedestrian_controller.random_spawn()
+                            self.tm.pedestrian_controller.cross_road()
                             print("Pedestrian Spawned")
                     else:
                         if(self.pedestrian_wait_frames != 0):
                             self.pedestrian_wait_frames -= 1
                         else:
-                            self.tm.pedestrian_controller.cross_road()
+                            # self.tm.pedestrian_controller.cross_road()
+                            ego_location = self.ego_vehicle.get_location()
+                            pedestrian_location = self.pedestrian.get_location()
+                            # print("Distance:", np.sqrt((ego_location.x - pedestrian_location.x)**2 + (ego_location.y - pedestrian_location.y)**2 + (ego_location.z - pedestrian_location.z)**2))
+                            
                                 
                     
                 # ### Maintain Speed ###

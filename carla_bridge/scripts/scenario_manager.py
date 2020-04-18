@@ -45,6 +45,10 @@ from grasp_path_planner.msg import PathPlan
 
 from dynamic_pedestrian import DynamicPedestrian
 
+from os import path
+sys.path.append(path.join(path.dirname(__file__), '../../grasp_path_planner/scripts/'))
+from settings import *
+
 
 def find_weather_presets():
     rgx = re.compile('.+?(?:(?<=[a-z])(?=[A-Z])|(?<=[A-Z])(?=[A-Z][a-z])|$)')
@@ -68,18 +72,18 @@ class CustomScenario:
         
         self.world.set_weather(find_weather_presets()[2][0])
 
-        # self.scenarios_town04 = [[[40],3,4,100,20], [[39],3,4,100,20], [[46],-2,-3,100,10], [[47],-2,-3,50,10]]
-        self.scenarios_town04 = [[[40],3,4,100,30]]
-        self.scenarios_town05 = [[[37], -2, -3, 350, 20]]#[[[21,22],-1,-2,0,10]], [[37], -2, -3, 0, 0]]
+        self.scenarios_town04 = [[[40],3,4,100,20], [[39],3,4,100,20], [[46],-2,-3,100,10], [[47],-2,-3,50,10]]
+        self.scenarios_town04 = [[[40],3,4,100,20]]
+        self.scenarios_town05 = [[[37], -2, -3, 320, 20]]#[[[21,22],-1,-2,0,10]], [[37], -2, -3, 0, 0]]
         self.scenarios_town03 = [[[8,7,6], 4, 5, 0, 0]]
-        
+        self.ego_init_speed = 28
         self.pedestrian_mode = True
 
         # self.client.set_timeout(20)
         # self.client.load_world('Town05')
         # brak
         # self.client.set_timeout(2)
-        # # brak
+        # brak
         
         
     def reset(self, warm_start=False, warm_start_duration=5):
@@ -109,7 +113,7 @@ class CustomScenario:
         if(self.pedestrian_mode == True):
             num_vehicles = 0
         else:
-            num_vehicles = np.random.randint(12,15)
+            num_vehicles = np.random.randint(45,60)
         waypoints = self.world.get_map().generate_waypoints(distance=np.random.randint(15,30))
         road_waypoints = []
         for waypoint in waypoints:
@@ -170,9 +174,9 @@ class CustomScenario:
             # print(n, ":", np.sqrt(v.get_velocity().x**2 + v.get_velocity().y**2 + v.get_velocity().z**2) * 3.6, nearest_waypoint.road_id, current_speed_limit, new_limit_percentage)
             # self.traffic_manager.vehicle_percentage_speed_difference(v, new_limit_percentage)
             # # time.sleep(2)
-
             
-            # self.traffic_manager.vehicle_percentage_speed_difference(v, np.random.randint(40,50))
+            # self.traffic_manager.distance_to_leading_vehicle(v, 0)
+
             self.traffic_manager.auto_lane_change(v,False)
             self.traffic_manager.ignore_lights_percentage(v,100)
             self.traffic_manager.ignore_signs_percentage(v,100)
@@ -189,14 +193,13 @@ class CustomScenario:
         
         yaw = spawn_point.rotation.yaw *  np.pi / 180
         
-        ego_list.append(SpawnActor(vehicle_blueprint, spawn_point).then(ApplyVelocity(FutureActor, carla.Vector3D(self.vehicle_init_speed*np.cos(yaw), self.vehicle_init_speed*np.sin(yaw),0))).then(SetAutopilot(FutureActor, True)))
+        ego_list.append(SpawnActor(vehicle_blueprint, spawn_point).then(ApplyVelocity(FutureActor, carla.Vector3D(self.ego_init_speed*np.cos(yaw), self.ego_init_speed*np.sin(yaw),0))).then(SetAutopilot(FutureActor, True)))
         response = self.client.apply_batch_sync(ego_list, synchronous_master)
         ego_vehicle_ID = response[0].actor_id
         ego_vehicle = self.world.get_actors([ego_vehicle_ID])[0]
         self.traffic_manager.ignore_lights_percentage(ego_vehicle, 100)
         
-        for n, v in enumerate(my_vehicles):
-            # self.traffic_manager.distance_to_leading_vehicle(v, 1)
+        for v in my_vehicles:
             # self.traffic_manager.vehicle_percentage_speed_difference(v, 100)
             self.traffic_manager.collision_detection(v, ego_vehicle, False)
 
