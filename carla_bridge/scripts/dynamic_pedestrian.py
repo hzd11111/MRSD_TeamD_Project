@@ -7,6 +7,10 @@ import random
 import time
 import numpy as np
 
+from os import path
+sys.path.append(path.join(path.dirname(__file__), '../../grasp_path_planner/scripts/'))
+from settings import *
+
 
 class DynamicPedestrian():
     def __init__(self, world, road_id=None, lane_id=None, distance=None, ego_veh_loc=None):
@@ -37,7 +41,7 @@ class DynamicPedestrian():
         # Pedestrian motion parameters
         self.direction = None
         self.speed = None
-        self.max_speed = 5
+        self.max_speed = WALKER_MAX_SPEED
         
 
     def set_waypoints_list(self):
@@ -75,8 +79,12 @@ class DynamicPedestrian():
                 perp_vector /= np.linalg.norm(perp_vector) # normalize the vec
                 wp_loc = self.closest_waypoint.transform.location
                 self.offset = prev_waypoint.lane_width/4 * 2.5
-                loc   = np.array([wp_loc.x, wp_loc.y, wp_loc.z]) - perp_vector*self.offset
-                self.z_spawn_height = self.closest_waypoint.transform.location.z + 0.5
+                dir = -1
+                if(np.random.uniform(0,1) > 0):
+                    self.offset *= 1
+                    dir *= -1
+                loc   = np.array([wp_loc.x, wp_loc.y, wp_loc.z]) - perp_vector*self.offset*dir
+                self.z_spawn_height = self.closest_waypoint.transform.location.z + 1
 
                 self.spawn_location = carla.Location(loc[0], loc[1], self.z_spawn_height)
                 
@@ -90,7 +98,7 @@ class DynamicPedestrian():
                 self.rotation = rotation #[rotation.pitch, rotation.yaw, rotation.roll]
                 self.actor    = pedestrian
                 self.id       = pedestrian.id
-                self.direction= carla.Vector3D(x=perp_vector[0],y=perp_vector[1], z=perp_vector[2])
+                self.direction= carla.Vector3D(x=dir*perp_vector[0],y=dir*perp_vector[1], z=dir*perp_vector[2])
 
                 return pedestrian
             except:
@@ -100,7 +108,11 @@ class DynamicPedestrian():
         # print("Pedestrian Spawn Error, likely collision at all attempted spawn locations")
 
     def cross_road(self):
-        self.speed = random.random() * self.max_speed
+        if(WALKER_SAMPLE_SPEED):
+            self.speed = np.random.uniform(0.3,0.5) * self.max_speed
+        else:
+            self.speed = self.max_speed
+            
         walk  = carla.WalkerControl(self.direction, speed=self.speed, jump=False)
 
         self.actor.apply_control(walk)

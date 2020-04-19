@@ -373,7 +373,7 @@ class PedestrianReward(Reward):
 
     # ---------------------------------INTERFACES-----------------------------------------#
     def get_reward(self,desc,action):
-        print("Action",action)
+        # print("Action",action)
         if action==RLDecision.CONSTANT_SPEED.value:
             # call constant speed reward functon
             return self.speed_reward(desc,action)

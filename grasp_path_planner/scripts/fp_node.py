@@ -43,15 +43,15 @@ class FullPlannerManager:
         if self.event == Scenario.PEDESTRIAN:
             model = DQN(CustomPedestrianPolicy, env, verbose=1, learning_starts=256, batch_size=256, exploration_fraction=0.9, target_network_update_freq=100, tensorboard_log=dir_path+'/Logs/Ped', gamma=0.93, learning_rate=0.0001)
         model.learn(total_timesteps=20000)
-        model.save(dir_path+"/Models/DQN_Model_CARLA_Ped")
+        model.save(MODEL_SAVE_PATH)
 
     def run_test(self):
         env = CustomEnv(self.path_planner, self.behavior_planner, event)
         env = make_vec_env(lambda: env, n_envs=1)
         if(self.event == Scenario.LANE_CHANGE):
-            model = DQN.load(dir_path+"/DQN_20min")
+            model = DQN.load(MODEL_LOAD_PATH)
         if(self.event == Scenario.PEDESTRIAN):
-            model = DQN.load(dir_path+"/Models/DQN_Model_CARLA_Ped2")
+            model = DQN.load(MODEL_LOAD_PATH)
         obs = env.reset()
         count = 0
         success = 0
@@ -61,9 +61,9 @@ class FullPlannerManager:
             while not done:
                 action, _ = model.predict(obs)
 
-                print(action)
+                print("Action taken:", RLDecision(action))
                 obs, reward, done, info = env.step(action)
-                print("Reward",reward)
+                # print("Reward",reward)
             count += 1
             if info[0]["success"]:
                 success += 1
@@ -71,13 +71,17 @@ class FullPlannerManager:
 
 if __name__ == '__main__':
     try:
-        event = Scenario.PEDESTRIAN
+        event = CURRENT_SCENARIO
         if event==Scenario.PEDESTRIAN:
             full_planner = FullPlannerManager(Scenario.PEDESTRIAN)
         elif event == Scenario.LANE_CHANGE:
             full_planner = FullPlannerManager(Scenario.LANE_CHANGE)
         full_planner.initialize()
-        full_planner.run_test()
+        
+        if(CURRENT_MODE == Mode.TEST):
+            full_planner.run_test()
+        else:
+            full_planner.run_train()
 
     except rospy.ROSInterruptException:
         pass

@@ -277,7 +277,7 @@ class CustomEnv(gym.Env):
                     env_desc.reward.time_elapsed > self.rl_manager.eps_time)
         info = {}
         info["success"] = success
-        print("REWARD",reward)
+        # print("REWARD",reward)
         # time.sleep(2)
         return env_state, reward, done, info
 
