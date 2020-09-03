@@ -306,6 +306,7 @@ class RLManager:
         self.event = event
 
     def convertDecision(self, action):
+
         if action == RLDecision.CONSTANT_SPEED.value:
             return RLDecision.CONSTANT_SPEED
         elif action == RLDecision.ACCELERATE.value:
@@ -330,7 +331,7 @@ class RLManager:
                 ped_vehicle.vehicle_location = env_desc.nearest_pedestrian.pedestrian_location
                 ped_vehicle.vehicle_speed = env_desc.nearest_pedestrian.pedestrian_speed
                 relative_pose = convert_to_local(env_desc.cur_vehicle_state,ped_vehicle)
-                if relative_pose.vehicle_location.x < -1:
+                if relative_pose.vehicle_location.x < -10:
                     return True
             # usual conditions
             return env_desc.reward.collision or \

@@ -57,7 +57,7 @@ class FullPlannerManager:
         success = 0
         while count < 500:
             done = False
-            print("Count ", count, "Success ", success)
+            
             while not done:
                 action, _ = model.predict(obs)
 
@@ -67,6 +67,7 @@ class FullPlannerManager:
             count += 1
             if info[0]["success"]:
                 success += 1
+            print("Count ", count, "Success ", success, "Success Rate:", success*100/float(count), "%")
         print("Success Rate ", success / count, success, count)
 
 if __name__ == '__main__':

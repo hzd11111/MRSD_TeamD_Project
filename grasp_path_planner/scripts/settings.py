@@ -31,20 +31,20 @@ else:
 if(CURRENT_SCENARIO == Scenario.PEDESTRIAN):
     TOWN_ID = "Town04"
     
-    ROAD_IDs = [40]
-    LEFT_LANE_ID = 3 #Not required for this scenario
-    RIGHT_LANE_ID = 4
+    ROAD_IDs = [12]
+    LEFT_LANE_ID = 0 #Not required for this scenario
+    RIGHT_LANE_ID = -1
     
-    EGO_INIT_SPEED = 28
+    EGO_INIT_SPEED = 44.5  #46.5 for road 40, #44.5 for road 37
     NPC_INIT_SPEED = 20 #Not required for this scenario
     
-    EGO_SPAWN_IDX = 100
-    EGO_VEHICLE_MAKE = "model3"
+    EGO_SPAWN_IDX = 80
+    EGO_VEHICLE_MAKE = "tt"
     
-    WALKER_MAX_SPEED = 1.4
+    WALKER_MAX_SPEED = 1.2
     WALKER_SAMPLE_SPEED = True
     WALKER_SPAWN_DIST_MIN = 16
-    WALKER_SPAWN_DIST_MAX = 18
+    WALKER_SPAWN_DIST_MAX = 25 
     
     NPC_SPAWN_POINT_GAP_LOW = 15 #Not required for this scenario
     NPC_SPAWN_POINT_GAP_HIGH = 30 #Not required for this scenario
@@ -52,19 +52,19 @@ if(CURRENT_SCENARIO == Scenario.PEDESTRIAN):
 
 else:
     
-    TOWN_ID = "Town04"
+    TOWN_ID = "Town05"
     
-    ROAD_IDs = [40]
-    LEFT_LANE_ID = 3
-    RIGHT_LANE_ID = 4
+    ROAD_IDs = [37]
+    LEFT_LANE_ID = -2
+    RIGHT_LANE_ID = -3
     
-    EGO_INIT_SPEED = 28
+    EGO_INIT_SPEED = 20 #30 for high speed on road40
     NPC_INIT_SPEED = 20
-    EGO_SPAWN_IDX = 100
+    EGO_SPAWN_IDX = 320
     EGO_VEHICLE_MAKE = "model3"   
     
-    LOW_NUM_VEHICLES = 8
-    HIGH_NUM_VEHICLES = 12
+    LOW_NUM_VEHICLES = 45
+    HIGH_NUM_VEHICLES = 46
     
     NPC_SPAWN_POINT_GAP_LOW = 15
     NPC_SPAWN_POINT_GAP_HIGH = 30
@@ -115,7 +115,7 @@ else:
         SWITCH_LANE = 1
         NO_ACTION = 4
         
-    OLD_REWARD=True
+    OLD_REWARD=False
         
     
 ###### INIT TO ACTUAL SPEED MAPPINGS FOR EGO VEHICLE ######

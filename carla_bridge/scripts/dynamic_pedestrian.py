@@ -22,7 +22,7 @@ class DynamicPedestrian():
         self.walker_blueprint = None
         self.spawn_location = None
         self.direction = None
-        self.max_spawn_attempts = 5
+        self.max_spawn_attempts = 10
         
 
         # Lane information
@@ -109,7 +109,7 @@ class DynamicPedestrian():
 
     def cross_road(self):
         if(WALKER_SAMPLE_SPEED):
-            self.speed = np.random.uniform(0.3,0.5) * self.max_speed
+            self.speed = np.random.uniform(0.5,1) * self.max_speed
         else:
             self.speed = self.max_speed
             

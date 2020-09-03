@@ -13,6 +13,7 @@ __version__ = "0.1"
 import time
 import subprocess
 import sys
+import os
 sys.path.insert(0, "/home/mayank/Mayank/MRSD_TeamD_Project")
 sys.path.insert(0, "/home/mayank/Carla/CARLA_0.9.8/PythonAPI/carla/")
 # sys.path.insert(0, "/home/mayank/Carla/carla/Dist/0.9.7.4/PythonAPI/carla/dist/")
@@ -47,6 +48,9 @@ from grasp_path_planner.msg import PathPlan
 
 from scenario_manager import CustomScenario
 from grasp_path_planner.srv import SimService, SimServiceResponse
+from agents.tools.misc import get_speed
+
+from utils import *
 
 
 #######################################################################################
@@ -103,6 +107,8 @@ class CarlaManager:
         self.pedestrian = None
         self.pedestrian_wait_frames = 0
         self.last_time = time.time()
+        
+        self.metrics = DataCollector()
   
     def getVehicleState(self, actor):
 
@@ -142,6 +148,7 @@ class CarlaManager:
 
         lane_cur = Lane()
         lane_points = []
+
         for i,waypoint in enumerate(waypoints):
             lane_point = LanePoint()
             lane_point.pose.y = waypoint.transform.location.y
@@ -149,16 +156,35 @@ class CarlaManager:
             lane_point.pose.theta = waypoint.transform.rotation.yaw * np.pi / 180 # CHECK : Changed this to radians.
             lane_point.width = 3.5 # TODO
             lane_points.append(lane_point)
+            
         lane_cur.lane = lane_points
-
+        
+        
+        
+        
         return lane_cur
+    
+    def distance_to_line(self, p1, p2, x, y):
+        x_diff = p2[0] - p1[0]
+        y_diff = p2[1] - p1[1]
+        num = abs(y_diff*x - x_diff*y + p2[0]*p1[1] - p2[1]*p1[0])
+        den = np.sqrt(y_diff**2 + x_diff**2)
+        return num/float(den)
+    
+
+        
+
+
+        
+        
     
     def pathRequest(self, data):
         
         # tmp = self.last_time
         # self.last_time = time.time()
         # print("Time diff:", self.last_time - tmp)
-        
+        os.system("clear")
+
         reset_sim = False
         if self.first_frame_generated:
             data = data.path_plan
@@ -169,7 +195,39 @@ class CarlaManager:
             reset_sim = data.reset_sim
             future_poses = data.future_poses
             
-            # ego_location = self.ego_vehicle.get_location()
+            ### Find distance from centre Line ###
+            ego_location = self.ego_vehicle.get_location()
+            ego_waypoint = self.carla_handler.world_map.get_waypoint(self.ego_vehicle.get_location(), project_to_road=True)
+            next_waypoint = ego_waypoint.next(3)[0]
+            prev_waypoint = ego_waypoint.previous(3)[0]
+            
+            point1 = [next_waypoint.transform.location.x, next_waypoint.transform.location.y]
+            point2 = [prev_waypoint.transform.location.x, prev_waypoint.transform.location.y]
+            lane_displacement = self.distance_to_line(point1, point2, ego_location.x, ego_location.y)
+            speed_to_show = get_speed(self.ego_vehicle)
+            
+            if(self.tm.pedestrian_mode == False):
+                distances2 = [(((ego_location.x - actor.get_location().x)**2 + (ego_location.y - actor.get_location().y)**2),actor) for actor in self.tm.world.get_actors().filter('vehicle.*')] 
+                dists = [distances2[i][0] for i in range(len(distances2))]
+                actors = [distances2[i][1] for i in range(len(distances2))]
+                sorted_idx2 = np.argsort(dists)
+                # closest_vehicle_distance = np.sqrt(dists[sorted_idx2[1]])
+                closest_vehicle = actors[sorted_idx2[1]]
+                
+                bbox_ego = get_bounding_box(self.ego_vehicle)
+                bbox_closest_vehicle = get_bounding_box(closest_vehicle)
+                closest_distance = get_closest_distance(bbox_ego, bbox_closest_vehicle)
+                
+                if(lane_displacement < 0.05):
+                    print("Lane marking displacement:", 1.75-self.ego_vehicle.bounding_box.extent.x/2.0 - lane_displacement, "| Current Speed:", speed_to_show, " | Distance to closest vehicle:", closest_distance)
+                    self.metrics.update(closest_distance,  1.75-self.ego_vehicle.bounding_box.extent.x/2.0 - lane_displacement, [ego_location.x, ego_location.y])
+                else:
+                    print("Lane marking displacement (Switching Lanes):", lane_displacement, "| Current Speed:", speed_to_show, " | Distance to closest vehicle:", closest_distance)
+                    self.metrics.update(closest_distance, lane_displacement, [ego_location.x, ego_location.y], ignore_lane=True)
+                
+            
+            
+            
             # future_loc = carla.Location(x=ego_location.x, y=ego_location.y, z=ego_location.z + 1)
             # self.carla_handler.world.debug.draw_string(future_loc, str(tracking_speed), draw_shadow=False,
             #                 color=carla.Color(r=0, g=0, b=255), life_time=0.05,
@@ -197,6 +255,10 @@ class CarlaManager:
                 
             else:
                 self.first_run = 0
+                
+                
+                
+                
 
                 # time.sleep(1)
                 ### Apply Control ###
@@ -218,7 +280,21 @@ class CarlaManager:
                             # self.tm.pedestrian_controller.cross_road()
                             ego_location = self.ego_vehicle.get_location()
                             pedestrian_location = self.pedestrian.get_location()
-                            print("Distance:", np.sqrt((ego_location.x - pedestrian_location.x)**2 + (ego_location.y - pedestrian_location.y)**2 + (ego_location.z - pedestrian_location.z)**2))
+                            
+                            distances2 = [(((ego_location.x - actor.get_location().x)**2 + (ego_location.y - actor.get_location().y)**2),actor) for actor in self.tm.world.get_actors().filter('walker.*')] 
+                            dists = [distances2[i][0] for i in range(len(distances2))]
+                            actors = [distances2[i][1] for i in range(len(distances2))]
+                            sorted_idx2 = np.argsort(dists)
+                            # closest_vehicle_distance = np.sqrt(dists[sorted_idx2[1]])
+                            closest_vehicle = actors[sorted_idx2[0]]
+                            
+                            bbox_ego = get_bounding_box(self.ego_vehicle)
+                            bbox_closest_vehicle = get_bounding_box(closest_vehicle)
+                            closest_distance = get_closest_distance(bbox_ego, bbox_closest_vehicle) + 0.1
+                            
+                            print("Speed:", get_speed(self.ego_vehicle), "| Closest Distance:", closest_distance, "| Lane Marking Displacement:", lane_displacement)
+                            self.metrics.update(closest_distance, lane_displacement, [ego_location.x, ego_location.y])
+
                             
                                 
                     
@@ -289,6 +365,7 @@ class CarlaManager:
         else:
             lane_cur = self.lane_cur
             
+            
             # Left Lane
             lane_left = self.lane_left
             
@@ -309,7 +386,7 @@ class CarlaManager:
             vehicle_rear = vehicle_ego
         else:	
             vehicle_rear = self.getVehicleState(rear_vehicle)
-            
+        
         # Contruct enviroment state ROS message
         env_state = EnvironmentState()
         env_state.cur_vehicle_state = vehicle_ego
@@ -320,6 +397,8 @@ class CarlaManager:
         env_state.adjacent_lane_vehicles, _ = self.getClosest([self.getVehicleState(actor) for actor in actors_in_left_lane], vehicle_ego, self.max_num_vehicles)
         env_state.speed_limit = self.speed_limit
 
+        
+        # print(self.get_bounding_box(self.ego_vehicle))
         # print(env_state.cur_vehicle_state.vehicle_location.theta)
         for idx in _:
             tmp_vehicle = actors_in_left_lane[idx]
@@ -327,6 +406,19 @@ class CarlaManager:
             tmp_bounding_box = tmp_vehicle.bounding_box
             tmp_bounding_box.location += tmp_transform.location
             self.carla_handler.world.debug.draw_box(tmp_bounding_box, tmp_transform.rotation, life_time=0.05, color=carla.Color(r=128, g=0, b=128))
+        
+        if(len(_) == 0):
+            current_lane_vehicles, _2 = self.getClosest([self.getVehicleState(actor) for actor in actors_in_current_lane], vehicle_ego, self.max_num_vehicles)
+            for idx in _2:
+                tmp_vehicle = actors_in_current_lane[idx]
+                tmp_transform = tmp_vehicle.get_transform()
+                tmp_bounding_box = tmp_vehicle.bounding_box
+                tmp_bounding_box.location += tmp_transform.location
+                # tmp_bounding_box.extent.x = tmp_bounding_box.extent.x * 1.5
+                # tmp_bounding_box.extent.y = tmp_bounding_box.extent.y * 1.5
+                # tmp_bounding_box.extent.z = tmp_bounding_box.extent.z * 1.5              
+
+                self.carla_handler.world.debug.draw_box(tmp_bounding_box, tmp_transform.rotation, life_time=0.05, color=carla.Color(r=128, g=0, b=128))
         
         
         
@@ -345,6 +437,7 @@ class CarlaManager:
             tmp_transform = self.pedestrian.get_transform()
             tmp_bounding_box = self.pedestrian.bounding_box
             tmp_bounding_box.location += tmp_transform.location
+
             self.carla_handler.world.debug.draw_box(tmp_bounding_box, tmp_transform.rotation, life_time=0.05, color=carla.Color(r=128, g=0, b=128))
         else:
             env_state.nearest_pedestrian = Pedestrian()
@@ -388,6 +481,17 @@ class CarlaManager:
         self.timestamp = 0
         self.collision_marker = 0
         self.first_run = 1
+        # os.system("clear")
+        print("Run Metrics:")
+        print("Distance travelled in currect iteration:", self.metrics.curr_distance_travelled)
+        self.metrics.reset()
+
+        if(self.tm.pedestrian_mode == True):
+            print("Avg Distance:", self.metrics.avg_distance_travelled)
+        else:
+            print("Avg Distance To Lane Change:", self.metrics.avg_distance_travelled)
+        # print("Avg Min Displacement from Lane Marking:", self.metrics.avg_max_dist_lane)
+        # print("Avg Min Distance to objects:", self.metrics.avg_min_dist_actor)
 
         # time.sleep(1)
         synchronous_master = True
@@ -415,6 +519,14 @@ class CarlaManager:
         
         distances = [((ego_x - adjacent_lane_vehicles[i].vehicle_location.x)**2 + (ego_y - adjacent_lane_vehicles[i].vehicle_location.y)**2) for i in range(len(adjacent_lane_vehicles))]
         sorted_idx = np.argsort(distances)[:n]
+
+        # if(len(sorted_idx)==0):
+        #     distances2 = [((ego_x - actor.get_location().x)**2 + (ego_y - actor.get_location().y)**2) for actor in self.tm.world.get_actors().filter('vehicle.*')] 
+        #     sorted_idx2 = np.argsort(distances2)[:n]
+        #     print("Closest Vehicle Distance:", np.sqrt(distances2[sorted_idx2[1]]))
+        # else:
+        #     print("Closest Vehicle Distance:", np.sqrt(distances[sorted_idx[0]]))
+
         
         return [adjacent_lane_vehicles[i] for i in sorted_idx], sorted_idx
     
@@ -478,6 +590,7 @@ class CarlaManager:
         # publish the first frame 
         # Current Lane
         self.lane_cur = self.getLanePoints(current_lane_waypoints)
+        
         
         # Left Lane
         self.lane_left = self.getLanePoints(left_lane_waypoints)

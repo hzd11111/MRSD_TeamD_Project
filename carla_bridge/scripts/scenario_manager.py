@@ -70,8 +70,7 @@ class CustomScenario:
         
         if(CURRENT_SCENARIO == Scenario.PEDESTRIAN):
             self.pedestrian_controller = DynamicPedestrian(self.world)
-        
-        self.world.set_weather(find_weather_presets()[2][0])
+        self.world.set_weather(find_weather_presets()[0][0])
 
         self.scenarios_town04 = [[[40],3,4,100,20], [[39],3,4,100,20], [[46],-2,-3,100,10], [[47],-2,-3,50,10]]
         self.scenarios_town04 = [[[52],0,1,0,20]]
@@ -89,10 +88,10 @@ class CustomScenario:
             self.pedestrian_spawn_dist_high = WALKER_SPAWN_DIST_MAX
 
         # self.client.set_timeout(30)
-        # self.client.load_world(TOWN_ID)
+        # self.client.load_world("Town01")
         # brak
         # self.client.set_timeout(2)
-        # # [0, 0, 0, 32.21003291083181, 156.01067181080413, -29.388363302418508, -0.004837898956386594, 0.0]
+        # [0, 0, 0, 32.21003291083181, 156.01067181080413, -29.388363302418508, -0.004837898956386594, 0.0]
         # brak
         
         
@@ -190,7 +189,7 @@ class CustomScenario:
             # self.traffic_manager.vehicle_percentage_speed_difference(v, new_limit_percentage)
             # # time.sleep(2)
             
-            # self.traffic_manager.distance_to_leading_vehicle(v, 0)
+            # self.traffic_manager.distance_to_leading_vehicle(v, -100)
 
             self.traffic_manager.auto_lane_change(v,False)
             self.traffic_manager.ignore_lights_percentage(v,100)

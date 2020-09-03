@@ -242,6 +242,7 @@ class LaneChangeReward(Reward):
     
     def update(self,desc,action):
         cur_dist = self.get_closest_distance(desc)
+        # print("Closest Distance Now:", cur_dist)
         if self.closest_dist > cur_dist:
             self.closest_dist=cur_dist
         self.cum_vel_err+=self.get_velocity_error(desc.cur_vehicle_state.vehicle_speed)
@@ -275,7 +276,7 @@ class PedestrianReward(Reward):
         if desc.reward.collision:
             return -self.max_reward
         # check if pedestrian avoided
-        elif desc.nearest_pedestrian.exist and relative_pose.vehicle_location.x < -1:
+        elif desc.nearest_pedestrian.exist and relative_pose.vehicle_location.x < -10:
             reward=self.max_reward
         # add costs of overspeeding
         reward-=self.vel_cost()
