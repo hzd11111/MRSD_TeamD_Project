@@ -3,7 +3,6 @@ import sys
 from typing import Optional, List
 from configparser import ConfigParser
 
-
 config = ConfigParser()
 config.read("config.ini")
 CARLA_PATH = config.get("main", "CARLA_PATH")
@@ -62,8 +61,8 @@ def get_global_planner(
     """
     Get a global route planner object. The planner object can be used to retrieve point to point routes and route topologies.
     """
-    map = world.get_map()
-    dao = GlobalRoutePlannerDAO(map, planner_resolution)
+    world_map = world.get_map()
+    dao = GlobalRoutePlannerDAO(world_map, planner_resolution)
     grp = GlobalRoutePlanner(dao)
     grp.setup()
     return grp
@@ -79,7 +78,7 @@ def spawn_vehicle(
     If no spawn point is provided, randomly selects the spawn point from the set of pre-assigned spawn points in the map.
     """
 
-    if spawn_point == None:
+    if spawn_point is None:
         spawn_point = random.choice(world.get_map().get_spawn_points())
     vehicle_blueprint = world.get_blueprint_library().filter(vehicle_type)[0]
     vehicle = world.spawn_actor(vehicle_blueprint, spawn_point)
