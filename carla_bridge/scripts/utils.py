@@ -87,7 +87,7 @@ def get_matrix(transform):
 
 
 
-def create_bb_points(vehicle):
+def create_bb_points(vehicle) -> np.ndarray:
     """
     Returns 3D bounding box for a vehicle.
     """

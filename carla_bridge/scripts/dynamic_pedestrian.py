@@ -13,7 +13,7 @@ from settings import *
 
 
 class DynamicPedestrian():
-    def __init__(self, world, road_id=None, lane_id=None, distance=None, ego_veh_loc=None):
+    def __init__(self, world, road_id=None, lane_id=None, distance=None, ego_veh_loc=None) -> None:
         self.location = None
         self.rotation = None
         self.world    = world
@@ -44,7 +44,7 @@ class DynamicPedestrian():
         self.max_speed = WALKER_MAX_SPEED
         
 
-    def set_waypoints_list(self):
+    def set_waypoints_list(self) -> None :
         '''
         Gets a list of road waypoints from CARLA map for the particular road and lane id
         Input: road id and lane id
@@ -59,9 +59,7 @@ class DynamicPedestrian():
 
         self.lane_width = first_waypoint.lane_width
 
-        # return waypoints_list
-
-    def random_spawn(self):
+    def random_spawn(self) -> carla.Actor:
         spawn_attempts = 0
         # choose walker type
         self.walker_blueprint = self.world.get_blueprint_library().filter('walker.pedestrian.*')[5]
@@ -117,7 +115,7 @@ class DynamicPedestrian():
 
         self.actor.apply_control(walk)
 
-    def destroy(self):
+    def destroy(self) -> None:
         if(self.actor is not None):
             self.actor.destroy()
             print('Pedestrian destroyed...')

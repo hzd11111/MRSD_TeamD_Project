@@ -46,7 +46,7 @@ class GRASPPIDController():
         self._lon_controller = PIDLongitudinalController(self._vehicle, **args_longitudinal)
         self._lat_controller = PIDLateralController(self._vehicle, **args_lateral)
 
-    def run_step(self, target_speed, pose):
+    def run_step(self, target_speed, pose) -> carla.VehicleControl:
         """
         Execute one step of control invoking both lateral and longitudinal PID controllers to reach a target waypoint
         at a given target_speed.
@@ -74,7 +74,7 @@ class PIDLongitudinalController():
     PIDLongitudinalController implements longitudinal control using a PID.
     """
 
-    def __init__(self, vehicle, K_P=1.0, K_D=0.0, K_I=0.0, dt=0.03):
+    def __init__(self, vehicle, K_P=1.0, K_D=0.0, K_I=0.0, dt=0.03) -> None:
         """
         :param vehicle: actor to apply to local planner logic onto
         :param K_P: Proportional term
@@ -89,7 +89,7 @@ class PIDLongitudinalController():
         self._dt = dt
         self._e_buffer = deque(maxlen=30)
 
-    def run_step(self, target_speed, debug=False):
+    def run_step(self, target_speed, debug=False) -> np.ndarray:
         """
         Execute one step of longitudinal control to reach a given target speed.
         :param target_speed: target speed in Km/h
@@ -102,7 +102,7 @@ class PIDLongitudinalController():
 
         return self._pid_control(target_speed, current_speed)
 
-    def _pid_control(self, target_speed, current_speed):
+    def _pid_control(self, target_speed, current_speed) -> np.ndarray:
         """
         Estimate the throttle of the vehicle based on the PID equations
         :param target_speed:  target speed in Km/h
@@ -128,7 +128,7 @@ class PIDLateralController():
     PIDLateralController implements lateral control using a PID.
     """
 
-    def __init__(self, vehicle, K_P=1.0, K_D=0.0, K_I=0.0, dt=0.03):
+    def __init__(self, vehicle, K_P=1.0, K_D=0.0, K_I=0.0, dt=0.03) -> None:
         """
         :param vehicle: actor to apply to local planner logic onto
         :param K_P: Proportional term
@@ -143,7 +143,7 @@ class PIDLateralController():
         self._dt = dt
         self._e_buffer = deque(maxlen=10)
 
-    def run_step(self, pose):
+    def run_step(self, pose) -> np.ndarray:
         """
         Execute one step of lateral control to steer the vehicle towards a certain waypoin.
         :param waypoint: target waypoint
@@ -153,7 +153,7 @@ class PIDLateralController():
         """
         return self._pid_control(pose, self._vehicle.get_transform())
 
-    def _pid_control(self, pose, vehicle_transform):
+    def _pid_control(self, pose, vehicle_transform) -> np.ndarray:
         """
         Estimate the steering angle of the vehicle based on the PID equations
         :param waypoint: target waypoint
