@@ -169,11 +169,13 @@ class CustomPedestrianPolicy(DQNPolicy):
         with tf.variable_scope("embedding_network", reuse=tf.AUTO_REUSE):
             out = tf_layers.fully_connected(out, num_outputs=16, activation_fn=tf.nn.relu)
             out = tf_layers.fully_connected(out, num_outputs=32, activation_fn=tf.nn.relu)
+            out = tf_layers.fully_connected(out, num_outputs=64, activation_fn=tf.nn.relu)
         return out
 
     def q_net(self, input_vec, out_num):
         out = input_vec
         with tf.variable_scope("action_value"):
+            out = tf_layers.fully_connected(out, num_outputs=64, activation_fn=tf.nn.relu)
             out = tf_layers.fully_connected(out, num_outputs=32, activation_fn=tf.nn.relu)
             out = tf_layers.fully_connected(out, num_outputs=16, activation_fn=tf.nn.relu)
             out = tf_layers.fully_connected(out, num_outputs=out_num, activation_fn=tf.nn.tanh)
@@ -253,7 +255,7 @@ class CustomEnv(gym.Env):
         if INVERT_ANGLES:
             env_copy = self.invert_angles(env_desc)
         self.rl_manager.reward_manager.update(env_copy,action)
-        done = self.rl_manager.terminate(env_copy)
+        done, expired = self.rl_manager.terminate(env_copy)
         end_of_action = end_of_action or done
         while not end_of_action:
             env_desc, end_of_action = self.path_planner.performAction(decision)
@@ -261,16 +263,16 @@ class CustomEnv(gym.Env):
             if INVERT_ANGLES:
                 env_copy = self.invert_angles(env_desc)
             self.rl_manager.reward_manager.update(env_copy,action)
-            done = self.rl_manager.terminate(env_copy)
+            done, expired = self.rl_manager.terminate(env_copy)
             end_of_action = end_of_action or done
         env_state = self.rl_manager.makeStateVector(env_copy, self.to_local)
-        reward = self.rl_manager.reward_manager.get_reward(env_copy,action)
+        reward = self.rl_manager.reward_manager.get_reward(env_copy,action, expired)
         # for sending success signal during testing
-        success = not( env_desc.reward.collision or \
-                    env_desc.reward.time_elapsed > self.rl_manager.eps_time)
+        success = done and (not( env_desc.reward.collision or \
+                    env_desc.reward.time_elapsed > self.rl_manager.eps_time))
         info = {}
         info["success"] = success
-        print("REWARD",reward)
+        #print("REWARD",reward)
         # time.sleep(2)
         return env_state, reward, done, info
 
@@ -311,9 +313,9 @@ class RLManager:
 
     def terminate(self, env_desc):
         if self.event == Scenario.LANE_CHANGE:
-            return env_desc.reward.collision or \
+            return (env_desc.reward.collision or \
                 env_desc.reward.path_planner_terminate or \
-                    env_desc.reward.time_elapsed > self.eps_time
+                    env_desc.reward.time_elapsed > self.eps_time), env_desc.reward.time_elapsed > self.eps_time
         elif self.event == Scenario.PEDESTRIAN:
             # return true if vehicle has moved past the vehicle
             ped_vehicle = VehicleState()
@@ -323,27 +325,33 @@ class RLManager:
                 ped_vehicle.vehicle_speed = env_desc.nearest_pedestrian.pedestrian_speed
                 relative_pose = convert_to_local(env_desc.cur_vehicle_state,ped_vehicle)
                 if relative_pose.vehicle_location.x < -1:
-                    return True
+                    return True, False
             # usual conditions
-            return env_desc.reward.collision or \
-                env_desc.reward.path_planner_terminate or \
-                    env_desc.reward.time_elapsed > self.eps_time
+
+            return (env_desc.reward.collision or \
+                    env_desc.reward.path_planner_terminate or \
+                    env_desc.reward.time_elapsed > self.eps_time), env_desc.reward.time_elapsed > self.eps_time
 
     def rewardCalculation(self, env_desc):
         reward = 0
         if env_desc.reward.collision:
             reward = reward - 1
-            print("Collision")
+            #print("Collision")
         elif env_desc.reward.path_planner_terminate:
-            reward += env_desc.reward.action_progress
-            print("Progress",env_desc.reward.action_progress)
+            if self.event == Scenario.LANE_CHANGE:
+                reward += env_desc.reward.action_progress
+            elif self.event == Scenario.PEDESTRIAN:
+                reward += 1
+
+            #print("Progress",env_desc.reward.action_progress)
         return reward
 
     def append_vehicle_state(self, env_state, vehicle_state):
         env_state.append(vehicle_state.vehicle_location.x)
         env_state.append(vehicle_state.vehicle_location.y)
-        env_state.append(vehicle_state.vehicle_location.theta)
-        env_state.append(vehicle_state.vehicle_speed)
+        env_state.append(vehicle_state.vehicle_speed * np.cos(vehicle_state.vehicle_location.theta))
+        env_state.append(vehicle_state.vehicle_speed * np.sin(vehicle_state.vehicle_location.theta))
+        #env_state.append(vehicle_state.vehicle_speed)
         return
 
     def makeStateVector(self, data, local=False):

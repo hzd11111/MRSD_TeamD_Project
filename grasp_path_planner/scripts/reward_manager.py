@@ -70,7 +70,7 @@ class Reward(ABC):
         self.max_vel = 20
         self.min_dist = 0.5
         self.k_vel = 0.01
-        self.p_vel = 0.01
+        self.p_vel = 0.05
         self.k_pos = 1
         self.k_col = -10
         self.k_succ = 20
@@ -174,7 +174,7 @@ class Reward(ABC):
         return
 
     @abstractmethod
-    def get_reward(self,desc,action):
+    def get_reward(self,desc,action, expired):
         return
     
     @abstractmethod
@@ -207,7 +207,7 @@ class LaneChangeReward(Reward):
         cost = max(0,1/(self.closest_dist+r_inv)-1/(self.min_dist+r_inv))
         return self.k_pos*cost
     
-    def lane_change_reward(self,desc,action):
+    def lane_change_reward(self,desc,action, expired):
         if desc.reward.collision:
             return -self.max_reward
         else:
@@ -256,7 +256,7 @@ class PedestrianReward(Reward):
         self.max_reward = 1
 
     # ---------------------------------HELPERS-----------------------------------------#
-    def speed_reward(self,desc, action):
+    def speed_reward(self, desc, action):
         reward=0
         self.min_dist = desc.nearest_pedestrian.radius
         ped_vehicle = VehicleState()
@@ -280,6 +280,9 @@ class PedestrianReward(Reward):
         # add costs of overspeeding
         reward-=self.vel_cost()
         reward-=self.position_cost()
+
+        reward = max(min(reward, self.max_reward), -self.max_reward)
+
         self.reset()
         return reward
 
@@ -372,8 +375,9 @@ class PedestrianReward(Reward):
         return closest
 
     # ---------------------------------INTERFACES-----------------------------------------#
-    def get_reward(self,desc,action):
-        print("Action",action)
+    def get_reward(self,desc,action, expired):
+        if expired:
+            return -self.max_reward
         if action==RLDecision.CONSTANT_SPEED.value:
             # call constant speed reward functon
             return self.speed_reward(desc,action)
@@ -390,7 +394,7 @@ class PedestrianReward(Reward):
             cur_dist = self.get_closest_distance(desc)
             if self.closest_dist > cur_dist:
                 self.closest_dist=cur_dist
-        self.cum_vel_err+=self.get_velocity_error(desc.cur_vehicle_state.vehicle_speed)
+        self.cum_vel_err = max(self.cum_vel_err, self.get_velocity_error(desc.cur_vehicle_state.vehicle_speed))
 
     def reset(self):
         self.closest_dist=1e5
