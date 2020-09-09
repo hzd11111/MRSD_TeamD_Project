@@ -10,7 +10,7 @@ __version__ = "0.1"
 import carla
 import numpy as np
 
-def get_matrix(transform):
+def get_matrix(transform) -> np.ndarray:
     """
     Creates matrix from carla transform.
     """
@@ -40,7 +40,7 @@ def get_matrix(transform):
 
 
 
-def create_bb_points(vehicle):
+def create_bb_points(vehicle) -> np.ndarray:
     """
     Returns 3D bounding box for a vehicle.
     """
