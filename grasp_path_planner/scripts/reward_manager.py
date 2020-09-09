@@ -51,13 +51,6 @@ def convert_to_local(cur_vehicle, adj_vehicle):
         # calculate and set relative speed
         res_vel = np.array([vx-cvx,vy-cvy])
         result_state.vehicle_speed = speed # np.linalg.norm(res_vel)
-        # print("ADJ-----------------")
-        # print(adj_vehicle)
-        # print("CUR-----------------")
-        # print(cur_vehicle)
-        # print("RESULT--------------")
-        # print(result_state)
-        # time.sleep(5)
         return result_state
 
 # Parent Reward Class
@@ -266,12 +259,7 @@ class PedestrianReward(Reward):
             ped_vehicle.vehicle_location = desc.nearest_pedestrian.pedestrian_location
             ped_vehicle.vehicle_speed = desc.nearest_pedestrian.pedestrian_speed
             relative_pose = convert_to_local(desc.cur_vehicle_state,ped_vehicle)
-            # print("CUR")
-            # print(desc.cur_vehicle_state)
-            # print("PED")
-            # print(ped_vehicle)
-            # print("RELATIVE")
-            # print(relative_pose)
+
         # check if pedestrian collided
         if desc.reward.collision:
             return -self.max_reward
@@ -367,14 +355,10 @@ class PedestrianReward(Reward):
             closest = abs(np.dot(point, ego_lines[2]))
         elif region == 8:
             closest = np.linalg.norm(point-np.array(ego_bb[2]+[1]))
-        # print("Closest distance is ",closest)
-        # print("Cur Vehicle", desc.cur_vehicle_state)
-        # print("Pedestrian", desc.nearest_pedestrian)
         return closest
 
     # ---------------------------------INTERFACES-----------------------------------------#
     def get_reward(self,desc,action):
-        # print("Action",action)
         if action==RLDecision.CONSTANT_SPEED.value:
             # call constant speed reward functon
             return self.speed_reward(desc,action)

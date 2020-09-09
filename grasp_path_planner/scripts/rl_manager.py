@@ -68,12 +68,6 @@ def convert_to_local(cur_vehicle, adj_vehicle):
         # calculate and set relative speed
         res_vel = np.array([vx-cvx,vy-cvy])
         result_state.vehicle_speed = speed # np.linalg.norm(res_vel)
-        # print("ADJ-----------------")
-        # print(adj_vehicle)
-        # print("CUR-----------------")
-        # print(cur_vehicle)
-        # print("RESULT--------------")
-        # print(result_state)
         # time.sleep(5)
         return result_state
 
@@ -228,7 +222,6 @@ class CustomEnv(gym.Env):
             N_ACTIONS=3
             self.action_space = spaces.Discrete(N_ACTIONS)
             self.observation_space = spaces.Box(low = -1000, high=1000, shape = (1,8))
-            print("Here")
         elif event==Scenario.LANE_CHANGE:
             N_ACTIONS=4
             self.action_space = spaces.Discrete(N_ACTIONS)
@@ -277,7 +270,6 @@ class CustomEnv(gym.Env):
                     env_desc.reward.time_elapsed > self.rl_manager.eps_time)
         info = {}
         info["success"] = success
-        # print("REWARD",reward)
         # time.sleep(2)
         return env_state, reward, done, info
 
@@ -345,7 +337,6 @@ class RLManager:
             print("Collision")
         elif env_desc.reward.path_planner_terminate:
             reward += env_desc.reward.action_progress
-            print("Progress",env_desc.reward.action_progress)
         return reward
 
     def append_vehicle_state(self, env_state, vehicle_state):

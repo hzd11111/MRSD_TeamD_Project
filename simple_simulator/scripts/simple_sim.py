@@ -240,8 +240,6 @@ class SimpleSimulator:
     def pathRequest(self, msg):
         new_time = rospy.Time.now()
 
-        # if self.prev_time:
-        #     print "Iteration Duration: ", (new_time - self.prev_time).nsecs * 1e-6
         self.prev_time = new_time
         if self.first_frame_generated:
             msg = msg.path_plan
@@ -270,20 +268,16 @@ class SimpleSimulator:
     def pathCallback(self, msg):
         self.lock.acquire()
 
-        #print("New path received with id:", msg.id)
         if not msg.id == self.id_waiting:
             self.lock.release()
             return
-        #print "Simulator Path Plan Msg Delay", (rospy.Time.now()-msg.sent_time).nsecs * 1e-6
 
         tracking_pose = msg.tracking_pose
         tracking_speed = msg.tracking_speed/3.6
         reset_sim = msg.reset_sim
         self.end_of_action = msg.end_of_action
         self.action_progress = msg.action_progress
-        #print("Self.id:", self.id)
         new_time = rospy.Time.now()
-        #print "Iteration Duration: ", (new_time - self.prev_time).nsecs * 1e-6
         self.id_waiting = self.id
         self.lock.release()
         if reset_sim:
@@ -564,9 +558,6 @@ class SimpleSimulator:
 
         # ego vehicle
         publish_msg.cur_vehicle_state = self.controlling_vehicle.convert2ROS()
-        #print("Simple Sim: Current Vehicle State")
-        #print(self.controlling_vehicle.x)
-        #print(self.controlling_vehicle.y)
 
         # max # vehicles
         publish_msg.max_num_vehicles = NUM_NEXT_LANE_VEHICLES
