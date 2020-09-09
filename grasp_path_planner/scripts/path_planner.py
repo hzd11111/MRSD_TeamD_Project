@@ -32,14 +32,6 @@ class VecTemp:
         self.x = x
         self.y = y
 
-    # def __init__(self, x, y):
-    #	self.x = x
-    #	self.y = y
-
-    # def __init__(self, pose):
-    #	self.x = pose.x
-    #	self.y = pose.y
-
     def norm(self):
         return math.sqrt(self.x ** 2 + self.y ** 2)
 
@@ -67,11 +59,6 @@ class PoseTemp:
             self.x = 0
             self.y = 0
             self.theta = 0
-
-    # def __init__(self, ros_pose):
-    #	self.x = ros_pose.x
-    #	self.y = ros_pose.y
-    #	self.theta = self.wrapToPi(ros_pose.theta)
 
     def wrapToPi(self, theta):
         return (theta + math.pi) % (2. * math.pi) - math.pi
@@ -112,9 +99,6 @@ class PoseSpeedTemp(PoseTemp):
         PoseTemp.__init__(self)
         self.speed = 0
 
-    # def __init__(self, pose, speed):
-    #	self.speed = speed
-    #	PoseTemp.__init__(self,pose)
     def addToPose(self, pose):
         new_pose = PoseSpeedTemp()
         new_pose.x = pose.x + self.x * math.cos(pose.theta) - self.y * math.sin(pose.theta)
@@ -146,36 +130,23 @@ class TrajGenerator:
     def trajPlan(self, rl_data, sim_data):
         if len(sim_data.current_lane.lane) <= 0 or len(sim_data.next_lane.lane) <= 0:
             print("Lane has no component")
-        #print("RL_DATA:", rl_data)
-        #print("SIWTCH_LANE", RLDecision.SWITCH_LANE)
-        #print("ACCELERATE", RLDecision.ACCELERATE)
-        #print("DECELERATE", RLDecision.DECELERATE)
-        #print("CONSTANT SPEED", RLDecision.CONSTANT_SPEED)
         if self.current_action == RLDecision.SWITCH_LANE:
-            #print("SWITCH LANE")
             return self.laneChangeTraj(sim_data)
         elif self.current_action == RLDecision.ACCELERATE:
-            #print("ACCELERATE")
             return self.accelerateTraj(sim_data)
         elif self.current_action == RLDecision.DECELERATE:
-            #print("DECELERATE")
             return self.decelerateTraj(sim_data)
         elif self.current_action == RLDecision.CONSTANT_SPEED:
-            #print("CONSTANT SPEED")
             return self.constSpeedTraj(sim_data)
         elif rl_data == RLDecision.CONSTANT_SPEED:
-            #print("CONSTANT SPEED")
             return self.constSpeedTraj(sim_data)
         elif rl_data == RLDecision.ACCELERATE:
-            #print("ACCELERATE")
             new_path_plan = self.accelerateTraj(sim_data)
             return new_path_plan
         elif rl_data == RLDecision.DECELERATE:
-            #print("DECELERATE")
             new_path_plan = self.decelerateTraj(sim_data)
             return new_path_plan
         elif rl_data == RLDecision.SWITCH_LANE:
-            #print("SWITCH LANE")
             return self.laneChangeTraj(sim_data)
         else:
             print("RL Decision Error")
@@ -413,7 +384,6 @@ class TrajGenerator:
         if not self.current_action == RLDecision.SWITCH_LANE:
             self.reset(RLDecision.SWITCH_LANE)
             # ToDo: Use closest pose for lane width
-            # print("reached here")
             neutral_traj = self.cubicSplineGen(sim_data.current_lane.lane[0].width, \
                             sim_data.next_lane.lane[0].width, sim_data.cur_vehicle_state.vehicle_speed)
             # determine the closest next pose in the current lane
@@ -447,7 +417,6 @@ class TrajGenerator:
             self.path_pointer += 1
 
         new_path_plan = PathPlan()
-        # print("Total Path Length", len(self.generated_path))
         # determine if lane switch is completed
 
         action_progress = self.path_pointer / float(len(self.generated_path))
@@ -497,15 +466,12 @@ class PathPlannerManager:
 
     def performAction(self, action):
         path_plan = self.traj_generator.trajPlan(action, self.prev_env_desc)
-        #print("------------------Path Plan--------------------")
-        #print(path_plan)
         req = SimServiceRequest()
         req.path_plan = path_plan
         self.prev_env_desc = self.sim_service_interface(req).env
         return self.prev_env_desc, path_plan.end_of_action
 
     def resetSim(self):
-        #print("RESET SIM CALLED")
         self.traj_generator.reset()
         reset_msg = PathPlan()
         reset_msg.reset_sim = True
