@@ -2,9 +2,10 @@ import os
 from enum import Enum
 dir_path = os.path.dirname(os.path.realpath(__file__))
 
+
 class Scenario(Enum):
-    LANE_CHANGE=0
-    PEDESTRIAN=1
+    LANE_CHANGE = 0
+    PEDESTRIAN = 1
 
 class Mode(Enum):
     TRAIN=0
@@ -85,6 +86,11 @@ else:
 
 
 
+
+
+# TODO: Currently all the decisions are under one enum. If this is so, we cannot directly
+# convert the argmax of the neural network into an enum as each network might not have the same
+# number of heads. We will need a more sophisticated enum
 
 
 
