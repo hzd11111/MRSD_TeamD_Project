@@ -150,55 +150,8 @@ def get_cartesian_from_frenet(
 def get_path_linestring(waypoints: List[carla.libcarla.Waypoint]) -> LineString:
 
     coordinates = [
-        [waypoint[0].transform.location.x, waypoint[0].transform.location.y]
+        [waypoint.transform.location.x, waypoint.transform.location.y]
         for waypoint in waypoints
     ]
     shapely_linestring = LineString(coordinates)
     return shapely_linestring
-
-
-if __name__ == "__main__":
-
-    # Get client to interact with CARLA server
-    client = get_client()
-
-    # Get current CARLA world
-    world = client.get_world()
-
-    # Spawn a vehicle at a random spawn point
-    vehicle = spawn_vehicle(world=world)
-
-    # Get a local planner for the vehicle
-    opt_dict = {"target_speed": 20}
-    local_planner = LocalPlanner(vehicle, opt_dict=opt_dict)
-
-    # Get waypoins of the lane in which the vehicle has been spawned
-    # local_planner._compute_next_waypoints(k=20)
-    # current_path_waypoints = [item[0] for item in local_planner._waypoints_queue]dw
-
-    # draw_waypoints(world, current_path_waypoints)
-
-    # path_linestring = get_path_linestring(current_path_waypoints)
-
-    # vehicle.destroy()
-    # flag = False
-    # while True:
-    #     control = local_planner.run_step(debug=True)
-    #     vehicle.apply_control(control)
-
-    #         current_path_linestring = get_path_linestring(
-    #             list(local_planner._waypoint_buffer)
-    #         )
-    #         # draw_waypoints(
-    #         #     world, [item[0] for item in list(local_planner._waypoint_buffer)]
-    #         # )
-
-    #         # Find s, d (Frenet Coordinates)
-    #         vehicle_location = vehicle.get_location()
-    #         vehicle_location_point = Point(vehicle_location.x, vehicle_location.y)
-    #         length_along_linestring = current_path_linestring.project(
-    #             vehicle_location_point
-    #         )
-
-    #         print("s:", length_along_linestring)
-    #         print("d:", current_path_linestring.distance(vehicle_location_point))
