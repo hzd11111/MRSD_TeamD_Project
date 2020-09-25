@@ -1,12 +1,9 @@
+import numpy as np
 # RL Packages
 from stable_baselines import DQN
 
-# ROS Packages
-from grasp_path_planner.msg import EnvironmentState
-
 # other packages
-from state_manager import StateManager
-from settings import Scenario, RLDecision, CONVERT_TO_LOCAL
+from settings import Scenario, RLDecision
 
 
 class NNManager:
@@ -18,7 +15,6 @@ class NNManager:
         Class constructor.
         Handles the neural_network inference based on the scenario
         """
-        self.state_manager = StateManager()
         self.event = event
 
     def initialize(self, model_path: str):
@@ -29,14 +25,13 @@ class NNManager:
         """
         self.neural_network = DQN.load(model_path)
 
-    def makeDecision(self, env_desc: EnvironmentState) -> RLDecision:
+    def makeDecision(self, env_embedding: np.ndarray) -> RLDecision:
         """
         Makes a decision using the neural network
         Args:
-        :param env_desc: (EnvironmentState) A ROS Message describing the environment
+        :param env_embedding: Embedding of environment information
         """
-        env_state = self.state_manager.embedState(env_desc, self.event, CONVERT_TO_LOCAL)
-        action, _ = self.neural_network.predict(env_state)
+        action, _ = self.neural_network.predict(env_embedding)
         return RLDecision(action)
 
 
