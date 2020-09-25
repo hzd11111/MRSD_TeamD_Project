@@ -88,7 +88,7 @@ class CustomScenario:
             self.pedestrian_spawn_dist_high = WALKER_SPAWN_DIST_MAX
 
         # self.client.set_timeout(30)
-        # self.client.load_world("Town01")
+        # self.client.load_world("Town05")
         # brak
         # self.client.set_timeout(2)
         # [0, 0, 0, 32.21003291083181, 156.01067181080413, -29.388363302418508, -0.004837898956386594, 0.0]

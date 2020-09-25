@@ -13,7 +13,6 @@ import time
 import math
 
 import numpy as np
-import cv2
 import carla
 
 from utils import get_matrix, create_bb_points

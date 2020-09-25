@@ -1,28 +1,18 @@
-#!/usr/bin/env python
-
-""" CARLA Node for the GRASP System. """
-
-__author__ = "Mayank Singal, Scott Jin"
-__maintainer__ = "Mayank Singal, Scott Jin"
-__email__ = "mayanksi@andrew.cmu.edu"
-__version__ = "0.1"
-
-#######################################################################################
-
-
 import time
 import subprocess
 import sys
 import os
-sys.path.insert(0, "/home/mayank/Mayank/MRSD_TeamD_Project")
-sys.path.insert(0, "/home/mayank/Carla/CARLA_0.9.8/PythonAPI/carla/")
+# sys.path.insert(0, "/home/grasp//Mayank/MRSD_TeamD_Project")
+sys.path.insert(0, "/home/grasp/Fall2020/src")
 # sys.path.insert(0, "/home/mayank/Carla/carla/Dist/0.9.7.4/PythonAPI/carla/dist/")
 import rospy
 import copy
 import random
 import threading
 
-sys.path.append("/home/mayank/Carla/CARLA_0.9.8/PythonAPI/carla/dist/carla-0.9.8-py3.6-linux-x86_64.egg")
+# sys.path.append("/home/mayank/Carla/CARLA_0.9.8/PythonAPI/carla/dist/carla-0.9.8-py3.6-linux-x86_64.egg")
+sys.path.append("/home/grasp/carla/PythonAPI/carla/dist/carla-0.9.9-py3.7-linux-x86_64.egg")
+sys.path.append("/home/grasp/carla/PythonAPI/carla")
 
 import carla
 

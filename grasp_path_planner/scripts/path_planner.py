@@ -504,6 +504,7 @@ class PathPlannerManager:
         self.sim_service_interface = None
         self.prev_env_desc = None
 
+
     def initialize(self):
         rospy.init_node(NODE_NAME, anonymous=True)
         rospy.wait_for_service(SIM_SERVICE_NAME)

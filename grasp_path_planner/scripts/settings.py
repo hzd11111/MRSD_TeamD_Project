@@ -16,7 +16,7 @@ class Mode(Enum):
     
 
 ############ Mode and Model Selection ##############################
-CURRENT_SCENARIO = Scenario.PEDESTRIAN
+CURRENT_SCENARIO = Scenario.LANE_CHANGE
 CURRENT_MODE = Mode.TEST
 
 if(CURRENT_SCENARIO == Scenario.PEDESTRIAN):
@@ -58,7 +58,7 @@ else:
     LEFT_LANE_ID = -2
     RIGHT_LANE_ID = -3
     
-    EGO_INIT_SPEED = 20 #30 for high speed on road40
+    EGO_INIT_SPEED = 30 #30 for high speed on road40
     NPC_INIT_SPEED = 20
     EGO_SPAWN_IDX = 320
     EGO_VEHICLE_MAKE = "model3"   
