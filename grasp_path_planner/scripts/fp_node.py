@@ -17,7 +17,8 @@ from stable_baselines.common.env_checker import check_env
 from stable_baselines.common.cmd_util import make_vec_env
 # Other Packages
 from path_planner import PathPlannerManager
-from rl_manager import RLManager, CustomEnv, CustomLaneChangePolicy, CustomPedestrianPolicy
+from rl_manager import RLManager, CustomLaneChangePolicy, CustomPedestrianPolicy
+from custom_env import CustomEnv
 from settings import *
 
 # -----------------------------------Global------------------------------------------------------#
@@ -72,6 +73,7 @@ class FullPlannerManager:
 
 if __name__ == '__main__':
     try:
+        print("LOL")
         event = CURRENT_SCENARIO
         if event==Scenario.PEDESTRIAN:
             full_planner = FullPlannerManager(Scenario.PEDESTRIAN)

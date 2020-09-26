@@ -68,8 +68,15 @@ class StateManager:
     """
     A class to encompass all the logic needed to create state embeddings
     """
-    def __init__():
-        pass
+    def __init__(self, event):
+        self.event = event
+
+    def append_vehicle_state(self, env_state, vehicle_state):
+        env_state.append(vehicle_state.vehicle_location.x)
+        env_state.append(vehicle_state.vehicle_location.y)
+        env_state.append(vehicle_state.vehicle_location.theta)
+        env_state.append(vehicle_state.vehicle_speed)
+        return
 
     def embedState(self, env_desc: EnvironmentState, scenario: Scenario, local=False) -> np.ndarray:
         """

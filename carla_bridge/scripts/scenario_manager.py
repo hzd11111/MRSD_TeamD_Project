@@ -18,7 +18,7 @@ from typing import Tuple
 
 sys.path.append("/home/cckai/Documents/CARLA_0.9.8/PythonAPI/carla/dist/carla-0.9.8-py3.5-linux-x86_64.egg")
 import carla
-
+import re
 
 import agents.navigation.controller
 import numpy as np

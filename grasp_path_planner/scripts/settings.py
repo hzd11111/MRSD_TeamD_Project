@@ -25,7 +25,7 @@ if(CURRENT_SCENARIO == Scenario.PEDESTRIAN):
     MODEL_LOAD_PATH = dir_path + "/Models/DQN_Model_CARLA_Ped5"
 else:
     MODEL_SAVE_PATH = dir_path + "/Models/DQN_LANE_SWITCH"
-    MODEL_LOAD_PATH = dir_path + "/DQN_20min"
+    MODEL_LOAD_PATH = dir_path + "/Models/DQN_20min"
     
 
 ################## Test Mode Arguments ######################
