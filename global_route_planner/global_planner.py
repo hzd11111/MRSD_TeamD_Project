@@ -50,7 +50,7 @@ def get_client() -> carla.libcarla.Client:
     Get a CARLA client object. The client object enables interaction with the CARLA server.
     """
     client = carla.Client("localhost", 2000)
-    client.set_timeout(2.0)
+    client.set_timeout(10.0)
     print("Connection to CARLA server established!")
     return client
 
