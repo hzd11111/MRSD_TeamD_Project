@@ -30,13 +30,13 @@ else:
 
 ################## Test Mode Arguments ######################
 if(CURRENT_SCENARIO == Scenario.PEDESTRIAN):
-    TOWN_ID = "Town04"
+    TOWN_ID = "Town01"
     
     ROAD_IDs = [12]
-    LEFT_LANE_ID = 0 #Not required for this scenario
+    LEFT_LANE_ID = 4 #Not required for this scenario
     RIGHT_LANE_ID = -1
     
-    EGO_INIT_SPEED = 44.5  #46.5 for road 40, #44.5 for road 37
+    EGO_INIT_SPEED = 48.5  #46.5 for road 40, #44.5 for road 37
     NPC_INIT_SPEED = 20 #Not required for this scenario
     
     EGO_SPAWN_IDX = 80

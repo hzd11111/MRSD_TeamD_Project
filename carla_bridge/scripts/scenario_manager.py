@@ -16,18 +16,18 @@ import random
 import threading
 from typing import Tuple
 
-sys.path.append("/home/cckai/Documents/CARLA_0.9.8/PythonAPI/carla/dist/carla-0.9.8-py3.5-linux-x86_64.egg")
+# sys.path.append("/home/cckai/Documents/CARLA_0.9.8/PythonAPI/carla/dist/carla-0.9.8-py3.5-linux-x86_64.egg")
 import carla
 import re
 
 import agents.navigation.controller
 import numpy as np
 
-sys.path.remove('/opt/ros/kinetic/lib/python2.7/dist-packages')
+# sys.path.remove('/opt/ros/kinetic/lib/python2.7/dist-packages')
 from carla_handler import CarlaHandler
-sys.path.insert(0, "/home/mayank/Mayank/GRASP_ws/src/MRSD_TeamD_Project/carla_bridge/scripts")
+# sys.path.insert(0, "/home/mayank/Mayank/GRASP_ws/src/MRSD_TeamD_Project/carla_bridge/scripts")
 from grasp_controller import GRASPPIDController
-sys.path.insert(0, '/opt/ros/kinetic/lib/python2.7/dist-packages')
+# sys.path.insert(0, '/opt/ros/kinetic/lib/python2.7/dist-packages')
 
 from std_msgs.msg import String
 from grasp_path_planner.msg import LanePoint

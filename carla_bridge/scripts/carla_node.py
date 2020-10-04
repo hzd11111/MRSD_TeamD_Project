@@ -3,7 +3,7 @@ import subprocess
 import sys
 import os
 # sys.path.insert(0, "/home/grasp//Mayank/MRSD_TeamD_Project")
-sys.path.insert(0, "/home/grasp/Fall2020/src")
+# sys.path.insert(0, "/home/grasp/Fall2020/src")
 # sys.path.insert(0, "/home/mayank/Carla/carla/Dist/0.9.7.4/PythonAPI/carla/dist/")
 import rospy
 import copy
@@ -11,8 +11,8 @@ import random
 import threading
 
 # sys.path.append("/home/mayank/Carla/CARLA_0.9.8/PythonAPI/carla/dist/carla-0.9.8-py3.6-linux-x86_64.egg")
-sys.path.append("/home/grasp/carla/PythonAPI/carla/dist/carla-0.9.9-py3.7-linux-x86_64.egg")
-sys.path.append("/home/grasp/carla/PythonAPI/carla")
+# sys.path.append("/home/grasp/carla/PythonAPI/carla/dist/carla-0.9.9-py3.7-linux-x86_64.egg")
+# sys.path.append("/home/grasp/carla/PythonAPI/carla")
 
 import carla
 
@@ -20,11 +20,11 @@ import carla
 import agents.navigation.controller
 import numpy as np
 
-sys.path.remove('/opt/ros/kinetic/lib/python2.7/dist-packages')
+# sys.path.remove('/opt/ros/kinetic/lib/python2.7/dist-packages')
 from carla_handler import CarlaHandler
-sys.path.insert(0, "/home/mayank/Mayank/GRASP_ws/src/MRSD_TeamD_Project/carla_bridge/scripts")
+# sys.path.insert(0, "/home/mayank/Mayank/GRASP_ws/src/MRSD_TeamD_Project/carla_bridge/scripts")
 from grasp_controller import GRASPPIDController
-sys.path.insert(0, '/opt/ros/kinetic/lib/python2.7/dist-packages')
+# sys.path.insert(0, '/opt/ros/kinetic/lib/python2.7/dist-packages')
 
 from std_msgs.msg import String
 from grasp_path_planner.msg import LanePoint

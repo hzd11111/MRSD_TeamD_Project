@@ -159,6 +159,7 @@ include_directories(
 # See http://ros.org/doc/api/catkin/html/adv_user_guide/variables.html
 
 catkin_install_python(PROGRAMS
+	scripts/carla_node.py
   DESTINATION ${CATKIN_PACKAGE_BIN_DESTINATION}
 )
 

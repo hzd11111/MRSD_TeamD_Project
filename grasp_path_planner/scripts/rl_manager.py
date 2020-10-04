@@ -65,7 +65,7 @@ class RLManager:
                 # populate the "pedestrian vehicle" parameters
                 ped_vehicle.vehicle_location = env_desc.nearest_pedestrian.pedestrian_location
                 ped_vehicle.vehicle_speed = env_desc.nearest_pedestrian.pedestrian_speed
-                relative_pose = convert_to_local(env_desc.cur_vehicle_state,ped_vehicle)
+                relative_pose = convertToLocal(env_desc.cur_vehicle_state,ped_vehicle)
                 if relative_pose.vehicle_location.x < -10:
                     return True
             # usual conditions
