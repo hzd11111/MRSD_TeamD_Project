@@ -64,6 +64,7 @@ add_message_files(
   ParallelLaneMsg.msg
   PerpendicularLaneMsg.msg
   RewardInfoMsg.msg
+  FrenetMsg.msg
 )
 
 ## Generate services in the 'srv' folder
@@ -177,6 +178,7 @@ include_directories(
 catkin_install_python(PROGRAMS
   utils/test_pub.py
   utils/utility.py
+  utils/functional_utility.py
   DESTINATION ${CATKIN_PACKAGE_BIN_DESTINATION}
 )
 # install(PROGRAMS
