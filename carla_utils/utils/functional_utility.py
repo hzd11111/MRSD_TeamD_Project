@@ -36,6 +36,8 @@ class Frenet(object):
 
 
 class Vec2D:
+    __slots__ = ["x", "y"]
+
     def __init__(self, x=0, y=0):
         self.x = x
         self.y = y
@@ -118,6 +120,8 @@ class Pose2D(object):
 
 
 class PoseSpeed(Pose2D):
+    __slots__ = ["speed"]
+
     def __init__(self, speed: float = 0):
         Pose2D.__init__(self)
         self.speed = speed
