@@ -179,6 +179,7 @@ catkin_install_python(PROGRAMS
   utils/test_pub.py
   utils/utility.py
   utils/functional_utility.py
+  utils/actors.py
   DESTINATION ${CATKIN_PACKAGE_BIN_DESTINATION}
 )
 # install(PROGRAMS
