@@ -3,17 +3,10 @@ import subprocess
 import sys
 import os
 
-# sys.path.insert(0, "/home/grasp//Mayank/MRSD_TeamD_Project")
-# sys.path.insert(0, "/home/grasp/Fall2020/src")
-# sys.path.insert(0, "/home/mayank/Carla/carla/Dist/0.9.7.4/PythonAPI/carla/dist/")
 import rospy
 import copy
 import random
 import threading
-
-# sys.path.append("/home/mayank/Carla/CARLA_0.9.8/PythonAPI/carla/dist/carla-0.9.8-py3.6-linux-x86_64.egg")
-# sys.path.append("/home/grasp/carla/PythonAPI/carla/dist/carla-0.9.9-py3.7-linux-x86_64.egg")
-# sys.path.append("/home/grasp/carla/PythonAPI/carla")
 
 import carla
 
@@ -21,13 +14,9 @@ import carla
 import agents.navigation.controller
 import numpy as np
 
-# sys.path.remove('/opt/ros/kinetic/lib/python2.7/dist-packages')
 from carla_handler import CarlaHandler
 
-# sys.path.insert(0, "/home/mayank/Mayank/GRASP_ws/src/MRSD_TeamD_Project/carla_bridge/scripts")
 from grasp_controller import GRASPPIDController
-
-# sys.path.insert(0, '/opt/ros/kinetic/lib/python2.7/dist-packages')
 
 from std_msgs.msg import String
 from grasp_path_planner.msg import LanePoint
@@ -59,20 +48,12 @@ SIM_SERVICE_NAME = "simulator"
 
 class CarlaManager:
     def __init__(self):
-        self.env_pub = None
-        self.path_sub = None
-
-        # id
-        self.id = 0
-        self.id_waiting = 0
 
         ## CARLA Deps ##
         self.client = None
         self.carla_handler = None
         self.ego_vehicle = None
         self.vehicle_controller = None
-        self.lock = threading.Lock()
-        self.env_msg = False
         self.vehicles_list = []
         self.original_lane = None
         self.timestamp = 0
@@ -85,22 +66,17 @@ class CarlaManager:
         self.tm = None
 
         self.simulation_sync_timestep = 0.05
-
         self.first_frame_generated = False
         self.path_planner_terminate = False
 
         self.action_progress = 0
         self.end_of_action = True
-        # self.initialize()
 
         self.max_num_vehicles = 5
-        self.last_call_reset = False
 
         self.speed_limit = None
-
         self.pedestrian = None
         self.pedestrian_wait_frames = 0
-        self.last_time = time.time()
 
         self.metrics = DataCollector()
 
@@ -292,8 +268,7 @@ class CarlaManager:
             self.path_planner_terminate = data.path_planner_terminate
 
             ### Update ROS Sync ###
-            self.id_waiting = self.id
-
+            
             if reset_sim:
                 self.resetEnv()
 
@@ -524,11 +499,6 @@ class CarlaManager:
             env_state.nearest_pedestrian = Pedestrian()
             env_state.nearest_pedestrian.exist = False
 
-        if reset_sim:
-            self.last_call_reset = True
-        else:
-            self.last_call_reset = False
-
         return SimServiceResponse(env_state)
 
     def destroy_actors_and_sensors(self):
@@ -648,9 +618,6 @@ class CarlaManager:
         # initialize node
         rospy.init_node(NODE_NAME, anonymous=True)
 
-        # initialize publisher
-        self.env_pub = rospy.Publisher(SIM_TOPIC_NAME, EnvironmentState, queue_size=10)
-
         # initialize service
         self.planner_service = rospy.Service(
             SIM_SERVICE_NAME, SimService, self.pathRequest
@@ -755,7 +722,6 @@ class CarlaManager:
         env_state.next_lane = self.lane_left
         env_state.max_num_vehicles = self.max_num_vehicles
         env_state.speed_limit = 20
-        # env_state.id = self.id
 
         ## Pedestrian
         if self.pedestrian is not None:
@@ -773,14 +739,6 @@ class CarlaManager:
         reward_info.new_run = self.first_run
         reward_info.collision = self.collision_marker
         env_state.reward = reward_info
-
-        # Update Sync
-        self.id_waiting = self.id
-        self.id += 1
-        if self.id > 100000:
-            self.id = 0
-
-        rate = rospy.Rate(10)
 
     def spin(self):
         print("Start Ros Spin")
