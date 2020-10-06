@@ -17,7 +17,7 @@ class Mode(Enum):
     
 
 ############ Mode and Model Selection ##############################
-CURRENT_SCENARIO = Scenario.LANE_CHANGE
+CURRENT_SCENARIO = Scenario.PEDESTRIAN
 CURRENT_MODE = Mode.TEST
 
 if(CURRENT_SCENARIO == Scenario.PEDESTRIAN):
