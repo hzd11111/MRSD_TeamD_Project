@@ -4,12 +4,5 @@
         "/home/arcot/GRASP/devel/lib/python2.7/dist-packages",
         "/opt/ros/melodic/lib/python2.7/dist-packages"
     ],
-    "python.pythonPath": "/usr/bin/python3.6",
-    "python.linting.enabled": true,
-    "python.formatting.provider": "black",
-    "python.linting.flake8Enabled": false,
-    "python.linting.pylintArgs": [
-        "--enable=W0612",
-        "--disable=W0142,W0403,W0613,W0232,R0903,R0913,C0103,R0914,C0304,F0401,W0402,E1101,W0614,C0111,C0301,W0621,C0413,C0330"
-    ]
+    "python.pythonPath": "/home/arcot/anaconda3/envs/rl/bin/python"
 }
