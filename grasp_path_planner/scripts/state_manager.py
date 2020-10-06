@@ -44,8 +44,8 @@ def convertToLocal(cur_vehicle: VehicleState, adj_vehicle: VehicleState):
     H_Rot[0, -1] = 0
     H_Rot[1, -1] = 0
     H_Rot[0, 0] = np.cos(cur_vehicle.vehicle_location.theta)
-    H_Rot[0, 1] = -np.sin(cur_vehicle.vehicle_location.theta)
-    H_Rot[1, 0] = np.sin(cur_vehicle.vehicle_location.theta)
+    H_Rot[0, 1] = np.sin(cur_vehicle.vehicle_location.theta)
+    H_Rot[1, 0] = -np.sin(cur_vehicle.vehicle_location.theta)
     H_Rot[1, 1] = np.cos(cur_vehicle.vehicle_location.theta)
     H_trans = np.eye(3)
     H_trans[0, -1] = -cur_vehicle.vehicle_location.x
