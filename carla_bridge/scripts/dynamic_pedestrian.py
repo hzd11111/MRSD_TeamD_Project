@@ -110,7 +110,7 @@ class DynamicPedestrian():
             self.speed = np.random.uniform(0.5,1) * self.max_speed
         else:
             self.speed = self.max_speed
-            
+
         walk  = carla.WalkerControl(self.direction, speed=self.speed, jump=False)
 
         self.actor.apply_control(walk)

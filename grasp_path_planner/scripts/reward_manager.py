@@ -226,6 +226,7 @@ class PedestrianReward(Reward):
             ped_vehicle.vehicle_speed = desc.nearest_pedestrian.pedestrian_speed
             relative_pose = convertToLocal(desc.cur_vehicle_state,ped_vehicle)
 
+
         # check if pedestrian collided
         if desc.reward.collision:
             return -self.max_reward

@@ -1,0 +1,1 @@
+GlobalPathPointMsg[] path_points
