@@ -65,7 +65,7 @@ class RLManager:
                 # populate the "pedestrian vehicle" parameters
                 ped_vehicle.vehicle_location = env_desc.nearest_pedestrian.pedestrian_location
                 ped_vehicle.vehicle_speed = env_desc.nearest_pedestrian.pedestrian_speed
-                relative_pose = convertToLocal(env_desc.cur_vehicle_state,ped_vehicle)
+                relative_pose = convertToLocal(env_desc.cur_vehicle_state, ped_vehicle)
                 if relative_pose.vehicle_location.x < -10:
                     return True
             # usual conditions
@@ -148,8 +148,8 @@ class CustomLaneChangePolicy(DQNPolicy):
     def __init__(self, sess, ob_space, ac_space, n_env, n_steps, n_batch, reuse=False,
                  obs_phs=None, dueling=False, **kwargs):
         super(CustomLaneChangePolicy, self).__init__(sess, ob_space, ac_space, n_env, n_steps,
-                                            n_batch, dueling=dueling, reuse=reuse,
-                                            scale=False, obs_phs=obs_phs)
+                                                     n_batch, dueling=dueling, reuse=reuse,
+                                                     scale=False, obs_phs=obs_phs)
         with tf.variable_scope("model", reuse=reuse):
             out_ph = tf.layers.flatten(self.processed_obs)
             embed_list = []
@@ -158,7 +158,7 @@ class CustomLaneChangePolicy(DQNPolicy):
                     self.embedding_net(tf.concat([out_ph[:, :4], out_ph[:, (i + 1) * 4:(i + 2) * 4]], axis=1)))
             stacked_out = tf.stack(embed_list, axis=1)
             max_out = tf.reduce_max(stacked_out, axis=1)
-            q_out = self.q_net(max_out,ac_space.n)
+            q_out = self.q_net(max_out, ac_space.n)
         self.q_values = q_out
         self._setup_init()
 
@@ -216,15 +216,15 @@ class CustomPedestrianPolicy(DQNPolicy):
     def __init__(self, sess, ob_space, ac_space, n_env, n_steps, n_batch, reuse=False,
                  obs_phs=None, dueling=False, **kwargs):
         super(CustomPedestrianPolicy, self).__init__(sess, ob_space, ac_space, n_env, n_steps,
-                                            n_batch, dueling=dueling, reuse=reuse,
-                                            scale=False, obs_phs=obs_phs)
+                                                     n_batch, dueling=dueling, reuse=reuse,
+                                                     scale=False, obs_phs=obs_phs)
         with tf.variable_scope("model", reuse=reuse):
             out_ph = tf.layers.flatten(self.processed_obs)
             embed_list = []
             for i in range(1):
                 embed_list.append(
                     self.embedding_net(tf.concat([out_ph[:, :4], out_ph[:, (i + 1) * 4:(i + 2) * 4]], axis=1)))
-            q_out = self.q_net(embed_list[0],ac_space.n)
+            q_out = self.q_net(embed_list[0], ac_space.n)
         self.q_values = q_out
         self._setup_init()
 

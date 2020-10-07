@@ -1,6 +1,7 @@
 #!/usr/bin/env python
 # -----------------------------------Packages------------------------------------------------------#
 import sys
+print(sys.path)
 import os
 import time
 from enum import Enum
