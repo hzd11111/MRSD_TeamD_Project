@@ -81,7 +81,8 @@ class CarlaManager:
         self.metrics = DataCollector()
 
     def getVehicleState(self, actor):
-
+        '''Creates Vehicle State ROS msg'''
+        #TODO: update this class to get Vehicle msg instead of VehicleState msg
         if actor == None:
             return None
 
@@ -101,13 +102,14 @@ class CarlaManager:
         )
 
         vehicle_bounding_box = actor.bounding_box.extent
-        vehicle.length = vehicle_bounding_box.x * 2
+        vehicle.length = vehicle_bounding_box.x * 2 #TODO: Check this, do we need to multiply
         vehicle.width = vehicle_bounding_box.y * 2
 
         return vehicle
 
     def getPedestrianState(self, actor, pedestrian_radius=0.5):
-
+        '''Creates pedestrian State ROS msg'''
+        #TODO: update this class to get Pedestrian msg instead of PEdesterianState msg
         ## TODO: Processing them like vehicles for now
         if actor == None:
             return None
@@ -133,7 +135,8 @@ class CarlaManager:
         return pedestrian_state
 
     def getLanePoints(self, waypoints, flip=False):
-
+        # TODO: Lane classes should generate this type of messages
+        # Remove this function
         lane_cur = Lane()
         lane_points = []
 
@@ -152,6 +155,7 @@ class CarlaManager:
         return lane_cur
 
     def distance_to_line(self, p1, p2, x, y):
+        # TODO: Delete
         x_diff = p2[0] - p1[0]
         y_diff = p2[1] - p1[1]
         num = abs(y_diff * x - x_diff * y + p2[0] * p1[1] - p2[1] * p1[0])
@@ -159,11 +163,12 @@ class CarlaManager:
         return num / float(den)
 
     def pathRequest(self, data):
-
+        # data is pathplan ROS msg, check compatibility with the new msgs
+        # TODO: make this compatible with the new ROS msg
         os.system("clear")
 
         reset_sim = False
-        if self.first_frame_generated:
+        if self.first_frame_generated: # have we generated the first frame of 
             data = data.path_plan
 
             ### Get requested pose and speed values ###
@@ -173,6 +178,7 @@ class CarlaManager:
             future_poses = data.future_poses
 
             ### Find distance from centre Line ###
+            #TODO: make this a LaneStatus class or something or Vehicle class
             ego_location = self.ego_vehicle.get_location()
             ego_waypoint = self.carla_handler.world_map.get_waypoint(
                 self.ego_vehicle.get_location(), project_to_road=True
@@ -193,6 +199,7 @@ class CarlaManager:
             )
             speed_to_show = get_speed(self.ego_vehicle)
 
+            # TODO: remove if not needed anymore, otherwise migrate to other class
             if self.tm.pedestrian_mode == False:
                 distances2 = [
                     (
@@ -247,7 +254,9 @@ class CarlaManager:
                         [ego_location.x, ego_location.y],
                         ignore_lane=True,
                     )
+            #-------------------------------------------------------------------
 
+            # TODO: Remove
             for future_pose in future_poses:
                 future_loc = carla.Location(
                     x=future_pose.x,
@@ -276,11 +285,13 @@ class CarlaManager:
                 self.first_run = 0
 
                 # time.sleep(1)
-                ### Apply Control ###
+                ### Apply Control signal on the vehicle. Vehicle and controller spawned in resetEnv###
                 self.ego_vehicle.apply_control(
                     self.vehicle_controller.run_step(tracking_speed, tracking_pose)
                 )
 
+                # TODO:ROHAN: Move this to Pedesterian Class 
+                # pedestrian = Pedestrian(....)
                 #### Pedestrian Spawning
                 if self.tm.pedestrian_mode == True:
                     if self.pedestrian is None:
@@ -355,6 +366,7 @@ class CarlaManager:
                                 [ego_location.x, ego_location.y],
                             )
 
+                # TODO: Do we need this?
                 #### Check Sync ###
                 flag = 0
                 while flag == 0:
@@ -371,6 +383,7 @@ class CarlaManager:
             self.first_frame_generated = True
             self.resetEnv()
 
+        # TODO: Ensure state information is extracted from the right class
         state_information = self.carla_handler.get_state_information_new(
             self.ego_vehicle, self.original_lane
         )
@@ -385,10 +398,12 @@ class CarlaManager:
             actors_in_right_lane,
         ) = state_information
 
+        # TODO: ROHAN move this to pedestrian class
         pedestrians_on_current_road = self.carla_handler.get_pedestrian_information(
             self.ego_vehicle
         )
 
+        # TODO: Use the new class functions instead of getLanePoints
         # Current Lane
         if reset_sim == True:
             self.lane_cur = self.getLanePoints(current_lane_waypoints)
@@ -424,6 +439,7 @@ class CarlaManager:
         else:
             vehicle_rear = self.getVehicleState(rear_vehicle)
 
+        # TODO: migrate logic to Environment State class, move it after reward state defined
         # Contruct enviroment state ROS message
         env_state = EnvironmentState()
         env_state.cur_vehicle_state = vehicle_ego
@@ -438,7 +454,7 @@ class CarlaManager:
         )
         env_state.speed_limit = self.speed_limit
 
-        for idx in _:
+        for idx in _: # TODO: ROHAN: Bounding box visualize for pedestrians and vehicles
             tmp_vehicle = actors_in_left_lane[idx]
             tmp_transform = tmp_vehicle.get_transform()
             tmp_bounding_box = tmp_vehicle.bounding_box
@@ -469,6 +485,7 @@ class CarlaManager:
                     color=carla.Color(r=128, g=0, b=128),
                 )
 
+        # TODO: move this logic to RewardInfo Class
         reward_info = RewardInfo()
         reward_info.time_elapsed = self.timestamp
         reward_info.new_run = self.first_run
@@ -478,7 +495,7 @@ class CarlaManager:
         reward_info.path_planner_terminate = self.path_planner_terminate
         env_state.reward = reward_info
 
-        ## Pedestrian
+        ## Pedestrian # TODO: ROHAN move this logic to pedestrian class 
         if self.pedestrian is not None:
             env_state.nearest_pedestrian = self.getClosestPedestrian(
                 [self.getPedestrianState(actor) for actor in [self.pedestrian]],
@@ -499,10 +516,10 @@ class CarlaManager:
             env_state.nearest_pedestrian = Pedestrian()
             env_state.nearest_pedestrian.exist = False
 
-        return SimServiceResponse(env_state)
+        return SimServiceResponse(env_state) #TODO:Update with new EnvDesc class 
 
     def destroy_actors_and_sensors(self):
-
+        # TODO: ROHAN: get destroy method from Actor Class
         if self.collision_sensor is not None:
             self.collision_sensor.destroy()
 
@@ -531,7 +548,7 @@ class CarlaManager:
         self.collision_marker = 0
         self.first_run = 1
         # os.system("clear")
-        print("Run Metrics:")
+        print("Run Metrics:") #TODO: Remove unnecessary stuff
         print(
             "Distance travelled in currect iteration:",
             self.metrics.curr_distance_travelled,
@@ -578,13 +595,14 @@ class CarlaManager:
                 },
             )
             # time.sleep(1)
-            self.original_lane = -3
+            self.original_lane = -3 #TODO: check and remove 
 
         except rospy.ROSInterruptException:
             print("failed....")
             pass
 
     def getClosest(self, adjacent_lane_vehicles, ego_vehicle, n=5):
+        # TODO: ROHAN move to the Vehicle class
         ego_x = ego_vehicle.vehicle_location.x
         ego_y = ego_vehicle.vehicle_location.y
 
@@ -600,6 +618,7 @@ class CarlaManager:
         return [adjacent_lane_vehicles[i] for i in sorted_idx], sorted_idx
 
     def getClosestPedestrian(self, pedestrians, ego_vehicle, n=1):
+        # TODO: ROHAN move to the Pedestrian class
         ego_x = ego_vehicle.vehicle_location.x
         ego_y = ego_vehicle.vehicle_location.y
 
