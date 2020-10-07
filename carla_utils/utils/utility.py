@@ -313,13 +313,13 @@ def callback(data):
     # path_plan = PathPlan.fromRosMsg(data)
     # print("receiving data")
     # rospy.loginfo("%f is age: %d" % (data.tracking_speed, data.reset_sim))
-    obj = EnvDesc.fromRosMsg(data)
-    print("Confirm msg is: ", obj.speed_limit)
+    obj = CurrentLane.fromRosMsg(data)
+    print("Confirm msg.lane_id is: ", obj.lane_id)
 
 
 def listener():
     rospy.init_node(TEST_NODE_NAME, anonymous=True)
-    rospy.Subscriber(TEST_TOPIC_NAME, EnvDescMsg, callback)
+    rospy.Subscriber(TEST_TOPIC_NAME, CurrentLaneMsg, callback)
 
     # spin() simply keeps python from exiting until this node is stopped
     rospy.spin()

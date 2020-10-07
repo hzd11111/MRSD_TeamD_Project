@@ -1,4 +1,4 @@
 geometry_msgs/Pose2D global_pose
-# FrenetMsg frenet_pose
-# StopLineStatusMsg stop_line
+FrenetMsg frenet_pose
+int64 stop_line
 bool lane_start
