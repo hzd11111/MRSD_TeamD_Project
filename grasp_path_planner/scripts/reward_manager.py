@@ -56,7 +56,7 @@ class Reward(ABC):
         return [delta_y, -delta_x, point1[1]*delta_x - point1[0]*delta_y]
 
     def project_point_on_line(self, px, py, a, b, c):
-        k = b*p_x - a*p_y
+        k = b*px - a*py
         y = -(a*k + b*c)/(a**2 + b**2)
         x = (-c/a) - (b*y)/a if a > 0 else px
         return [x,y]
@@ -74,7 +74,7 @@ class LaneChangeReward(Reward):
 
     # ---------------------------------HELPERS-----------------------------------------#
 
-    def calculate_bounding_box(self, cx: float, cy: float, theta: float, length: float, width: float):
+    def calculate_bounding_box(self, cx: float, cy: float, theta: float, l: float, w: float):
         """
         Assumes angles are proper and not inverted.
         Gets the coordinates of the vehicle bounding box in global frame
@@ -118,9 +118,9 @@ class LaneChangeReward(Reward):
             # Let us project on normal centered at origin
             # ax+by+c = 0 is equivalent t0 bx+ay = 0
             for point in bb1:
-                bb1_projections.append(project_point_on_line(point[0], point[1], normal[0], normal[1], normal[2]))
+                bb1_projections.append(self.project_point_on_line(point[0], point[1], normal[0], normal[1], normal[2]))
             for point in bb2:
-                bb2_projections.append(project_point_on_line(point[0], point[1], normal[0], normal[1], normal[2]))
+                bb2_projections.append(self.project_point_on_line(point[0], point[1], normal[0], normal[1], normal[2]))
 
             # get the distance between these projections
             dist = 0
@@ -166,22 +166,22 @@ class LaneChangeReward(Reward):
         NPC_bb = []
         # Get the bounding boxes for each vehicle
         for vehicle in NPCs:
-            NPC_bb.append(calculate_bounding_box(vehicle.vehicle_location.x,
+            NPC_bb.append(self.calculate_bounding_box(vehicle.vehicle_location.x,
                                                  vehicle.vehicle_location.y,
                                                  vehicle.vehicle_location.theta,
                                                  vehicle.length,
                                                  vehicle.width))
         # Get the bounding boxes for ego vehicle
-        ego_bb.append(calculate_bounding_box(desc.cur_vehicle_state.vehicle_location.x,
+        ego_bb = self.calculate_bounding_box(desc.cur_vehicle_state.vehicle_location.x,
                                                  desc.cur_vehicle_state.vehicle_location.y,
                                                  desc.cur_vehicle_state.vehicle_location.theta,
                                                  desc.cur_vehicle_state.length,
-                                                 desc.cur_vehicle_state.width))
+                                                 desc.cur_vehicle_state.width)
 
         # Get the closest distance for each vehicle
         closest_vehicle_dist = 1e5
         for vehicle_bb in NPC_bb:
-            dist = get_distance_between(ego_bb,vehicle_bb)
+            dist = self.get_distance_between(ego_bb,vehicle_bb)
             if (closest_vehicle_dist > dist):
                 closest_vehicle_dist = dist
         return closest_vehicle_dist
@@ -201,11 +201,6 @@ class LaneChangeReward(Reward):
     
     def vel_cost(self):
         return self.k_vel*self.cum_vel_err
-
-    def position_cost(self):
-        r_inv = 1/self.max_reward
-        cost = max(0,1/(self.closest_dist+r_inv)-1/(self.min_dist+r_inv))
-        return self.k_pos*cost
     
     def lane_change_reward(self,desc,action):
         if desc.reward.collision:
@@ -325,10 +320,10 @@ class PedestrianReward(Reward):
                                1])
 
         # identify which point it is closest to
-        bb_local = [[l/2,-w/2, 1], 
-                    [l/2, w/2, 1],
-                    [-l/2, w/2, 1],
-                    [-l/2, -w/2, 1]]
+        bb_local = [[l/2,-w/2], 
+                    [l/2, w/2],
+                    [-l/2, w/2],
+                    [-l/2, -w/2]]
         dist = 1e5
         closest_idx = -1
         for i,point in enumerate(bb_local):
