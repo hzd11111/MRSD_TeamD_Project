@@ -30,7 +30,7 @@ class Actor():
         cls.speed = actor_msg.speed
         cls.acceleration = actor_msg.acceleration
         cls.location_global = actor_msg.location_global
-        cls.location_frenet = actor_msg.location_frenet
+        cls.location_frenet = Frenet.fromRosMsg(actor_msg.location_frenet)
         cls.length = actor_msg.length
         cls.width = actor_msg.width
         return cls
@@ -161,9 +161,10 @@ class Vehicle(Actor):
     ):
         super(Vehicle, self).__init__(
             world, actor_id, speed, acceleration, location_global, location_frenet, length, width
-        )
+        )            
         self.traffic_light_status = traffic_light_status
-
+        if self.traffic_light_status is None:
+            self.traffic_light_status = TrafficLightStatus.RED
     @classmethod
     def fromRosMsg(cls, msg):
         Actor = super(Vehicle, cls).fromRosMsg(msg.actor_msg)
@@ -195,6 +196,8 @@ class Pedestrian(Actor):
             world, actor_id, speed, acceleration, location_global, location_frenet, length, width
         )
         self.priority_status = priority_status
+        if self.priority_status is None:
+            self.priority_status = PedestrainPriority.JAYWALK
 
     @classmethod
     def fromRosMsg(cls, msg):
@@ -218,7 +221,7 @@ def callback(data):
     # print("receiving data")
     # rospy.loginfo("%f is age: %d" % (data.tracking_speed, data.reset_sim))
     obj = Pedestrian.fromRosMsg(data)
-    print("Confirm msg is: ", obj.acceleration, obj.priority_status)
+    print("Confirm msg is: ", obj.location_frenet.theta, obj.priority_status)
 
 
 def listener():
