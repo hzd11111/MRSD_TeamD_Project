@@ -5,8 +5,8 @@ import numpy as np
 import rospy
 import math
 
-from functional_utility import Frenet 
-from geometry_msgs.msg import Pose2D
+from functional_utility import Frenet, Pose2D
+from geometry_msgs.msg import Pose2D as Pose2DMsg
 from carla_utils.msg import ActorMsg, VehicleMsg, PedestrainMsg, FrenetMsg
 from options import TrafficLightStatus, PedestrainPriority
 
@@ -25,15 +25,15 @@ class Actor():
         # system identifiers
         self.world = world
         self.actor_id = actor_id
-        self.actor = None
+        self.actor = None if self.world is None else world.get_actor(self.actor_id)
 
         # variables to pass to the rosmsg
-        self.speed = speed
-        self.acceleration = acceleration
-        self.location_global = location_global
-        self.location_frenet = location_frenet
-        self.length = length
-        self.width = width
+        self.speed = speed if self.world is None else self.get_velocity()
+        self.acceleration = acceleration if self.world is None else self.get_acceleration()
+        self.location_global = location_global if self.world is None else self.get_location_global()
+        self.location_frenet = location_frenet if self.world is None else self.get_location_frenet()
+        self.length = length if self.world is None else self.get_length()
+        self.width = width if self.world is None else self.get_width()
 
     @classmethod
     def fromRosMsg(cls, actor_msg):
@@ -56,7 +56,7 @@ class Actor():
             state_dict = self.get_state_dict()
 
             # create the Pose2D message for actor location
-            pose_msg = Pose2D()
+            pose_msg = Pose2DMsg()
             pose_msg.x = state_dict['Pose2D'][0]
             pose_msg.y = state_dict['Pose2D'][1]
             pose_msg.theta = state_dict['Pose2D'][2]
@@ -94,7 +94,7 @@ class Actor():
         Gets the actor status and returns a status dict with the following info:
         - actor_id (int)
         - speed (float)
-        - acceleration (list [x,y,z]) 
+        - acceleration (list [x,y,z])
         - global location (list [x,y,z])
         - location frenet (TODO)
         - length (float)
@@ -124,15 +124,15 @@ class Actor():
         rot = trans.rotation
 
         # frenet_x, frenet_y, theta = Frenet.get_frenet_distance_from_global(loc.x, loc.y, loc.z) #TODO
-        frenet_x, frenet_y, theta = [0, 0, 0] #TODO: implement Frenet
+        frenet_x, frenet_y, theta = [0, 0, 0]  # TODO: implement Frenet
 
-        state_dict['global_location_3d'] = [loc.x, loc.y, loc.z]
-        state_dict['global_location_2d'] = [loc.x, loc.y]
-        state_dict['Pose2D'] = [loc.x, loc.y, rot.yaw]
-        state_dict['location_frenet'] = [frenet_x, frenet_y, theta]
+        state_dict["global_location_3d"] = [loc.x, loc.y, loc.z]
+        state_dict["global_location_2d"] = [loc.x, loc.y]
+        state_dict["Pose2D"] = Pose2D(loc.x, loc.y, rot.yaw)
+        state_dict["location_frenet"] = Frenet(frenet_x, frenet_y, theta)
 
         # global rotation
-        state_dict['rpy'] = [rot.roll, rot.pitch, rot.yaw]
+        state_dict["rpy"] = [rot.roll, rot.pitch, rot.yaw]
 
         # actor dimensions
         state_dict['length'] = actor.bounding_box.extent.x * 2
@@ -142,28 +142,47 @@ class Actor():
         return state_dict
 
     def spawn(self, Pose2D=None):
-        '''
-        Constructor method to overwrite in the child class to spawn an instance of the child. 
-        '''
+        """
+        Constructor method to overwrite in the child class to spawn an instance of the child.
+        """
         raise Exception("This needs to be implemented in the child class")
 
     def destroy(self):
-        '''
+        """
         Method to destroy the actor.
         Returns:
             bool: True if successful
-        '''
+        """
         return self.actor.destroy()
 
     def fromControllingVehicle(self, Frenet, current_lane):
-        '''
+        """
         Gets the distance from the ego/controlling vehicle in frenet coordinate frame
-        '''
+        """
         pass
 
     def getLocationFrenet(self):
         pass
 
+    def get_velocity(self):
+        return self.get_state_dict()['speed']
+    
+    def get_acceleration(self):
+        return self.get_state_dict()['acceleration']
+
+    def get_location_global(self):
+        '''Returns a Pose2D object'''
+        return self.get_state_dict()['Pose2D']
+    
+    def get_location_frenet(self):
+        '''Returns a Frenet object'''
+        return self.get_state_dict()['location_frenet']
+
+    def get_length(self):
+        return self.get_state_dict()['length']
+        
+    def get_width(self):
+        return self.get_state_dict()['width']
 
 class Vehicle(Actor):
     def __init__(
@@ -179,8 +198,15 @@ class Vehicle(Actor):
                 traffic_light_status=None):
         
         super(Vehicle, self).__init__(
-            world, actor_id, speed, acceleration, location_global, location_frenet, length, width
-        )            
+            world,
+            actor_id,
+            speed,
+            acceleration,
+            location_global,
+            location_frenet,
+            length,
+            width,
+        )
         self.traffic_light_status = traffic_light_status
         if self.traffic_light_status is None:
             self.traffic_light_status = TrafficLightStatus.RED
@@ -196,24 +222,30 @@ class Vehicle(Actor):
         msg.actor_msg = super(Vehicle, self).toRosMsg()
         msg.traffic_light_status = self.traffic_light_status.value
         return msg
- 
 
 
 class Pedestrian(Actor):
     def __init__(
-        self, 
-        world=None, 
-        actor_id=0, 
-        speed=0.0, 
-        acceleration=0.0, 
-        location_global=Pose2D(), 
-        location_frenet=Frenet(), 
-        length=0.0, 
+        self,
+        world=None,
+        actor_id=0,
+        speed=0.0,
+        acceleration=0.0,
+        location_global=Pose2D(),
+        location_frenet=Frenet(),
+        length=0.0,
         width=0.0,
-        priority_status=None
+        priority_status=None,
     ):
         super(Pedestrian, self).__init__(
-            world, actor_id, speed, acceleration, location_global, location_frenet, length, width
+            world,
+            actor_id,
+            speed,
+            acceleration,
+            location_global,
+            location_frenet,
+            length,
+            width,
         )
         self.priority_status = priority_status
         if self.priority_status is None:
