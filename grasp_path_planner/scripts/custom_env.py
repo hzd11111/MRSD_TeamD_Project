@@ -11,7 +11,7 @@ from gym import spaces
 from grasp_path_planner.msg import EnvironmentState
 
 # other packages
-from settings import Scenario, CONVERT_TO_LOCAL, INVERT_ANGLES, OLD_REWARD
+from settings import Scenario, CONVERT_TO_LOCAL
 from path_planner import PathPlannerManager
 from rl_manager import RLManager
 
@@ -73,27 +73,18 @@ class CustomEnv(gym.Env):
         decision = self.rl_manager.convertDecision(action)
         env_desc, end_of_action = self.path_planner.performAction(decision)
         env_copy = env_desc
-        if INVERT_ANGLES:
-            env_copy = self.invert_angles(env_desc)
-        if not OLD_REWARD:
-            self.rl_manager.reward_manager.update(env_copy, action)
+        self.rl_manager.reward_manager.update(env_copy, action)
         done = self.rl_manager.terminate(env_copy)
         end_of_action = end_of_action or done
         while not end_of_action:
             env_desc, end_of_action = self.path_planner.performAction(decision)
             env_copy = env_desc
-            if INVERT_ANGLES:
-                env_copy = self.invert_angles(env_desc)
-            if not OLD_REWARD:
-                self.rl_manager.reward_manager.update(env_copy, action)
+            self.rl_manager.reward_manager.update(env_copy, action)
             done = self.rl_manager.terminate(env_copy)
             end_of_action = end_of_action or done
         env_state = self.rl_manager.makeStateVector(env_copy, self.to_local)
         reward = None
-        if OLD_REWARD and self.rl_manager.event == Scenario.LANE_CHANGE:
-            reward = self.rl_manager.rewardCalculation(env_copy)
-        else:
-            reward = self.rl_manager.reward_manager.get_reward(env_copy, action)
+        reward = self.rl_manager.reward_manager.get_reward(env_copy, action)
         # for sending success signal during testing
         success = not(env_desc.reward.collision or env_desc.reward.time_elapsed > self.rl_manager.eps_time)
         info = {}
@@ -105,12 +96,9 @@ class CustomEnv(gym.Env):
         """
         Resets the environment
         """
-        if not OLD_REWARD:
-            self.rl_manager.reward_manager.reset()
+        self.rl_manager.reward_manager.reset()
         env_desc = self.path_planner.resetSim()
         env_copy = env_desc
-        if INVERT_ANGLES:
-            env_copy = self.invert_angles(env_desc)
         env_state = self.rl_manager.makeStateVector(env_copy, self.to_local)
         return env_state
         # return observation  # reward, done, info can't be included

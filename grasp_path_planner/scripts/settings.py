@@ -99,8 +99,6 @@ N_DISCRETE_ACTIONS = 4
 CONVERT_TO_LOCAL = True
 SIM_SERVICE_NAME = "simulator"
 NODE_NAME = "full_grasp_planner"
-INVERT_ANGLES = False
-OLD_REWARD=None
 
 
 if(CURRENT_SCENARIO == Scenario.PEDESTRIAN):
