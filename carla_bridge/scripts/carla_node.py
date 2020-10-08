@@ -40,6 +40,7 @@ from utility import (
     ParallelLane,
     PerpendicularLane,
     LanePoint,
+    PathPlan,
 )
 from functional_utility import Pose2D
 
@@ -87,8 +88,6 @@ class CarlaManager:
         self.speed_limit = None
         self.pedestrian = None
         self.pedestrian_wait_frames = 0
-
-        self.metrics = DataCollector()
 
     def getVehicleState(self, actor):
         """Creates Vehicle State ROS msg"""
@@ -147,25 +146,22 @@ class CarlaManager:
         return pedestrian_state
 
     def pathRequest(self, data):
-        # data is pathplan ROS msg, check compatibility with the new msgs
-        # TODO: make this compatible with the new ROS msg
+
         os.system("clear")
+
+        plan = PathPlan.fromRosMsg(data)
 
         reset_sim = False
         if self.first_frame_generated:  # have we generated the first frame of
-            data = data.path_plan
 
             ### Get requested pose and speed values ###
-            tracking_pose = data.tracking_pose
-            tracking_speed = data.tracking_speed  # / 3.6
-            reset_sim = data.reset_sim
+            tracking_pose = plan.tracking_pose
+            tracking_speed = plan.tracking_speed  # / 3.6
+            reset_sim = plan.reset_sim
 
-            # TODO: remove if not needed anymore, otherwise migrate to other class
-            # -------------------------------------------------------------------
-
-            self.end_of_action = data.end_of_action
-            self.action_progress = data.action_progress
-            self.path_planner_terminate = data.path_planner_terminate
+            self.end_of_action = plan.end_of_action
+            self.action_progress = plan.action_progress
+            self.path_planner_terminate = plan.path_planner_terminate
 
             ### Update ROS Sync ###
 
@@ -211,7 +207,6 @@ class CarlaManager:
                             self.tm.pedestrian_controller.cross_road()
                             print("Pedestrian Spawned")
 
-                # TODO: Do we need this?
                 #### Check Sync ###
                 flag = 0
                 while flag == 0:
