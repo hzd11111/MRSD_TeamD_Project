@@ -15,7 +15,9 @@ from carla_utils.msg import EnvDescMsg
 from carla_utils.msg import LanePointMsg
 
 from actors import *
-from options import * 
+from options import *
+
+
 class PathPlan(object):
     __slots__ = [
         "tracking_pose",
@@ -111,11 +113,12 @@ class GlobalPath(object):
 class LanePoint(object):
     __slots__ = ["global_pose", "frenet_pose", "stop_line", "lane_start"]
 
-    def __init__(self, 
-        global_pose=Pose2D(), 
-        frenet_pose=Frenet(), 
-        stop_line=None, 
-        lane_start=False
+    def __init__(
+        self,
+        global_pose=Pose2D(),
+        frenet_pose=Frenet(),
+        stop_line=None,
+        lane_start=False,
     ):
         self.global_pose = global_pose
         self.frenet_pose = frenet_pose
@@ -129,7 +132,7 @@ class LanePoint(object):
         cls.global_pose = msg.global_pose
         cls.frenet_pose = Frenet.fromRosMsg(msg.frenet_pose)
         cls.stop_line = StopLineStatus(msg.stop_line)
-        cls.lane_start = msg.lane_start  
+        cls.lane_start = msg.lane_start
         return cls
 
     def toRosMsg(self):
@@ -137,8 +140,9 @@ class LanePoint(object):
         msg.global_pose = self.global_pose
         msg.frenet_pose = self.frenet_pose.toRosMsg()
         msg.stop_line = self.stop_line.value
-        msg.lane_start = self.lane_start        
+        msg.lane_start = self.lane_start
         return msg
+
 
 # Base class impl for Lanes
 class LaneStatus(object):
@@ -154,28 +158,20 @@ class LaneStatus(object):
 
     @classmethod
     def fromRosMsg(cls, msg):
-        cls.lane_vehicles = (
-            [Vehicle.fromRosMsg(v) for v in msg.lane_vehicles]
-        )  
-        cls.lane_points = (
-            [LanePoint.fromRosMsg(lp) for lp in msg.lane_points]
-        )  
+        cls.lane_vehicles = [Vehicle.fromRosMsg(v) for v in msg.lane_vehicles]
+        cls.lane_points = [LanePoint.fromRosMsg(lp) for lp in msg.lane_points]
         cls.lane_id = msg.lane_id
-        cls.crossing_pedestrain = (
-            [Pedestrian.fromRosMsg(ped) for ped in msg.crossing_pedestrain]
-        )  
+        cls.crossing_pedestrain = [
+            Pedestrian.fromRosMsg(ped) for ped in msg.crossing_pedestrain
+        ]
         return cls
 
     def toRosMsg(self):
         msg = LaneStatusMsg()
-        msg.lane_vehicles = (
-           [v.toRosMsg() for v in self.lane_vehicles]
-        )  
-        msg.lane_points =  [l.toRosMsg() for l in self.lane_points]
+        msg.lane_vehicles = [v.toRosMsg() for v in self.lane_vehicles]
+        msg.lane_points = [l.toRosMsg() for l in self.lane_points]
         msg.lane_id = self.lane_id
-        msg.crossing_pedestrain = (
-            [p.toRosMsg() for p in self.crossing_pedestrain]
-        )  
+        msg.crossing_pedestrain = [p.toRosMsg() for p in self.crossing_pedestrain]
         return msg
 
     # TODO: add definition (Mayank)
@@ -275,6 +271,7 @@ class PerpendicularLane(LaneStatus):
         msg.directed_right = self.directed_right
         return msg
 
+
 class RewardInfo(object):
     __slots__ = [
         "collision",
@@ -286,21 +283,22 @@ class RewardInfo(object):
         "path_planner_terminate",
     ]
 
-    def __init__(self, 
-        collision=False, 
-        time_elapsed=0.0, 
-        new_run=False, 
+    def __init__(
+        self,
+        collision=False,
+        time_elapsed=0.0,
+        new_run=False,
         end_of_action=False,
         action_progress=0.0,
         current_action=None,
-        path_planner_terminate=False
+        path_planner_terminate=False,
     ):
         self.collision = collision
         self.time_elapsed = time_elapsed
         self.new_run = new_run
-        self.end_of_action = end_of_action  
-        self.action_progress = action_progress  
-        self.current_action = current_action  
+        self.end_of_action = end_of_action
+        self.action_progress = action_progress
+        self.current_action = current_action
         self.path_planner_terminate = path_planner_terminate
         if self.current_action is None:
             self.current_action = RLDecision.NO_ACTION
@@ -311,9 +309,9 @@ class RewardInfo(object):
         cls.time_elapsed = msg.time_elapsed
         cls.new_run = msg.new_run
         cls.end_of_action = msg.end_of_action
-        cls.action_progress = msg.action_progress  
-        cls.current_action = RLDecision(msg.current_action)  
-        cls.path_planner_terminate = msg.path_planner_terminate 
+        cls.action_progress = msg.action_progress
+        cls.current_action = RLDecision(msg.current_action)
+        cls.path_planner_terminate = msg.path_planner_terminate
         return cls
 
     def toRosMsg(self):
@@ -322,10 +320,11 @@ class RewardInfo(object):
         msg.time_elapsed = self.time_elapsed
         msg.new_run = self.new_run
         msg.end_of_action = self.end_of_action
-        msg.action_progress = self.action_progress  
-        msg.current_action = self.current_action.value 
-        msg.path_planner_terminate = self.path_planner_terminate      
+        msg.action_progress = self.action_progress
+        msg.current_action = self.current_action.value
+        msg.path_planner_terminate = self.path_planner_terminate
         return msg
+
 
 class EnvDesc(object):
     __slots__ = [
@@ -359,9 +358,7 @@ class EnvDesc(object):
 
     @classmethod
     def fromRosMsg(cls, msg):
-        cls.cur_vehicle_state = (
-            Vehicle.fromRosMsg(msg.cur_vehicle_state)
-        ) 
+        cls.cur_vehicle_state = Vehicle.fromRosMsg(msg.cur_vehicle_state)
         cls.current_lane = CurrentLane.fromRosMsg(msg.current_lane)
         cls.next_intersection = [
             PerpendicularLane.fromRosMsg(pline) for pline in msg.next_intersection
@@ -395,7 +392,12 @@ def callback(data):
     # print("receiving data")
     # rospy.loginfo("%f is age: %d" % (data.tracking_speed, data.reset_sim))
     obj = EnvDesc.fromRosMsg(data)
-    print("Confirm msg.current_action is: ", obj.reward_info.current_action, "crossing_pedestrain.priority_status is: ", obj.next_intersection[0].crossing_pedestrain[0].priority_status)
+    print(
+        "Confirm msg.current_action is: ",
+        obj.reward_info.current_action,
+        "crossing_pedestrain.priority_status is: ",
+        obj.next_intersection[0].crossing_pedestrain[0].priority_status,
+    )
 
 
 def listener():
