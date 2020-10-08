@@ -24,7 +24,6 @@ from grasp_path_planner.msg import LanePoint
 from grasp_path_planner.msg import Lane
 from grasp_path_planner.msg import VehicleState
 from grasp_path_planner.msg import Pedestrian
-from grasp_path_planner.msg import RewardInfo
 from grasp_path_planner.msg import EnvironmentState
 from grasp_path_planner.msg import PathPlan
 
@@ -35,8 +34,9 @@ from agents.tools.misc import get_speed
 from utils import *
 
 sys.path.append("../../carla_utils/utils")
-from actors import Actor
+from utility import RewardInfo, EnvDesc
 
+# from actors import Actor, Vehicle, Pedestrian
 
 #######################################################################################
 
@@ -315,7 +315,7 @@ class CarlaManager:
         reward_info.action_progress = self.action_progress
         reward_info.end_of_action = self.end_of_action
         reward_info.path_planner_terminate = self.path_planner_terminate
-        env_state.reward = reward_info
+        env_state.reward = reward_info.toRosMsg()
 
         ## Pedestrian # TODO: ROHAN move this logic to pedestrian class
         if self.pedestrian is not None:
@@ -527,7 +527,7 @@ class CarlaManager:
         reward_info.time_elapsed = self.timestamp
         reward_info.new_run = self.first_run
         reward_info.collision = self.collision_marker
-        env_state.reward = reward_info
+        env_state.reward = reward_info.toRosMsg()
 
     def spin(self):
         print("Start Ros Spin")
