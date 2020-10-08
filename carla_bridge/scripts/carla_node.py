@@ -18,14 +18,6 @@ from carla_handler import CarlaHandler
 
 from grasp_controller import GRASPPIDController
 
-from std_msgs.msg import String
-from grasp_path_planner.msg import LanePoint
-from grasp_path_planner.msg import LanePoint
-from grasp_path_planner.msg import Lane
-from grasp_path_planner.msg import VehicleState
-from grasp_path_planner.msg import Pedestrian
-from grasp_path_planner.msg import EnvironmentState
-
 from scenario_manager import CustomScenario
 from grasp_path_planner.srv import SimService, SimServiceResponse
 from agents.tools.misc import get_speed
@@ -44,7 +36,7 @@ from utility import (
 )
 from functional_utility import Pose2D
 
-# from actors import Actor, Vehicle, Pedestrian
+from actors import Actor, Vehicle, Pedestrian
 
 #######################################################################################
 
@@ -171,14 +163,11 @@ class CarlaManager:
             else:
                 self.first_run = 0
 
-                # time.sleep(1)
                 ### Apply Control signal on the vehicle. Vehicle and controller spawned in resetEnv###
                 self.ego_vehicle.apply_control(
                     self.vehicle_controller.run_step(tracking_speed, tracking_pose)
                 )
 
-                # TODO:ROHAN: Move this to Pedesterian Class
-                # pedestrian = Pedestrian(....)
                 #### Pedestrian Spawning
                 if self.tm.pedestrian_mode == True:
                     if self.pedestrian is None:
@@ -291,22 +280,6 @@ class CarlaManager:
         else:
             vehicle_rear = self.getVehicleState(rear_vehicle)
 
-        # TODO: migrate logic to Environment State class, move it after reward state defined
-        # Contruct enviroment state ROS message
-        env_state = EnvironmentState()
-        env_state.cur_vehicle_state = vehicle_ego
-        env_state.front_vehicle_state = vehicle_front
-        env_state.back_vehicle_state = vehicle_rear
-        env_state.current_lane = lane_cur
-        env_state.next_lane = lane_left
-        env_state.adjacent_lane_vehicles, _ = self.getClosest(
-            [self.getVehicleState(actor) for actor in actors_in_left_lane],
-            vehicle_ego,
-            self.max_num_vehicles,
-        )
-        env_state.speed_limit = self.speed_limit
-
-        # TODO: move this logic to RewardInfo Class
         reward_info = RewardInfo()
         reward_info.time_elapsed = self.timestamp
         reward_info.new_run = self.first_run
@@ -314,21 +287,15 @@ class CarlaManager:
         reward_info.action_progress = self.action_progress
         reward_info.end_of_action = self.end_of_action
         reward_info.path_planner_terminate = self.path_planner_terminate
-        env_state.reward = reward_info.toRosMsg()
 
-        ## Pedestrian # TODO: ROHAN move this logic to pedestrian class
-        if self.pedestrian is not None:
-            env_state.nearest_pedestrian = self.getClosestPedestrian(
-                [self.getPedestrianState(actor) for actor in [self.pedestrian]],
-                vehicle_ego,
-                1,
-            )[0]
+        env_desc = EnvDesc()
+        env_desc.cur_vehicle_state = vehicle_ego
+        env_desc.current_lane = lane_cur
+        env_desc.adjacent_lanes = [self.lane_left, self.lane_right]
+        env_desc.speed_limit = self.speed_limit
+        env_desc.reward = reward_info.toRosMsg()
 
-        else:
-            env_state.nearest_pedestrian = Pedestrian()
-            env_state.nearest_pedestrian.exist = False
-
-        return SimServiceResponse(env_state)  # TODO:Update with new EnvDesc class
+        return SimServiceResponse(env_desc.toRosMsg())
 
     def destroy_actors_and_sensors(self):
         # TODO: ROHAN: get destroy method from Actor Class
@@ -492,53 +459,6 @@ class CarlaManager:
             left_to_the_current=False,
             next_lane=True,
         )
-
-        vehicle_ego = self.getVehicleState(self.ego_vehicle)
-
-        # Front vehicle
-        if front_vehicle == None:
-            vehicle_front = VehicleState()  # vehicle_ego
-        else:
-            vehicle_front = self.getVehicleState(front_vehicle)
-
-        # Rear vehicle
-        if rear_vehicle == None:
-            vehicle_rear = VehicleState()  # vehicle_ego
-        else:
-            vehicle_rear = self.getVehicleState(rear_vehicle)
-
-        # Contruct enviroment state ROS message
-        # env_state = EnvironmentState()
-        # env_state.cur_vehicle_state = vehicle_ego
-        # env_state.front_vehicle_state = vehicle_front
-        # env_state.back_vehicle_state = vehicle_rear
-        # env_state.adjacent_lane_vehicles, _ = self.getClosest(
-        #     [self.getVehicleState(actor) for actor in actors_in_left_lane],
-        #     vehicle_ego,
-        #     self.max_num_vehicles,
-        # )  # TODO : Only considering left lane for now. Need to make this more general
-        # env_state.current_lane = self.lane_cur
-        # env_state.next_lane = self.lane_left
-        # env_state.max_num_vehicles = self.max_num_vehicles
-        # env_state.speed_limit = 20
-
-        # ## Pedestrian
-        # if self.pedestrian is not None:
-        #     env_state.nearest_pedestrian = self.getClosestPedestrian(
-        #         [self.getPedestrianState(actor) for actor in [self.pedestrian]],
-        #         vehicle_ego,
-        #         1,
-        #     )[0]
-        # else:
-        #     env_state.nearest_pedestrian = Pedestrian()
-        #     env_state.nearest_pedestrian.exist = False
-
-        reward_info = RewardInfo()
-        reward_info.time_elapsed = self.timestamp
-        reward_info.new_run = self.first_run
-        reward_info.collision = self.collision_marker
-
-        env_state.reward = reward_info.toRosMsg()
 
     def spin(self):
         print("Start Ros Spin")

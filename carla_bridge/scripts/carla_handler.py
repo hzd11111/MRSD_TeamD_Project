@@ -22,6 +22,7 @@ import re
 sys.path.append("../../carla_utils/utils")
 from functional_utility import Pose2D
 from utility import LanePoint
+from actors import Actor, Vehicle, Pedestrian
 
 
 class RoadOption(Enum):
