@@ -19,6 +19,10 @@ from utils import get_matrix, create_bb_points
 from enum import Enum
 import re
 
+sys.path.append("../../carla_utils/utils")
+from functional_utility import Pose2D
+from utility import LanePoint
+
 
 class RoadOption(Enum):
     """
@@ -286,6 +290,14 @@ class CarlaHandler:
 
         return full_waypoints
 
+    def waypoint_to_pose2D(self, waypoint):
+
+        x = waypoint.transform.location.x
+        y = waypoint.transform.location.y
+        theta = waypoint.transform.rotation.yaw * np.pi / 180
+
+        return Pose2D(x=x, y=y, theta=theta)
+
     def get_state_information_new(
         self,
         ego_vehicle=None,
@@ -387,6 +399,19 @@ class CarlaHandler:
                             closest_distance_rear = (
                                 curr_actor_location_in_ego_vehicle_frame[0][0]
                             )
+
+        current_lane_waypoints = [
+            LanePoint(global_pose=self.waypoint_to_pose2D(wp))
+            for wp in current_lane_waypoints
+        ]
+        left_lane_waypoints = [
+            LanePoint(global_pose=self.waypoint_to_pose2D(wp))
+            for wp in left_lane_waypoints
+        ]
+        right_lane_waypoints = [
+            LanePoint(global_pose=self.waypoint_to_pose2D(wp))
+            for wp in right_lane_waypoints
+        ]
 
         return (
             current_lane_waypoints,

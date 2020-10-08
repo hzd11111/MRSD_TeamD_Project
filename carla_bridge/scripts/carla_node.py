@@ -25,7 +25,6 @@ from grasp_path_planner.msg import Lane
 from grasp_path_planner.msg import VehicleState
 from grasp_path_planner.msg import Pedestrian
 from grasp_path_planner.msg import EnvironmentState
-from grasp_path_planner.msg import PathPlan
 
 from scenario_manager import CustomScenario
 from grasp_path_planner.srv import SimService, SimServiceResponse
@@ -34,7 +33,15 @@ from agents.tools.misc import get_speed
 from utils import *
 
 sys.path.append("../../carla_utils/utils")
-from utility import RewardInfo, EnvDesc
+from utility import (
+    RewardInfo,
+    EnvDesc,
+    CurrentLane,
+    ParallelLane,
+    PerpendicularLane,
+    LanePoint,
+)
+from functional_utility import Pose2D
 
 # from actors import Actor, Vehicle, Pedestrian
 
@@ -139,26 +146,6 @@ class CarlaManager:
 
         return pedestrian_state
 
-    def getLanePoints(self, waypoints, flip=False):
-        # TODO: Lane classes should generate this type of messages
-        # Remove this function
-        lane_cur = Lane()
-        lane_points = []
-
-        for i, waypoint in enumerate(waypoints):
-            lane_point = LanePoint()
-            lane_point.pose.y = waypoint.transform.location.y
-            lane_point.pose.x = waypoint.transform.location.x
-            lane_point.pose.theta = (
-                waypoint.transform.rotation.yaw * np.pi / 180
-            )  # CHECK : Changed this to radians.
-            lane_point.width = 3.5  # TODO
-            lane_points.append(lane_point)
-
-        lane_cur.lane = lane_points
-
-        return lane_cur
-
     def pathRequest(self, data):
         # data is pathplan ROS msg, check compatibility with the new msgs
         # TODO: make this compatible with the new ROS msg
@@ -259,13 +246,30 @@ class CarlaManager:
         # TODO: Use the new class functions instead of getLanePoints
         # Current Lane
         if reset_sim == True:
-            self.lane_cur = self.getLanePoints(current_lane_waypoints)
+
+            # Current Lane
+            self.lane_cur = CurrentLane(
+                lane_vehicles=actors_in_current_lane, lane_points=current_lane_waypoints
+            )
             lane_cur = self.lane_cur
+
             # Left Lane
-            self.lane_left = self.getLanePoints(left_lane_waypoints)
+            self.lane_left = ParallelLane(
+                lane_vehicles=actors_in_left_lane,
+                lane_points=left_lane_waypoints,
+                same_direction=True,
+                left_to_the_current=True,
+                next_lane=True,
+            )
             lane_left = self.lane_left
             # Right Lane
-            self.lane_right = self.getLanePoints(right_lane_waypoints)
+            self.lane_right = ParallelLane(
+                lane_vehicles=actors_in_right_lane,
+                lane_points=right_lane_waypoints,
+                same_direction=True,
+                left_to_the_current=False,
+                next_lane=True,
+            )
             lane_right = self.lane_right
 
         else:
@@ -351,7 +355,6 @@ class CarlaManager:
         print("All actors destroyed..\n")
 
     def collision_handler(self, event):
-        # print("collision lol")
         self.collision_marker = 1
 
     def resetEnv(self):
@@ -476,12 +479,27 @@ class CarlaManager:
         ##############################################################################################################
         # publish the first frame
         # Current Lane
-        self.lane_cur = self.getLanePoints(current_lane_waypoints)
+        self.lane_cur = CurrentLane(
+            lane_vehicles=actors_in_current_lane, lane_points=current_lane_waypoints
+        )
 
         # Left Lane
-        self.lane_left = self.getLanePoints(left_lane_waypoints)
+        self.lane_left = ParallelLane(
+            lane_vehicles=actors_in_left_lane,
+            lane_points=left_lane_waypoints,
+            same_direction=True,
+            left_to_the_current=True,
+            next_lane=True,
+        )
+
         # Right Lane
-        self.lane_right = self.getLanePoints(right_lane_waypoints)
+        self.lane_right = ParallelLane(
+            lane_vehicles=actors_in_right_lane,
+            lane_points=right_lane_waypoints,
+            same_direction=True,
+            left_to_the_current=False,
+            next_lane=True,
+        )
 
         vehicle_ego = self.getVehicleState(self.ego_vehicle)
 
