@@ -1,2 +1,2 @@
 ActorMsg actor_msg
-# TrafficLightStatusMsg traffic_light_status
+int64 traffic_light_status

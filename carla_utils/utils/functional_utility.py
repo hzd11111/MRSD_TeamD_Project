@@ -9,7 +9,7 @@ from carla_utils.msg import FrenetMsg
 class Frenet(object):
     __slots__ = ["x", "y", "theta"]
 
-    def __init__(self, x, y, theta):
+    def __init__(self, x=0.0, y=0.0, theta=0.0):
         self.x = x
         self.y = y
         self.theta = theta
@@ -84,10 +84,10 @@ class Pose2D(object):
     def wrapToPi(self, theta: float) -> float:
         return (theta + math.pi) % (2.0 * math.pi) - math.pi
 
-    def distance(self, pose: Pose2D) -> float:
+    def distance(self, pose) -> float:
         return math.sqrt((self.x - pose.x) ** 2.0 + (self.y - pose.y) ** 2.0)
 
-    def add(self, pose: Pose2D) -> Pose2D:
+    def add(self, pose):
         new_pose = Pose2D()
         new_pose.x = (
             self.x + pose.x * math.cos(self.theta) - pose.y * math.sin(self.theta)
@@ -98,7 +98,7 @@ class Pose2D(object):
         new_pose.theta = self.wrapToPi(self.theta + pose.theta)
         return new_pose
 
-    def vecTo(self, pose: Pose2D) -> Vec2D:
+    def vecTo(self, pose) -> Vec2D:
         new_vec = Vec2D()
         new_vec.x = pose.x - self.x
         new_vec.y = pose.y - self.y
@@ -107,12 +107,12 @@ class Pose2D(object):
     def vecFromTheta(self) -> Vec2D:
         return Vec2D(math.cos(self.theta), math.sin(self.theta))
 
-    def isInfrontOf(self, pose: Pose2D) -> bool:
+    def isInfrontOf(self, pose) -> bool:
         diff_vec = pose.vecTo(self)
         other_vec = pose.vecFromTheta()
         return diff_vec.dot(other_vec) > 0
 
-    def scalarMultiply(self, scalar: float) -> Pose2D:
+    def scalarMultiply(self, scalar: float):
         new_pose = Pose2D()
         new_pose.x = self.x * scalar
         new_pose.y = self.y * scalar
