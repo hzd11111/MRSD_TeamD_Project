@@ -47,18 +47,21 @@ class Actor:
 
     @classmethod
     def fromRosMsg(cls, actor_msg):
-        cls.speed = actor_msg.speed
-        cls.acceleration = actor_msg.acceleration
-        cls.location_global = actor_msg.location_global
-        cls.location_frenet = Frenet.fromRosMsg(actor_msg.location_frenet)
-        cls.length = actor_msg.length
-        cls.width = actor_msg.width
-        return cls
+        # obj = cls.__new__(cls)
+        obj = cls()
+        obj.speed = actor_msg.speed
+        obj.acceleration = actor_msg.acceleration
+        obj.location_global = Pose2D.fromRosMsg(actor_msg.location_global)
+        obj.location_frenet = Frenet.fromRosMsg(actor_msg.location_frenet)
+        obj.length = actor_msg.length
+        obj.width = actor_msg.width
+        return obj
 
     def toRosMsg(self):
         """
         Returns the Actor ROS msg. If world is available, updates the state variable before returning.
         """
+        msg = ActorMsg()
         if self.world is not None:
             self.actor = self.world.get_actor(self.actor_id)
 
@@ -78,7 +81,6 @@ class Actor:
             frenet_msg.theta = state_dict["location_frenet"].theta
 
             # create the actor message
-            msg = ActorMsg()
             msg.actor_id = state_dict["actor_id"]
             msg.speed = state_dict["speed"]
             msg.acceleration = state_dict["acceleration"]
@@ -87,7 +89,6 @@ class Actor:
             msg.length = state_dict["length"]
             msg.width = state_dict["width"]
         else:
-            msg = ActorMsg()
             msg.actor_id = self.actor_id
             msg.speed = self.speed
             msg.acceleration = self.acceleration
@@ -227,9 +228,10 @@ class Vehicle(Actor):
 
     @classmethod
     def fromRosMsg(cls, msg):
-        Actor = super(Vehicle, cls).fromRosMsg(msg.actor_msg)
-        cls.traffic_light_status = TrafficLightStatus(msg.traffic_light_status)
-        return cls
+        obj = cls.__new__(cls)
+        obj = super(Vehicle, obj).fromRosMsg(msg.actor_msg)
+        obj.traffic_light_status = TrafficLightStatus(msg.traffic_light_status)
+        return obj
 
     def toRosMsg(self):
         msg = VehicleMsg()
@@ -283,9 +285,10 @@ class Pedestrian(Actor):
 
     @classmethod
     def fromRosMsg(cls, msg):
-        Actor = super(Pedestrian, cls).fromRosMsg(msg.actor_msg)
-        cls.priority_status = PedestrainPriority(msg.priority_status)
-        return cls
+        obj = cls.__new__(cls)
+        obj = super(Pedestrian, obj).fromRosMsg(msg.actor_msg)
+        obj.priority_status = PedestrainPriority(msg.priority_status)
+        return obj
 
     def toRosMsg(self):
         msg = PedestrainMsg()
@@ -295,7 +298,7 @@ class Pedestrian(Actor):
 
 
 TEST_NODE_NAME = "actor_listener"
-TEST_TOPIC_NAME = "actor_test"
+TEST_TOPIC_NAME = "custom_chatter"
 
 # Test Code for Deserialize and Infor Printing
 def callback(data):
@@ -303,7 +306,13 @@ def callback(data):
     # print("receiving data")
     # rospy.loginfo("%f is age: %d" % (data.tracking_speed, data.reset_sim))
     obj = Pedestrian.fromRosMsg(data)
-    print("Confirm msg is: ", obj.location_frenet.theta, obj.priority_status)
+    print(
+        "Confirm msg is: ",
+        obj.location_frenet.theta,
+        obj.location_global.x,
+        obj.location_global.y,
+        obj.location_global.theta,
+    )
 
 
 def listener():
