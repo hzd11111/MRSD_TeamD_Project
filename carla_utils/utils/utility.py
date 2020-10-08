@@ -1,6 +1,6 @@
 #!/usr/bin/env python
 import rospy
-from geometry_msgs.msg import Pose2D
+from geometry_msgs.msg import Pose2D as Pose2DMsg
 from carla_utils.msg import PathPlanMsg
 from carla_utils.msg import PathPlanMsg
 from carla_utils.msg import GlobalPathPointMsg
@@ -16,6 +16,8 @@ from carla_utils.msg import LanePointMsg
 
 from actors import *
 from options import * 
+from functional_utility import Pose2D
+
 class PathPlan(object):
     __slots__ = [
         "tracking_pose",
@@ -47,7 +49,7 @@ class PathPlan(object):
 
     @classmethod
     def fromRosMsg(cls, path_plan_msg):
-        cls.tracking_pose = path_plan_msg.tracking_pose
+        cls.tracking_pose = Pose2D.fromRosMsg(path_plan_msg.tracking_pose)
         cls.future_poses = path_plan_msg.future_poses
         cls.tracking_speed = path_plan_msg.tracking_speed
         cls.reset_sim = path_plan_msg.reset_sim
@@ -58,7 +60,7 @@ class PathPlan(object):
 
     def toRosMsg(self):
         msg = PathPlanMsg()
-        msg.tracking_pose = self.tracking_pose
+        msg.tracking_pose = self.tracking_pose.toRosMsg()
         msg.future_poses = self.future_poses
         msg.tracking_speed = self.tracking_speed
         msg.reset_sim = self.reset_sim
@@ -78,14 +80,14 @@ class GlobalPathPoint(object):
 
     @classmethod
     def fromRosMsg(cls, msg):
-        cls.global_pose = msg.global_pose
+        cls.global_pose = Pose2D.fromRosMsg(msg.global_pose)
         cls.lane_id = msg.lane_id
         cls.action = msg.action
         return cls
 
     def toRosMsg(self):
         msg = GlobalPathPointMsg()
-        msg.global_pose = self.global_pose
+        msg.global_pose = self.global_pose.toRosMsg()
         msg.lane_id = self.lane_id
         msg.action = self.action
         return msg
@@ -126,7 +128,7 @@ class LanePoint(object):
 
     @classmethod
     def fromRosMsg(cls, msg):
-        cls.global_pose = msg.global_pose
+        cls.global_pose = Pose2D.fromRosMsg(msg.global_pose)
         cls.frenet_pose = Frenet.fromRosMsg(msg.frenet_pose)
         cls.stop_line = StopLineStatus(msg.stop_line)
         cls.lane_start = msg.lane_start  
@@ -134,7 +136,7 @@ class LanePoint(object):
 
     def toRosMsg(self):
         msg = LanePointMsg()
-        msg.global_pose = self.global_pose
+        msg.global_pose = self.global_pose.toRosMsg()
         msg.frenet_pose = self.frenet_pose.toRosMsg()
         msg.stop_line = self.stop_line.value
         msg.lane_start = self.lane_start        
@@ -142,18 +144,20 @@ class LanePoint(object):
 
 # Base class impl for Lanes
 class LaneStatus(object):
-    __slots__ = ["lane_vehicles", "lane_points", "lane_id", "crossing_pedestrain"]
+    __slots__ = ["lane_vehicles", "lane_points", "lane_id", "crossing_pedestrain", "origin_global_pose"]
 
     def __init__(
-        self, lane_vehicles=[], lane_points=[], lane_id=0, crossing_pedestrain=[]
+        self, lane_vehicles=[], lane_points=[], lane_id=0, crossing_pedestrain=[], origin_global_pose=Pose2D()
     ):
         self.lane_vehicles = lane_vehicles
         self.lane_points = lane_points
         self.lane_id = lane_id
         self.crossing_pedestrain = crossing_pedestrain
+        self.origin_global_pose = origin_global_pose
 
     @classmethod
     def fromRosMsg(cls, msg):
+        print("calling the base class[LaneStatus] fromRosMsg")
         cls.lane_vehicles = (
             [Vehicle.fromRosMsg(v) for v in msg.lane_vehicles]
         )  
@@ -163,7 +167,13 @@ class LaneStatus(object):
         cls.lane_id = msg.lane_id
         cls.crossing_pedestrain = (
             [Pedestrian.fromRosMsg(ped) for ped in msg.crossing_pedestrain]
-        )  
+        ) 
+        print("print pedestrian in Lanestatus")
+        for p in cls.crossing_pedestrain:
+            print(p.location_global.x)
+            print(p.location_global.y)
+            print(p.location_global.theta)
+        cls.origin_global_pose = Pose2D.fromRosMsg(msg.origin_global_pose) 
         return cls
 
     def toRosMsg(self):
@@ -175,7 +185,8 @@ class LaneStatus(object):
         msg.lane_id = self.lane_id
         msg.crossing_pedestrain = (
             [p.toRosMsg() for p in self.crossing_pedestrain]
-        )  
+        ) 
+        msg.origin_global_pose = self.origin_global_pose.toRosMsg() 
         return msg
 
     # TODO: add definition (Mayank)
@@ -190,6 +201,12 @@ class CurrentLane(LaneStatus):
     @classmethod
     def fromRosMsg(cls, msg):
         LaneStatus = super(CurrentLane, cls).fromRosMsg(msg.lane_status)
+        print("size of cls.crossing_pedestrain", len(LaneStatus.crossing_pedestrain))
+        print("print pedestrian in CurrentLane")
+        for p in LaneStatus.crossing_pedestrain:
+            print(p.location_global.x)
+            print(p.location_global.y)
+            print(p.location_global.theta)
         return cls
 
     def toRosMsg(self):
@@ -213,13 +230,14 @@ class ParallelLane(LaneStatus):
         lane_points=[],
         lane_id=0,
         crossing_pedestrain=[],
+        origin_global_pose = Pose2D(),
         same_direction=False,
         left_to_the_current=False,
         next_lane=False,
         lane_distance=0.0,
     ):
         super(ParallelLane, self).__init__(
-            lane_vehicles, lane_points, lane_id, crossing_pedestrain
+            lane_vehicles, lane_points, lane_id, crossing_pedestrain, origin_global_pose
         )
         self.same_direction = same_direction
         self.left_to_the_current = left_to_the_current
@@ -394,13 +412,19 @@ def callback(data):
     # path_plan = PathPlan.fromRosMsg(data)
     # print("receiving data")
     # rospy.loginfo("%f is age: %d" % (data.tracking_speed, data.reset_sim))
-    obj = EnvDesc.fromRosMsg(data)
-    print("Confirm msg.current_action is: ", obj.reward_info.current_action, "crossing_pedestrain.priority_status is: ", obj.next_intersection[0].crossing_pedestrain[0].priority_status)
+    obj = CurrentLane.fromRosMsg(data)
+    # print(obj.crossing_pedestrain[0].location_global.x)
+    # print(obj.crossing_pedestrain[0].location_global.y)
+    # print(obj.crossing_pedestrain[0].location_global.theta)
+    # print(obj.lane_id)
+    # print(obj.origin_global_pose.x)
+    # print(obj.origin_global_pose.y)
+    # print(obj.origin_global_pose.theta)
 
 
 def listener():
     rospy.init_node(TEST_NODE_NAME, anonymous=True)
-    rospy.Subscriber(TEST_TOPIC_NAME, EnvDescMsg, callback)
+    rospy.Subscriber(TEST_TOPIC_NAME, CurrentLaneMsg, callback)
 
     # spin() simply keeps python from exiting until this node is stopped
     rospy.spin()

@@ -5,8 +5,8 @@ import numpy as np
 import rospy
 import math
 
-from functional_utility import Frenet
-from geometry_msgs.msg import Pose2D
+from functional_utility import Frenet, Pose2D
+from geometry_msgs.msg import Pose2D as Pose2DMsg
 from carla_utils.msg import ActorMsg, VehicleMsg, PedestrainMsg, FrenetMsg
 from options import TrafficLightStatus, PedestrainPriority
 
@@ -41,7 +41,8 @@ class Actor:
     def fromRosMsg(cls, actor_msg):
         cls.speed = actor_msg.speed
         cls.acceleration = actor_msg.acceleration
-        cls.location_global = actor_msg.location_global
+        cls.location_global = Pose2D.fromRosMsg(actor_msg.location_global)
+        # print(cls.location_global.theta)
         cls.location_frenet = Frenet.fromRosMsg(actor_msg.location_frenet)
         cls.length = actor_msg.length
         cls.width = actor_msg.width
@@ -51,6 +52,7 @@ class Actor:
         """
         Returns the Actor ROS msg. If world is available, updates the state variable before returning.
         """
+        msg = ActorMsg()
         if self.world is not None:
             self.actor = self.world.get_actor(self.actor_id)
 
@@ -58,7 +60,7 @@ class Actor:
             state_dict = self.get_state_dict()
 
             # create the Pose2D message for actor location
-            pose_msg = Pose2D()
+            pose_msg = Pose2DMsg()
             pose_msg.x = state_dict["Pose2D"][0]
             pose_msg.y = state_dict["Pose2D"][1]
             pose_msg.theta = state_dict["Pose2D"][2]
@@ -70,7 +72,6 @@ class Actor:
             frenet_msg.theta = state_dict["location_frenet"][2]
 
             # create the actor message
-            msg = ActorMsg()
             msg.actor_id = state_dict["actor_id"]
             msg.speed = state_dict["speed"]
             msg.acceleration = state_dict["acceleration"]
@@ -79,14 +80,13 @@ class Actor:
             msg.length = state_dict["length"]
             msg.width = state_dict["width"]
         else:
-            msg = ActorMsg()
             msg.actor_id = self.actor_id
             msg.speed = self.speed
             msg.acceleration = self.acceleration
             msg.length = self.length
             msg.width = self.width
 
-        msg.location_global = self.location_global
+        msg.location_global = self.location_global.toRosMsg()
         msg.location_frenet = self.location_frenet.toRosMsg()
 
         return msg
@@ -220,7 +220,7 @@ class Pedestrian(Actor):
         location_frenet=Frenet(),
         length=0.0,
         width=0.0,
-        priority_status=None,
+        priority_status=None
     ):
         super(Pedestrian, self).__init__(
             world,
@@ -250,7 +250,7 @@ class Pedestrian(Actor):
 
 
 TEST_NODE_NAME = "actor_listener"
-TEST_TOPIC_NAME = "actor_test"
+TEST_TOPIC_NAME = "custom_chatter"
 
 # Test Code for Deserialize and Infor Printing
 def callback(data):
@@ -258,7 +258,7 @@ def callback(data):
     # print("receiving data")
     # rospy.loginfo("%f is age: %d" % (data.tracking_speed, data.reset_sim))
     obj = Pedestrian.fromRosMsg(data)
-    print("Confirm msg is: ", obj.location_frenet.theta, obj.priority_status)
+    print("Confirm msg is: ", obj.location_frenet.theta, obj.location_global.x, obj.location_global.y, obj.location_global.theta)
 
 
 def listener():
