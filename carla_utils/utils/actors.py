@@ -39,14 +39,15 @@ class Actor:
 
     @classmethod
     def fromRosMsg(cls, actor_msg):
-        cls.speed = actor_msg.speed
-        cls.acceleration = actor_msg.acceleration
-        cls.location_global = Pose2D.fromRosMsg(actor_msg.location_global)
-        # print(cls.location_global.theta)
-        cls.location_frenet = Frenet.fromRosMsg(actor_msg.location_frenet)
-        cls.length = actor_msg.length
-        cls.width = actor_msg.width
-        return cls
+        # obj = cls.__new__(cls)
+        obj = cls()
+        obj.speed = actor_msg.speed
+        obj.acceleration = actor_msg.acceleration
+        obj.location_global = Pose2D.fromRosMsg(actor_msg.location_global)
+        obj.location_frenet = Frenet.fromRosMsg(actor_msg.location_frenet)
+        obj.length = actor_msg.length
+        obj.width = actor_msg.width
+        return obj
 
     def toRosMsg(self):
         """
@@ -198,9 +199,10 @@ class Vehicle(Actor):
 
     @classmethod
     def fromRosMsg(cls, msg):
-        Actor = super(Vehicle, cls).fromRosMsg(msg.actor_msg)
-        cls.traffic_light_status = TrafficLightStatus(msg.traffic_light_status)
-        return cls
+        obj = cls.__new__(cls)
+        obj = super(Vehicle, obj).fromRosMsg(msg.actor_msg)
+        obj.traffic_light_status = TrafficLightStatus(msg.traffic_light_status)
+        return obj
 
     def toRosMsg(self):
         msg = VehicleMsg()
@@ -238,9 +240,10 @@ class Pedestrian(Actor):
 
     @classmethod
     def fromRosMsg(cls, msg):
-        Actor = super(Pedestrian, cls).fromRosMsg(msg.actor_msg)
-        cls.priority_status = PedestrainPriority(msg.priority_status)
-        return cls
+        obj = cls.__new__(cls)
+        obj = super(Pedestrian, obj).fromRosMsg(msg.actor_msg)
+        obj.priority_status = PedestrainPriority(msg.priority_status)
+        return obj
 
     def toRosMsg(self):
         msg = PedestrainMsg()
