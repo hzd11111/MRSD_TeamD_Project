@@ -11,6 +11,7 @@ __version__ = "0.1"
 import random
 import time
 import math
+import sys
 
 import numpy as np
 import carla
@@ -70,26 +71,6 @@ class CarlaHandler:
                 actor.destroy()
         print("All actors destroyed..\n")
 
-    def get_spawn_points(self):
-
-        return self.world_map.get_spawn_points()
-
-    def spawn_vehicle(self, vehicle_type="model3", spawn_point=None):
-
-        if spawn_point == None:
-
-            spawn_point = random.choice(self.get_spawn_points())
-
-        vehicle_blueprint = self.blueprint_library.filter(vehicle_type)[0]
-
-        vehicle = self.world.spawn_actor(vehicle_blueprint, spawn_point)
-
-        self.actor_dict[vehicle.id] = vehicle
-
-        print("Vehicle spawned at", spawn_point, "with ID:", vehicle.id, "\n")
-
-        return vehicle, vehicle.id
-
     def get_waypoints(self, distance=1):
 
         return self.world_map.generate_waypoints(distance=distance)
@@ -134,34 +115,6 @@ class CarlaHandler:
                     color=carla.Color(r=0, g=255, b=b),
                     life_time=life_time,
                     persistent_lines=True,
-                )
-
-    def draw_arrow(self, waypoints, road_id=None, section_id=None, life_time=50.0):
-
-        for i, waypoint in enumerate(waypoints):
-            if i == len(waypoints) - 1:
-                continue
-            trans = waypoints[i + 1].transform
-            # yaw_in_rad = math.radians(trans.rotation.yaw)
-            yaw_in_rad = math.radians(
-                np.arctan(waypoint.transform.location.y - trans.location.y)
-                / (waypoint.transform.location.x - trans.location.x)
-            )
-            # pitch_in_rad = math.radians(trans.rotation.pitch)
-            p1 = carla.Location(
-                x=trans.location.x + math.cos(yaw_in_rad),
-                y=trans.location.y + math.sin(yaw_in_rad),
-                z=trans.location.z,
-            )
-
-            if road_id == None or waypoint.road_id == road_id:
-                self.world.debug.draw_arrow(
-                    waypoint.transform.location,
-                    p1,
-                    thickness=0.01,
-                    arrow_size=0.05,
-                    color=carla.Color(r=0, g=255, b=0),
-                    life_time=life_time,
                 )
 
     def _retrieve_options(self, list_waypoints, current_waypoint):
@@ -252,12 +205,12 @@ class CarlaHandler:
 
         return pedestrian_list
 
-    def get_next_waypoints(self, last_waypoint, ego_speed, rev=False, k=100):
+    def get_next_waypoints(self, last_waypoint, rev=False, k=100):
 
         if last_waypoint == None:
             return []
 
-        sampling_radius = 1  # ego_speed * 1 / 3.6
+        sampling_radius = 1
         full_waypoints = []
         for i in range(k):
             if rev == False:
@@ -315,25 +268,16 @@ class CarlaHandler:
                 ego_vehicle_location, project_to_road=True
             )
 
-            ego_speed = (
-                np.sqrt(
-                    ego_vehicle.get_velocity().x ** 2
-                    + ego_vehicle.get_velocity().y ** 2
-                    + ego_vehicle.get_velocity().z ** 2
-                )
-                * 3.6
-            )
-
-            current_lane_waypoints = self.get_next_waypoints(
-                nearest_waypoint, ego_speed, k=300
-            )[::-1]
+            current_lane_waypoints = self.get_next_waypoints(nearest_waypoint, k=300)[
+                ::-1
+            ]
             left_lane_waypoints = self.get_next_waypoints(
-                nearest_waypoint.get_left_lane(), ego_speed, k=300
+                nearest_waypoint.get_left_lane(), k=300
             )[
                 ::-1
             ]  # +
             right_lane_waypoints = self.get_next_waypoints(
-                nearest_waypoint.get_right_lane(), ego_speed, k=300
+                nearest_waypoint.get_right_lane(), k=300
             )[
                 ::-1
             ]  # +
@@ -412,6 +356,31 @@ class CarlaHandler:
         right_lane_waypoints = [
             LanePoint(global_pose=self.waypoint_to_pose2D(wp))
             for wp in right_lane_waypoints
+        ]
+
+        vehicle_ego = Vehicle(self.world, ego_vehicle.id)
+        # Front vehicle
+        if front_vehicle == None:
+            vehicle_front = vehicle_ego
+        else:
+            vehicle_front = Vehicle(self.world, front_vehicle.id)
+
+        # Rear vehicle
+        if rear_vehicle == None:
+            vehicle_rear = vehicle_ego
+        else:
+            vehicle_rear = Vehicle(self.world, rear_vehicle.id)
+
+        actors_in_current_lane = [
+            Vehicle(self.world, vehicle.id) for vehicle in actors_in_current_lane
+        ]
+
+        actors_in_left_lane = [
+            Vehicle(self.world, vehicle.id) for vehicle in actors_in_left_lane
+        ]
+
+        actors_in_right_lane = [
+            Vehicle(self.world, vehicle.id) for vehicle in actors_in_right_lane
         ]
 
         return (
