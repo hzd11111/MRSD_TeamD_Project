@@ -1,2 +1,2 @@
 ActorMsg actor_msg
-# PedestrainPriorityMsg priority_status
+int64 priority_status
