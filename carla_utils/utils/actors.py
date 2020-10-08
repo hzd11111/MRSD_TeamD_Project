@@ -1,70 +1,86 @@
+#!/usr/bin/env python
 import os
 import sys
-import carla
 import numpy as np
-
 import rospy
 import math
 
-from geometry_msgs.msg import Pose2D as Pose2DMsg
-from carla_utils.msg import ActorMsg, FrenetMsg
-
 from functional_utility import Frenet
-
-from frenet import Frenet  # TODO: Fix Import
-from lanestatus import LaneStatus  # TODO:Fix import
+from geometry_msgs.msg import Pose2D
+from carla_utils.msg import ActorMsg, VehicleMsg, PedestrainMsg, FrenetMsg
+from options import TrafficLightStatus, PedestrainPriority
 
 
 class Actor:
-    def __init__(self, world: carla.libcarla.World, actor_id: int):
+    def __init__(
+        self,
+        world=None,
+        actor_id=0,
+        speed=0.0,
+        acceleration=0.0,
+        location_global=Pose2D(),
+        location_frenet=Frenet(),
+        length=0.0,
+        width=0.0,
+    ):
 
         # system identifiers
         self.world = world
         self.actor_id = actor_id
         self.actor = None
 
-        # TODO: delete if not needed
-        # # variables to pass to the rosmsg
-        # self.speed = None
-        # self.acceleration = None
-        # self.location_global = None
-        # self.location_frenet = None
-        # self.length = None
-        # self.width = None
+        # variables to pass to the rosmsg
+        self.speed = speed
+        self.acceleration = acceleration
+        self.location_global = location_global
+        self.location_frenet = location_frenet
+        self.length = length
+        self.width = width
 
-    def toROS(self):
-        # Publishes the actor state info to ROS
-        # int64 actor_id
-        # float64 speed
-        # float64 acceleration
-        # geometry_msgs/Pose2D location_global
-        # FrenetMsg location_frenet
-        # float64 length
-        # float64 width
-        state_dict = self.get_state_dict()
+    @classmethod
+    def fromRosMsg(cls, actor_msg):
+        cls.speed = actor_msg.speed
+        cls.acceleration = actor_msg.acceleration
+        cls.location_global = actor_msg.location_global
+        cls.location_frenet = Frenet.fromRosMsg(actor_msg.location_frenet)
+        cls.length = actor_msg.length
+        cls.width = actor_msg.width
+        return cls
 
-        # create the Pose2D message for actor location
-        pose_msg = Pose2DMsg()
-        pose_msg.x = state_dict["Pose2D"][0]
-        pose_msg.y = state_dict["Pose2D"][1]
-        pose_msg.theta = state_dict["Pose2D"][2]
+    def toRosMsg(self):
+        # Commenting as Actor class def is not clear and running this would lead to err (Scott)
+        # # Publishes the actor state info to ROS
+        # state_dict = self.get_state_dict()
 
-        # create the frenet message for actor location
-        frenet_msg = FrenetMsg()
-        frenet_msg.x = state_dict["location_frenet"][0]
-        frenet_msg.y = state_dict["location_frenet"][1]
-        frenet_msg.theta = state_dict["location_frenet"][2]
+        # # create the Pose2D message for actor location
+        # pose_msg = Pose2D()
+        # pose_msg.x = state_dict['Pose2D'][0]
+        # pose_msg.y = state_dict['Pose2D'][1]
+        # pose_msg.theta = state_dict['Pose2D'][2]
 
-        # create the actor message
+        # # create the frenet message for actor location
+        # frenet_msg = FrenetMsg()
+        # frenet_msg.x = state_dict['location_frenet'][0]
+        # frenet_msg.y = state_dict['location_frenet'][1]
+        # frenet_msg.theta = state_dict['location_frenet'][2]
+
+        # # create the actor message
+        # msg = ActorMsg()
+        # msg.actor_id = state_dict['actor_id']
+        # msg.speed = state_dict['speed']
+        # msg.acceleration = state_dict['acceleration']
+        # msg.location_global = pose_msg
+        # msg.location_frenet = frenet_msg
+        # msg.length = state_dict['length']
+        # msg.width = state_dict['width']
         msg = ActorMsg()
-        msg.actor_id = state_dict["actor_id"]
-        msg.speed = state_dict["speed"]
-        msg.acceleration = state_dict["acceleration"]
-        msg.location_global = pose_msg
-        msg.location_frenet = frenet_msg
-        msg.length = state_dict["length"]
-        msg.width = state_dict["width"]
-
+        msg.actor_id = self.actor_id
+        msg.speed = self.speed
+        msg.acceleration = self.acceleration
+        msg.location_global = self.location_global
+        msg.location_frenet = self.location_frenet.toRosMsg()
+        msg.length = self.length
+        msg.width = self.width
         return msg
 
     def get_state_dict(self):
@@ -118,7 +134,7 @@ class Actor:
 
         return state_dict
 
-    def spawn(self, location: Pose2D = None) -> carla.Actor:
+    def spawn(self, Pose2D=None):
         """
         Constructor method to overwrite in the child class to spawn an instance of the child.
         """
@@ -132,32 +148,115 @@ class Actor:
         """
         return self.actor.destroy()
 
-    def fromControllingVehicle(contolling_vehicle: Frenet, current_lane) -> Frenet:
+    def fromControllingVehicle(self, Frenet, current_lane):
         """
         Gets the distance from the ego/controlling vehicle in frenet coordinate frame
         """
-
         pass
 
-    def getLocationFrenet():
+    def getLocationFrenet(self):
         pass
 
 
 class Vehicle(Actor):
-    def __init__(self, world: carla.libcarla.World, actor_id: int):
-        super.__init__(world, actor_id)
-        pass
+    def __init__(
+        self,
+        world=None,
+        actor_id=0,
+        speed=0.0,
+        acceleration=0.0,
+        location_global=Pose2D(),
+        location_frenet=Frenet(),
+        length=0.0,
+        width=0.0,
+        traffic_light_status=None,
+    ):
+        super(Vehicle, self).__init__(
+            world,
+            actor_id,
+            speed,
+            acceleration,
+            location_global,
+            location_frenet,
+            length,
+            width,
+        )
+        self.traffic_light_status = traffic_light_status
+        if self.traffic_light_status is None:
+            self.traffic_light_status = TrafficLightStatus.RED
 
     @classmethod
     def fromRosMsg(cls, msg):
-        raise NotImplemented
+        Actor = super(Vehicle, cls).fromRosMsg(msg.actor_msg)
+        cls.traffic_light_status = TrafficLightStatus(msg.traffic_light_status)
+        return cls
+
+    def toRosMsg(self):
+        msg = VehicleMsg()
+        msg.actor_msg = super(Vehicle, self).toRosMsg()
+        msg.traffic_light_status = self.traffic_light_status.value
+        return msg
 
 
 class Pedestrian(Actor):
-    def __init__(self, world: carla.libcarla.World, actor_id: int):
-        super.__init__(world, actor_id)
-        pass
+    def __init__(
+        self,
+        world=None,
+        actor_id=0,
+        speed=0.0,
+        acceleration=0.0,
+        location_global=Pose2D(),
+        location_frenet=Frenet(),
+        length=0.0,
+        width=0.0,
+        priority_status=None,
+    ):
+        super(Pedestrian, self).__init__(
+            world,
+            actor_id,
+            speed,
+            acceleration,
+            location_global,
+            location_frenet,
+            length,
+            width,
+        )
+        self.priority_status = priority_status
+        if self.priority_status is None:
+            self.priority_status = PedestrainPriority.JAYWALK
 
     @classmethod
     def fromRosMsg(cls, msg):
-        raise NotImplemented
+        Actor = super(Pedestrian, cls).fromRosMsg(msg.actor_msg)
+        cls.priority_status = PedestrainPriority(msg.priority_status)
+        return cls
+
+    def toRosMsg(self):
+        msg = PedestrainMsg()
+        msg.actor_msg = super(Pedestrian, self).toRosMsg()
+        msg.priority_status = self.priority_status.value
+        return msg
+
+
+TEST_NODE_NAME = "actor_listener"
+TEST_TOPIC_NAME = "actor_test"
+
+# Test Code for Deserialize and Infor Printing
+def callback(data):
+    # path_plan = PathPlan.fromRosMsg(data)
+    # print("receiving data")
+    # rospy.loginfo("%f is age: %d" % (data.tracking_speed, data.reset_sim))
+    obj = Pedestrian.fromRosMsg(data)
+    print("Confirm msg is: ", obj.location_frenet.theta, obj.priority_status)
+
+
+def listener():
+    rospy.init_node(TEST_NODE_NAME, anonymous=True)
+    rospy.Subscriber(TEST_TOPIC_NAME, PedestrainMsg, callback)
+
+    # spin() simply keeps python from exiting until this node is stopped
+    rospy.spin()
+
+
+if __name__ == "__main__":
+    listener()
