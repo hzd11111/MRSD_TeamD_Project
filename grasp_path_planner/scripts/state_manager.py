@@ -78,6 +78,42 @@ class StateManager:
         env_state.append(vehicle_state.vehicle_speed)
         return
 
+    def createLaneChangeState(self, env_desc, local):
+        pass
+
+    def createLaneFollowingState(self):
+        pass
+
+    def createPedestrianState(self, env_desc, local):
+        """
+        Create a pedestrian avoidance event state
+        Args:
+        :param env_desc: (EnvironmentState) a ROS message describing the environment
+        :param local: a bool flag describing whether the local or absolute coordinates must be used.
+        """
+        env_state = []
+        # choose between local and absolute coordinate system
+        # the state embedding contains the vehicle and the pedestrian
+        if not local:
+            self.append_vehicle_state(env_state, env_desc.cur_vehicle_state)
+            ped_vehicle = VehicleState()
+            ped_vehicle.vehicle_location = env_desc.nearest_pedestrian.pedestrian_location
+            ped_vehicle.pedestrian_speed = env_desc.nearest_pedestrian.pedestrian_speed
+            self.append_vehicle_state(env_state, ped_vehicle)
+        else:
+            cur_vehicle_state = VehicleState()
+            cur_vehicle_state.vehicle_location.x = 0
+            cur_vehicle_state.vehicle_location.y = 0
+            cur_vehicle_state.vehicle_location.theta = 0
+            cur_vehicle_state.vehicle_speed = env_desc.cur_vehicle_state.vehicle_speed
+            self.append_vehicle_state(env_state, cur_vehicle_state)
+            ped_vehicle = VehicleState()
+            ped_vehicle.vehicle_location = env_desc.nearest_pedestrian.pedestrian_location
+            ped_vehicle.vehicle_speed = env_desc.nearest_pedestrian.pedestrian_speed
+            converted_state = convertToLocal(env_desc.cur_vehicle_state, ped_vehicle)
+            self.append_vehicle_state(env_state, converted_state)
+        return env_state
+
     def embedState(self, env_desc: EnvironmentState, scenario: Scenario, local=False) -> np.ndarray:
         """
         Create a state embedding vector from message recieved
@@ -139,26 +175,4 @@ class StateManager:
 
         elif self.event == Scenario.PEDESTRIAN:
             # initialize an empty list for the state
-            env_state = []
-
-            # choose between local and absolute coordinate system
-            # the state embedding contains the vehicle and the pedestrian
-            if not local:
-                self.append_vehicle_state(env_state, env_desc.cur_vehicle_state)
-                ped_vehicle = VehicleState()
-                ped_vehicle.vehicle_location = env_desc.nearest_pedestrian.pedestrian_location
-                ped_vehicle.pedestrian_speed = env_desc.nearest_pedestrian.pedestrian_speed
-                self.append_vehicle_state(env_state, ped_vehicle)
-            else:
-                cur_vehicle_state = VehicleState()
-                cur_vehicle_state.vehicle_location.x = 0
-                cur_vehicle_state.vehicle_location.y = 0
-                cur_vehicle_state.vehicle_location.theta = 0
-                cur_vehicle_state.vehicle_speed = env_desc.cur_vehicle_state.vehicle_speed
-                self.append_vehicle_state(env_state, cur_vehicle_state)
-                ped_vehicle = VehicleState()
-                ped_vehicle.vehicle_location = env_desc.nearest_pedestrian.pedestrian_location
-                ped_vehicle.vehicle_speed = env_desc.nearest_pedestrian.pedestrian_speed
-                converted_state = convertToLocal(env_desc.cur_vehicle_state, ped_vehicle)
-                self.append_vehicle_state(env_state, converted_state)
-            return env_state
+            return self.createPedestrianState(env_desc, local)
