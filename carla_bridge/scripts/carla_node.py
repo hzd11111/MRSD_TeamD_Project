@@ -468,9 +468,6 @@ class CarlaManager:
             actors_in_right_lane,
         ) = state_information
 
-        self.current_lane = current_lane_waypoints
-        self.left_lane = left_lane_waypoints
-
         ##############################################################################################################
         # publish the first frame
         # Current Lane
@@ -511,35 +508,36 @@ class CarlaManager:
             vehicle_rear = self.getVehicleState(rear_vehicle)
 
         # Contruct enviroment state ROS message
-        env_state = EnvironmentState()
-        env_state.cur_vehicle_state = vehicle_ego
-        env_state.front_vehicle_state = vehicle_front
-        env_state.back_vehicle_state = vehicle_rear
-        env_state.adjacent_lane_vehicles, _ = self.getClosest(
-            [self.getVehicleState(actor) for actor in actors_in_left_lane],
-            vehicle_ego,
-            self.max_num_vehicles,
-        )  # TODO : Only considering left lane for now. Need to make this more general
-        env_state.current_lane = self.lane_cur
-        env_state.next_lane = self.lane_left
-        env_state.max_num_vehicles = self.max_num_vehicles
-        env_state.speed_limit = 20
+        # env_state = EnvironmentState()
+        # env_state.cur_vehicle_state = vehicle_ego
+        # env_state.front_vehicle_state = vehicle_front
+        # env_state.back_vehicle_state = vehicle_rear
+        # env_state.adjacent_lane_vehicles, _ = self.getClosest(
+        #     [self.getVehicleState(actor) for actor in actors_in_left_lane],
+        #     vehicle_ego,
+        #     self.max_num_vehicles,
+        # )  # TODO : Only considering left lane for now. Need to make this more general
+        # env_state.current_lane = self.lane_cur
+        # env_state.next_lane = self.lane_left
+        # env_state.max_num_vehicles = self.max_num_vehicles
+        # env_state.speed_limit = 20
 
-        ## Pedestrian
-        if self.pedestrian is not None:
-            env_state.nearest_pedestrian = self.getClosestPedestrian(
-                [self.getPedestrianState(actor) for actor in [self.pedestrian]],
-                vehicle_ego,
-                1,
-            )[0]
-        else:
-            env_state.nearest_pedestrian = Pedestrian()
-            env_state.nearest_pedestrian.exist = False
+        # ## Pedestrian
+        # if self.pedestrian is not None:
+        #     env_state.nearest_pedestrian = self.getClosestPedestrian(
+        #         [self.getPedestrianState(actor) for actor in [self.pedestrian]],
+        #         vehicle_ego,
+        #         1,
+        #     )[0]
+        # else:
+        #     env_state.nearest_pedestrian = Pedestrian()
+        #     env_state.nearest_pedestrian.exist = False
 
         reward_info = RewardInfo()
         reward_info.time_elapsed = self.timestamp
         reward_info.new_run = self.first_run
         reward_info.collision = self.collision_marker
+
         env_state.reward = reward_info.toRosMsg()
 
     def spin(self):
