@@ -94,7 +94,6 @@ class CarlaManager:
         '''
         if actor == None:
             return None
-        import ipdb; ipdb.set_trace()
 
         vehicle = Vehicle(world=actor.get_world(), actor_id=actor.id)
         vehicle_msg = vehicle.toRosMsg() 

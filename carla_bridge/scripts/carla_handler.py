@@ -14,6 +14,7 @@ import math
 
 import numpy as np
 import carla
+import sys
 
 from utils import get_matrix, create_bb_points
 from enum import Enum

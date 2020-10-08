@@ -35,15 +35,20 @@ class Actor():
         self.length = length if self.world is None else self.get_length()
         self.width = width if self.world is None else self.get_width()
 
+        # userful class attributes 
+        self.location = None if self.world is None else self.get_location()
+    #-------ROS HELPER METHODS----------------------
+
     @classmethod
     def fromRosMsg(cls, actor_msg):
-        cls.speed = actor_msg.speed
-        cls.acceleration = actor_msg.acceleration
-        cls.location_global = actor_msg.location_global
-        cls.location_frenet = Frenet.fromRosMsg(actor_msg.location_frenet)
-        cls.length = actor_msg.length
-        cls.width = actor_msg.width
-        return cls
+        obj = cls()
+        obj.speed = actor_msg.speed
+        obj.acceleration = actor_msg.acceleration
+        obj.location_global = Pose2D.fromRosMsg(actor_msg.location_global)
+        obj.location_frenet = Frenet.fromRosMsg(actor_msg.location_frenet)
+        obj.length = actor_msg.length
+        obj.width = actor_msg.width
+        return obj
 
     def toRosMsg(self):
         '''
@@ -57,23 +62,23 @@ class Actor():
 
             # create the Pose2D message for actor location
             pose_msg = Pose2DMsg()
-            pose_msg.x = state_dict['Pose2D'][0]
-            pose_msg.y = state_dict['Pose2D'][1]
-            pose_msg.theta = state_dict['Pose2D'][2]
+            pose_msg.x = state_dict['Pose2D'].x
+            pose_msg.y = state_dict['Pose2D'].y
+            pose_msg.theta = state_dict['Pose2D'].theta
 
             # create the frenet message for actor location
             frenet_msg = FrenetMsg()
-            frenet_msg.x = state_dict['location_frenet'][0]
-            frenet_msg.y = state_dict['location_frenet'][1]
-            frenet_msg.theta = state_dict['location_frenet'][2]
+            frenet_msg.x = state_dict['location_frenet'].x
+            frenet_msg.y = state_dict['location_frenet'].y
+            frenet_msg.theta = state_dict['location_frenet'].theta
 
             # create the actor message
             msg = ActorMsg()
             msg.actor_id = state_dict['actor_id']
             msg.speed = state_dict['speed']
             msg.acceleration = state_dict['acceleration']
-            # msg.location_global = pose_msg
-            # msg.location_frenet = frenet_msg
+            msg.location_global = pose_msg
+            msg.location_frenet = frenet_msg
             msg.length = state_dict['length']
             msg.width = state_dict['width']
         else:
@@ -81,13 +86,34 @@ class Actor():
             msg.actor_id = self.actor_id
             msg.speed = self.speed
             msg.acceleration = self.acceleration
+            msg.location_global = self.location_global.toRosMsg()
+            msg.location_frenet = self.location_frenet.toRosMsg()
             msg.length = self.length
             msg.width = self.width
-        
-        msg.location_global = self.location_global
-        msg.location_frenet = self.location_frenet.toRosMsg()
 
         return msg
+
+    def spawn(self, Pose2D=None):
+        """
+        Constructor method to overwrite in the child class to spawn an instance of the child.
+        """
+        raise Exception("This needs to be implemented in the child class")
+
+    def destroy(self):
+        """
+        Method to destroy the actor.
+        Returns:
+            bool: True if successful
+        """
+        return self.actor.destroy()
+
+    def fromControllingVehicle(self, Frenet, current_lane):
+        """
+        Gets the distance from the ego/controlling vehicle in frenet coordinate frame
+        """
+        pass
+
+    #---------GETTERS------------------------------
 
     def get_state_dict(self, actor=None):
         '''
@@ -126,8 +152,8 @@ class Actor():
         # frenet_x, frenet_y, theta = Frenet.get_frenet_distance_from_global(loc.x, loc.y, loc.z) #TODO
         frenet_x, frenet_y, theta = [0, 0, 0]  # TODO: implement Frenet
 
-        state_dict["global_location_3d"] = [loc.x, loc.y, loc.z]
-        state_dict["global_location_2d"] = [loc.x, loc.y]
+        state_dict["location_3d"] = {'x':loc.x, 'y':loc.y, 'z':loc.z}
+        state_dict["location_2d"] = {'x':loc.x, 'y':loc.y}
         state_dict["Pose2D"] = Pose2D(loc.x, loc.y, rot.yaw)
         state_dict["location_frenet"] = Frenet(frenet_x, frenet_y, theta)
 
@@ -140,26 +166,6 @@ class Actor():
         state_dict['height'] = actor.bounding_box.extent.z * 2
 
         return state_dict
-
-    def spawn(self, Pose2D=None):
-        """
-        Constructor method to overwrite in the child class to spawn an instance of the child.
-        """
-        raise Exception("This needs to be implemented in the child class")
-
-    def destroy(self):
-        """
-        Method to destroy the actor.
-        Returns:
-            bool: True if successful
-        """
-        return self.actor.destroy()
-
-    def fromControllingVehicle(self, Frenet, current_lane):
-        """
-        Gets the distance from the ego/controlling vehicle in frenet coordinate frame
-        """
-        pass
 
     def getLocationFrenet(self):
         pass
@@ -183,6 +189,9 @@ class Actor():
         
     def get_width(self):
         return self.get_state_dict()['width']
+    
+    def get_location(self):
+        return self.get_state_dict()['location_3d']
 
 class Vehicle(Actor):
     def __init__(
@@ -213,9 +222,10 @@ class Vehicle(Actor):
     
     @classmethod
     def fromRosMsg(cls, msg):
-        Actor = super(Vehicle, cls).fromRosMsg(msg.actor_msg)
-        cls.traffic_light_status = TrafficLightStatus(msg.traffic_light_status)
-        return cls
+        obj = cls()
+        Actor = super(Vehicle, obj).fromRosMsg(msg.actor_msg)
+        obj.traffic_light_status = TrafficLightStatus(msg.traffic_light_status)
+        return obj
 
     def toRosMsg(self):
         msg = VehicleMsg()
@@ -223,6 +233,32 @@ class Vehicle(Actor):
         msg.traffic_light_status = self.traffic_light_status.value
         return msg
 
+    @staticmethod
+    def getClosest(adjacent_lane_vehicles, ego_vehicle, n=5):
+        ''' 
+        Gets the n closest vehicles to the ego vehicle.
+        Input:
+            adjacent_lane_vehicles(list): list of vehicle objects of class Vehicle
+            ego_vehicle (Vehicle): ego vehicle of class Vehicle
+            n(int): closest n objects
+        Output:
+            closest_n_vehicles (list): list of n closest vehicles
+            sorted_idx (list): list of n vehicles indexes sorted by increasing distance from ego
+        '''
+        ego_x = ego_vehicle.location['x']
+        ego_y = ego_vehicle.location['y']
+
+        distances = [
+            (
+                (ego_x - adjacent_lane_vehicles[i].location['x']) ** 2
+                + (ego_y - adjacent_lane_vehicles[i].location['y']) ** 2
+            )
+            for i in range(len(adjacent_lane_vehicles))
+        ]
+        sorted_idx = np.argsort(distances)[:n]
+        closest_n_vehicles = [adjacent_lane_vehicles[i] for i in sorted_idx]
+
+        return closest_n_vehicles, sorted_idx
 
 class Pedestrian(Actor):
     def __init__(
@@ -236,7 +272,7 @@ class Pedestrian(Actor):
         length=0.0,
         width=0.0,
         priority_status=None,
-    ):
+        ):
         super(Pedestrian, self).__init__(
             world,
             actor_id,
@@ -253,15 +289,34 @@ class Pedestrian(Actor):
 
     @classmethod
     def fromRosMsg(cls, msg):
-        Actor = super(Pedestrian, cls).fromRosMsg(msg.actor_msg)
-        cls.priority_status = PedestrainPriority(msg.priority_status)
-        return cls
+        obj = cls()
+        Actor = super(Pedestrian, obj).fromRosMsg(msg.actor_msg)
+        obj.priority_status = PedestrainPriority(msg.priority_status)
+        return obj
 
     def toRosMsg(self):
         msg = PedestrainMsg()
         msg.actor_msg = super(Pedestrian, self).toRosMsg()
         msg.priority_status = self.priority_status.value
         return msg
+
+    @staticmethod
+    def getClosestPedestrian(pedestrians, ego_vehicle, n=1):
+        # TODO: ROHAN move to the Pedestrian class
+        ego_x = ego_vehicle.location['x']
+        ego_y = ego_vehicle.location['y']
+
+        distances = [
+            (
+                (ego_x - pedestrians[i].location['x']) ** 2
+                + (ego_y - pedestrians[i].location['y']) ** 2
+            )
+            for i in range(len(pedestrians))
+        ]
+        sorted_idx = np.argsort(distances)[:n]
+        closest_n_pedestrians = [pedestrians[i] for i in sorted_idx]
+
+        return closest_n_pedestrians, sorted_idx
 
 
 TEST_NODE_NAME = "actor_listener"
