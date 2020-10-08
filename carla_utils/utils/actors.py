@@ -48,42 +48,50 @@ class Actor:
         return cls
 
     def toRosMsg(self):
-        # Commenting as Actor class def is not clear and running this would lead to err (Scott)
-        # # Publishes the actor state info to ROS
-        # state_dict = self.get_state_dict()
+        """
+        Returns the Actor ROS msg. If world is available, updates the state variable before returning.
+        """
+        if self.world is not None:
+            self.actor = self.world.get_actor(self.actor_id)
 
-        # # create the Pose2D message for actor location
-        # pose_msg = Pose2D()
-        # pose_msg.x = state_dict['Pose2D'][0]
-        # pose_msg.y = state_dict['Pose2D'][1]
-        # pose_msg.theta = state_dict['Pose2D'][2]
+            # Publishes the actor state info to ROS
+            state_dict = self.get_state_dict()
 
-        # # create the frenet message for actor location
-        # frenet_msg = FrenetMsg()
-        # frenet_msg.x = state_dict['location_frenet'][0]
-        # frenet_msg.y = state_dict['location_frenet'][1]
-        # frenet_msg.theta = state_dict['location_frenet'][2]
+            # create the Pose2D message for actor location
+            pose_msg = Pose2D()
+            pose_msg.x = state_dict["Pose2D"][0]
+            pose_msg.y = state_dict["Pose2D"][1]
+            pose_msg.theta = state_dict["Pose2D"][2]
 
-        # # create the actor message
-        # msg = ActorMsg()
-        # msg.actor_id = state_dict['actor_id']
-        # msg.speed = state_dict['speed']
-        # msg.acceleration = state_dict['acceleration']
-        # msg.location_global = pose_msg
-        # msg.location_frenet = frenet_msg
-        # msg.length = state_dict['length']
-        # msg.width = state_dict['width']
-        msg = ActorMsg()
-        msg.actor_id = self.actor_id
-        msg.speed = self.speed
-        msg.acceleration = self.acceleration
+            # create the frenet message for actor location
+            frenet_msg = FrenetMsg()
+            frenet_msg.x = state_dict["location_frenet"][0]
+            frenet_msg.y = state_dict["location_frenet"][1]
+            frenet_msg.theta = state_dict["location_frenet"][2]
+
+            # create the actor message
+            msg = ActorMsg()
+            msg.actor_id = state_dict["actor_id"]
+            msg.speed = state_dict["speed"]
+            msg.acceleration = state_dict["acceleration"]
+            # msg.location_global = pose_msg
+            # msg.location_frenet = frenet_msg
+            msg.length = state_dict["length"]
+            msg.width = state_dict["width"]
+        else:
+            msg = ActorMsg()
+            msg.actor_id = self.actor_id
+            msg.speed = self.speed
+            msg.acceleration = self.acceleration
+            msg.length = self.length
+            msg.width = self.width
+
         msg.location_global = self.location_global
         msg.location_frenet = self.location_frenet.toRosMsg()
-        msg.length = self.length
-        msg.width = self.width
+
         return msg
 
-    def get_state_dict(self):
+    def get_state_dict(self, actor=None):
         """
         Gets the actor status and returns a status dict with the following info:
         - actor_id (int)
@@ -94,18 +102,20 @@ class Actor:
         - length (float)
         - width (float)
         """
-        # TODO: how comprehensive do we want to be here?
+        if actor is None:
+            actor = self.actor
+
         state_dict = {}
-        state_dict["actor"] = self.actor
-        state_dict["actor_id"] = self.actor_id
+        state_dict["actor_id"] = actor.id
+        state_dict["type_id"] = actor.type_id
 
         # speed
-        speed = self.actor.get_velocity()
+        speed = actor.get_velocity()
         state_dict["speed_3d"] = [speed.x, speed.y, speed.z]
         state_dict["speed"] = np.linalg.norm([speed.x, speed.y, speed.z])
 
         # acceleration
-        acc = self.actor.get_accleration()
+        acc = actor.get_acceleration()
         state_dict["acceleration_3d"] = [acc.x, acc.y, acc.z]
         state_dict["acceleration"] = np.linalg.norm([acc.x, acc.y, acc.z])
 
@@ -128,9 +138,9 @@ class Actor:
         state_dict["rpy"] = [rot.roll, rot.pitch, rot.yaw]
 
         # actor dimensions
-        state_dict["length"] = actor.bounding_box.extent.x
-        state_dict["width"] = actor.bounding_box.extent.y
-        state_dict["height"] = actor.bounding_box.extent.z
+        state_dict["length"] = actor.bounding_box.extent.x * 2
+        state_dict["width"] = actor.bounding_box.extent.y * 2
+        state_dict["height"] = actor.bounding_box.extent.z * 2
 
         return state_dict
 
@@ -171,6 +181,7 @@ class Vehicle(Actor):
         width=0.0,
         traffic_light_status=None,
     ):
+
         super(Vehicle, self).__init__(
             world,
             actor_id,
