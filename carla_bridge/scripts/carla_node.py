@@ -18,6 +18,12 @@ from carla_handler import CarlaHandler
 
 from grasp_controller import GRASPPIDController
 
+# WILLBREAK fix pedestrian spelling, fix relative import path
+from carla_utils.msg import ActorMsg, VehicleMsg, PedestrainMsg, FrenetMsg
+
+sys.path.insert(1, '/home/grasp/Fall2020/src/carla_utils/utils')
+from actors import *
+
 from std_msgs.msg import String
 from grasp_path_planner.msg import LanePoint
 from grasp_path_planner.msg import LanePoint
@@ -81,31 +87,21 @@ class CarlaManager:
         self.metrics = DataCollector()
 
     def getVehicleState(self, actor):
-        '''Creates Vehicle State ROS msg'''
-        #TODO: update this class to get Vehicle msg instead of VehicleState msg
+        '''
+        Creates Vehicle ROS msg and returns it.
+        Inputs:
+            actor (carla.Actor): carla actor object
+        Returns: 
+            vehicle_msg (VehicleMsg): ROS msg for vehicle state
+        '''
         if actor == None:
             return None
+        import ipdb; ipdb.set_trace()
 
-        vehicle = VehicleState()
-        vehicle.vehicle_location.x = actor.get_transform().location.x
-        vehicle.vehicle_location.y = actor.get_transform().location.y
-        vehicle.vehicle_location.theta = (
-            actor.get_transform().rotation.yaw * np.pi / 180
-        )  # CHECK : Changed this to radians.
-        vehicle.vehicle_speed = (
-            np.sqrt(
-                actor.get_velocity().x ** 2
-                + actor.get_velocity().y ** 2
-                + actor.get_velocity().z ** 2
-            )
-            * 3.6
-        )
+        vehicle = Vehicle(world=actor.get_world(), actor_id=actor.id)
+        vehicle_msg = vehicle.toRosMsg() 
 
-        vehicle_bounding_box = actor.bounding_box.extent
-        vehicle.length = vehicle_bounding_box.x * 2 #TODO: Check this, do we need to multiply
-        vehicle.width = vehicle_bounding_box.y * 2
-
-        return vehicle
+        return vehicle_msg
 
     def getPedestrianState(self, actor, pedestrian_radius=0.5):
         '''Creates pedestrian State ROS msg'''
@@ -114,25 +110,10 @@ class CarlaManager:
         if actor == None:
             return None
 
-        pedestrian_state = Pedestrian()
-        pedestrian_state.exist = True
-        pedestrian_state.pedestrian_location.x = actor.get_transform().location.x
-        pedestrian_state.pedestrian_location.y = actor.get_transform().location.y
-        pedestrian_state.pedestrian_location.theta = (
-            actor.get_transform().rotation.yaw * np.pi / 180
-        )  # CHECK : Changed this to radians.
-        pedestrian_state.radius = pedestrian_radius
-        pedestrian_state.pedestrian_acceleration = 0
-        pedestrian_state.pedestrian_speed = (
-            np.sqrt(
-                actor.get_velocity().x ** 2
-                + actor.get_velocity().y ** 2
-                + actor.get_velocity().z ** 2
-            )
-            * 3.6
-        )
+        pedestrian = Pedestrian(world=actor.get_world(), actor_id=actor.id)
+        pedestrian_msg = pedestrian.toRosMsg()
 
-        return pedestrian_state
+        return pedestrian_msg
 
     def getLanePoints(self, waypoints, flip=False):
         # TODO: Lane classes should generate this type of messages
