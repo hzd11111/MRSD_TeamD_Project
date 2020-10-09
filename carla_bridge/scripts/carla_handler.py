@@ -358,16 +358,18 @@ class CarlaHandler:
             for wp in right_lane_waypoints
         ]
 
-        vehicle_ego = Vehicle(self.world, ego_vehicle.id)
+        vehicle_dummy = Vehicle(
+            actor_id=-1, speed=-1, location_global=Pose2D(1000, 1000, 0)
+        )
         # Front vehicle
         if front_vehicle == None:
-            vehicle_front = vehicle_ego
+            vehicle_front = vehicle_dummy
         else:
             vehicle_front = Vehicle(self.world, front_vehicle.id)
 
         # Rear vehicle
         if rear_vehicle == None:
-            vehicle_rear = vehicle_ego
+            vehicle_rear = vehicle_dummy
         else:
             vehicle_rear = Vehicle(self.world, rear_vehicle.id)
 
@@ -387,8 +389,8 @@ class CarlaHandler:
             current_lane_waypoints,
             left_lane_waypoints,
             right_lane_waypoints,
-            front_vehicle,
-            rear_vehicle,
+            vehicle_front,
+            vehicle_rear,
             actors_in_current_lane,
             actors_in_left_lane,
             actors_in_right_lane,

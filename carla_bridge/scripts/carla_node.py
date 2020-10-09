@@ -329,6 +329,9 @@ class CarlaManager:
         state_information = self.carla_handler.get_state_information_new(
             self.ego_vehicle, self.original_lane
         )
+
+        ego_vehicle = Vehicle(self.carla_handler.world, self.ego_vehicle.id)
+
         (
             current_lane_waypoints,
             left_lane_waypoints,
@@ -355,7 +358,7 @@ class CarlaManager:
 
         # Left Lane
         self.lane_left = ParallelLane(
-            lane_vehicles=actors_in_left_lane,
+            lane_vehicles=Vehicle.getClosest(actors_in_left_lane, ego_vehicle, n=5)[0],
             lane_points=left_lane_waypoints,
             same_direction=True,
             left_to_the_current=True,
@@ -364,7 +367,7 @@ class CarlaManager:
 
         # Right Lane
         self.lane_right = ParallelLane(
-            lane_vehicles=actors_in_right_lane,
+            lane_vehicles=Vehicle.getClosest(actors_in_right_lane, ego_vehicle, n=5)[0],
             lane_points=right_lane_waypoints,
             same_direction=True,
             left_to_the_current=False,
