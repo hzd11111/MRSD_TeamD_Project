@@ -2,6 +2,7 @@
 import sys
 sys.path.append("../../carla_utils/utils")
 from utility import *
+from functional_utility import *
 from options import RLDecision
 
 class TrajGenerator:
