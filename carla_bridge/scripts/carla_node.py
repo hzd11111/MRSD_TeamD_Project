@@ -297,38 +297,6 @@ class CarlaManager:
             print("failed....")
             pass
 
-    def getClosest(self, adjacent_lane_vehicles, ego_vehicle, n=5):
-        # TODO: ROHAN move to the Vehicle class
-        ego_x = ego_vehicle.vehicle_location.x
-        ego_y = ego_vehicle.vehicle_location.y
-
-        distances = [
-            (
-                (ego_x - adjacent_lane_vehicles[i].vehicle_location.x) ** 2
-                + (ego_y - adjacent_lane_vehicles[i].vehicle_location.y) ** 2
-            )
-            for i in range(len(adjacent_lane_vehicles))
-        ]
-        sorted_idx = np.argsort(distances)[:n]
-
-        return [adjacent_lane_vehicles[i] for i in sorted_idx], sorted_idx
-
-    def getClosestPedestrian(self, pedestrians, ego_vehicle, n=1):
-        # TODO: ROHAN move to the Pedestrian class
-        ego_x = ego_vehicle.vehicle_location.x
-        ego_y = ego_vehicle.vehicle_location.y
-
-        distances = [
-            (
-                (ego_x - pedestrians[i].pedestrian_location.x) ** 2
-                + (ego_y - pedestrians[i].pedestrian_location.y) ** 2
-            )
-            for i in range(len(pedestrians))
-        ]
-        sorted_idx = np.argsort(distances)[:n]
-
-        return [pedestrians[i] for i in sorted_idx]
-
     def initialize(self):
         # initialize node
         rospy.init_node(NODE_NAME, anonymous=True)
@@ -357,8 +325,7 @@ class CarlaManager:
 
         # Reset Environment
         self.resetEnv()
-        state = self.getVehicleState(self.ego_vehicle)
-        import ipdb; ipdb.set_trace()
+
         state_information = self.carla_handler.get_state_information_new(
             self.ego_vehicle, self.original_lane
         )
