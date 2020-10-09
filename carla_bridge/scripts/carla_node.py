@@ -10,16 +10,12 @@ import threading
 
 import carla
 
-
 import agents.navigation.controller
 import numpy as np
 
 from carla_handler import CarlaHandler
 
 from grasp_controller import GRASPPIDController
-
-sys.path.insert(1, '/home/grasp/Fall2020/src/carla_utils/utils')
-from actors import *
 
 from scenario_manager import CustomScenario
 from grasp_path_planner.srv import SimService, SimServiceResponse
