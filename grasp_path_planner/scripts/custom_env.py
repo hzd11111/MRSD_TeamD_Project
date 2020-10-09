@@ -2,14 +2,15 @@
 import copy
 import numpy as np
 from typing import Tuple
+import sys
+sys.path.append("../../carla_utils/utils")
 
 # RL Packages
 import gym
 from gym import spaces
 
 # ROS Packages
-from grasp_path_planner.msg import EnvironmentState
-
+from utility import EnvDesc
 # other packages
 from settings import Scenario, CONVERT_TO_LOCAL
 from path_planner import PathPlannerManager
@@ -39,25 +40,10 @@ class CustomEnv(gym.Env):
         elif event == Scenario.LANE_CHANGE:
             N_ACTIONS = 4
             self.action_space = spaces.Discrete(N_ACTIONS)
-            self.observation_space = spaces.Box(low=-1000, high=1000, shape=(1, 24))
+            self.observation_space = spaces.Box(low=-1000, high=1000, shape=(1, 53))
         self.path_planner = path_planner
         self.rl_manager = rl_manager
         self.to_local = CONVERT_TO_LOCAL
-
-    def invert_angles(self, env_desc: EnvironmentState) -> EnvironmentState:
-        """
-        Inverts the angles to account for the coordinate system. yuck
-        Args:
-        :param env_desc: (EnvironmentState) A ROS Message containing the environment state
-        """
-        # TODO: Why do we not invert the angle for pedestrians? We should probably do that
-        env_copy = copy.deepcopy(env_desc)
-        for vehicle in env_copy.adjacent_lane_vehicles:
-            vehicle.vehicle_location.theta *= -1
-        env_copy.back_vehicle_state.vehicle_location.theta *= -1
-        env_copy.front_vehicle_state.vehicle_location.theta *= -1
-        env_copy.cur_vehicle_state.vehicle_location.theta *= -1
-        return env_copy
 
     def step(self, action: int) -> Tuple[np.ndarray, float, bool, dict]:
         """
@@ -71,7 +57,8 @@ class CustomEnv(gym.Env):
         """
         # reset sb_event flag if previously set in previous action
         decision = self.rl_manager.convertDecision(action)
-        env_desc, end_of_action = self.path_planner.performAction(decision)
+        env_desc_ros_msg, end_of_action = self.path_planner.performAction(decision)
+        env_desc = EnvDesc.fromRosMsg(env_desc_ros_msg)
         env_copy = env_desc
         self.rl_manager.reward_manager.update(env_copy, action)
         done = self.rl_manager.terminate(env_copy)
@@ -86,7 +73,9 @@ class CustomEnv(gym.Env):
         reward = None
         reward = self.rl_manager.reward_manager.get_reward(env_copy, action)
         # for sending success signal during testing
-        success = not(env_desc.reward.collision or env_desc.reward.time_elapsed > self.rl_manager.eps_time)
+        success = not(
+            env_desc.reward.collision
+            or (env_desc.reward.time_elapsed > self.rl_manager.eps_time))
         info = {}
         info["success"] = success
         # time.sleep(2)
@@ -97,7 +86,7 @@ class CustomEnv(gym.Env):
         Resets the environment
         """
         self.rl_manager.reward_manager.reset()
-        env_desc = self.path_planner.resetSim()
+        env_desc = EnvDesc.fromRosMsg(self.path_planner.resetSim())
         env_copy = env_desc
         env_state = self.rl_manager.makeStateVector(env_copy, self.to_local)
         return env_state

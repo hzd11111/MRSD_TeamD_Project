@@ -1,22 +1,9 @@
 import numpy as np
 from abc import ABC, abstractmethod
-from enum import Enum
-import copy
 # ROS Packages
-from geometry_msgs.msg import Pose2D
-from std_msgs.msg import String
-from grasp_path_planner.msg import LanePoint
-from grasp_path_planner.msg import Lane
-from grasp_path_planner.msg import VehicleState
-from grasp_path_planner.msg import RewardInfo
-from grasp_path_planner.msg import EnvironmentState
-from grasp_path_planner.msg import RLCommand
-from grasp_path_planner.msg import Pedestrian
-from grasp_path_planner.msg import PathPlan
-from grasp_path_planner.srv import SimService, SimServiceResponse, SimServiceRequest
+from grasp_path_planner.msg import VehicleMsg
 # other packages
 from settings import Scenario, RLDecision
-from state_manager import convertToLocal
 
 
 # Parent Reward Class
@@ -443,11 +430,45 @@ class PedestrianReward(Reward):
         self.cum_vel_err = 0
 
 
+# Plain Reward Class
+class PlainReward(Reward):
+    '''
+    Implements positional costs and basic required interfaces for all rewards
+    '''
+    def __init__(self):
+        super().__init__()
+        self.max_reward = 1
+
+    def update(self, desc, action):
+        """
+        Meant to update costs and other intermediate variables
+        """
+        return
+
+    def get_reward(self, desc, action):
+        """
+        Gives the cost of taking action
+        """
+        reward = 0
+        if desc.reward.collision:
+            reward = reward - 1
+            print("Collision")
+        elif desc.reward.path_planner_terminate:
+            reward += desc.reward.action_progress
+        return reward
+
+    def reset(self):
+        """
+        Resets environment
+        """
+        return
+
+
 def reward_selector(event):
     """
     Select reward manager based on event
     """
     if event is Scenario.PEDESTRIAN:
-        return PedestrianReward()
+        return PlainReward()
     elif event is Scenario.LANE_CHANGE:
-        return LaneChangeReward()
+        return PlainReward()

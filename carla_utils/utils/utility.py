@@ -232,7 +232,7 @@ class ParallelLane(LaneStatus):
         origin_global_pose=Pose2D(),
         same_direction=False,
         left_to_the_current=False,
-        next_lane=False,
+        adjacent_lane=False,
         lane_distance=0.0,
     ):
         super(ParallelLane, self).__init__(
@@ -240,7 +240,7 @@ class ParallelLane(LaneStatus):
         )
         self.same_direction = same_direction
         self.left_to_the_current = left_to_the_current
-        self.next_lane = next_lane
+        self.adjacent_lane = adjacent_lane
         self.lane_distance = lane_distance
 
     @classmethod
@@ -249,7 +249,7 @@ class ParallelLane(LaneStatus):
         obj = super(ParallelLane, obj).fromRosMsg(msg.lane_status)
         obj.same_direction = msg.same_direction
         obj.left_to_the_current = msg.left_to_the_current
-        obj.next_lane = msg.next_lane
+        obj.adjacent_lane = msg.adjacent_lane
         obj.lane_distance = msg.lane_distance
         return obj
 
@@ -258,7 +258,7 @@ class ParallelLane(LaneStatus):
         msg.lane_status = super(ParallelLane, self).toRosMsg()
         msg.same_direction = self.same_direction
         msg.left_to_the_current = self.left_to_the_current
-        msg.next_lane = self.next_lane
+        msg.adjacent_lane = self.adjacent_lane
         msg.lane_distance = self.lane_distance
         return msg
 

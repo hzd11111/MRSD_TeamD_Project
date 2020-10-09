@@ -18,7 +18,9 @@ from stable_baselines.common.env_checker import check_env
 from stable_baselines.common.cmd_util import make_vec_env
 # Other Packages
 from path_planner import PathPlannerManager
-from rl_manager import RLManager, CustomLaneChangePolicy, CustomPedestrianPolicy
+from rl_manager import RLManager
+from lane_change_policy import CustomLaneChangePolicy
+from lane_following_policy import CustomLaneFollowingPolicy
 from custom_env import CustomEnv
 from settings import *
 
@@ -43,7 +45,7 @@ class FullPlannerManager:
             model = DQN(CustomLaneChangePolicy, env, verbose=1, learning_starts=256, batch_size=256, exploration_fraction=0.9, target_network_update_freq=100, tensorboard_log=dir_path+'/Logs/')
 
         if self.event == Scenario.PEDESTRIAN:
-            model = DQN(CustomPedestrianPolicy, env, verbose=1, learning_starts=256, batch_size=256, exploration_fraction=0.9, target_network_update_freq=100, tensorboard_log=dir_path+'/Logs/Ped', gamma=0.93, learning_rate=0.0001)
+            model = DQN(CustomLaneFollowingPolicy, env, verbose=1, learning_starts=256, batch_size=256, exploration_fraction=0.9, target_network_update_freq=100, tensorboard_log=dir_path+'/Logs/Ped', gamma=0.93, learning_rate=0.0001)
         model.learn(total_timesteps=20000)
         model.save(MODEL_SAVE_PATH)
 
@@ -74,7 +76,6 @@ class FullPlannerManager:
 
 if __name__ == '__main__':
     try:
-        print("LOL")
         event = CURRENT_SCENARIO
         if event==Scenario.PEDESTRIAN:
             full_planner = FullPlannerManager(Scenario.PEDESTRIAN)

@@ -1,8 +1,11 @@
 # path planner packages
-import math
 import rospy
-import numpy as np
-from grasp_path_planner.srv import SimService, SimServiceResponse, SimServiceRequest
+import sys
+sys.path.append("../../carla_utils/utils")
+
+# ROS Packages
+from utility import PathPlan
+from grasp_path_planner.srv import SimService, SimServiceRequest
 from trajectory_generator import TrajGenerator
 # other packages
 from settings import *
@@ -55,7 +58,6 @@ class PathPlannerManager:
         reset_msg = PathPlan()
         reset_msg.reset_sim = True
         reset_msg.end_of_action = True
-        reset_msg.sent_time = rospy.Time.now()
         req = SimServiceRequest()
         req.path_plan = reset_msg
         self.prev_env_desc = self.sim_service_interface(req).env

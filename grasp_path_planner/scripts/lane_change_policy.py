@@ -25,12 +25,28 @@ class CustomLaneChangePolicy(DQNPolicy):
     :param _kwargs: (dict) Extra keyword arguments for the nature CNN feature extraction
     """
 
-    def embedding_net(self, input_vec):
+    def embedding_net_pedestrian(self, input_vec):
         out = input_vec
-        with tf.variable_scope("embedding_network", reuse=tf.AUTO_REUSE):
-            out = tf_layers.fully_connected(out, num_outputs=16, activation_fn=tf.nn.relu)
+        with tf.variable_scope("embedding_network_pedestrian", reuse=tf.AUTO_REUSE):
             out = tf_layers.fully_connected(out, num_outputs=32, activation_fn=tf.nn.relu)
-            out = tf_layers.fully_connected(out, num_outputs=64, activation_fn=tf.nn.relu)
+        return out
+
+    def embedding_net_front(self, input_vec):
+        out = input_vec
+        with tf.variable_scope("embedding_network_front", reuse=tf.AUTO_REUSE):
+            out = tf_layers.fully_connected(out, num_outputs=32, activation_fn=tf.nn.relu)
+        return out
+
+    def embedding_net_back(self, input_vec):
+        out = input_vec
+        with tf.variable_scope("embedding_network_back", reuse=tf.AUTO_REUSE):
+            out = tf_layers.fully_connected(out, num_outputs=32, activation_fn=tf.nn.relu)
+        return out
+
+    def embedding_net_adjacent(self, input_vec):
+        out = input_vec
+        with tf.variable_scope("embedding_network_adjacent", reuse=tf.AUTO_REUSE):
+            out = tf_layers.fully_connected(out, num_outputs=32, activation_fn=tf.nn.relu)
         return out
 
     def q_net(self, input_vec, out_num):
@@ -46,15 +62,41 @@ class CustomLaneChangePolicy(DQNPolicy):
         super(CustomLaneChangePolicy, self).__init__(sess, ob_space, ac_space, n_env, n_steps,
                                                      n_batch, dueling=dueling, reuse=reuse,
                                                      scale=False, obs_phs=obs_phs)
+
         with tf.variable_scope("model", reuse=reuse):
             out_ph = tf.layers.flatten(self.processed_obs)
-            embed_list = []
-            for i in range(5):
-                embed_list.append(
-                    self.embedding_net(tf.concat([out_ph[:, :4], out_ph[:, (i + 1) * 4:(i + 2) * 4]], axis=1)))
+            embed_adjacent_vehicles = []
+            i = 0
+            # Add adjacent vehicles
+            for j in range(5):
+                embed_adjacent_vehicles.append(
+                    self.embedding_net_adjacent(tf.concat([out_ph[:, :4], out_ph[:, (i + 1) * 4:(i + 2) * 4]], axis=1)))
+                i += 1
+            
+            # Add front vehicle
+            embed_front_vehicle = []
+            embed_front_vehicle.append(
+                self.embedding_net_front(tf.concat([out_ph[:, :4], out_ph[:, (i + 1) * 4:(i + 2) * 4]], axis=1)))
+            i += 1
+
+            # Add back vehicle
+            embed_back_vehicle = []
+            embed_back_vehicle.append(
+                self.embedding_net_back(tf.concat([out_ph[:, :4], out_ph[:, (i + 1) * 4:(i + 2) * 4]], axis=1)))
+            i += 1
+
+            # Add pedestrians
+            embed_pedestrians = []
+            for j in range(5):
+                embed_pedestrians.append(
+                    self.embedding_net_adjacent(tf.concat([out_ph[:, :4], out_ph[:, (i + 1) * 4:(i + 2) * 4]], axis=1)))
+                i += 1
+
+            embed_list = embed_adjacent_vehicles + embed_front_vehicle + embed_back_vehicle + embed_pedestrians
             stacked_out = tf.stack(embed_list, axis=1)
             max_out = tf.reduce_max(stacked_out, axis=1)
             q_out = self.q_net(max_out, ac_space.n)
+
         self.q_values = q_out
         self._setup_init()
 
@@ -74,5 +116,3 @@ class CustomLaneChangePolicy(DQNPolicy):
 
     def proba_step(self, obs, state=None, mask=None):
         return self.sess.run(self.policy_proba, {self.obs_ph: obs})
-
-
