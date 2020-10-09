@@ -10,7 +10,6 @@ import threading
 
 import carla
 
-
 import agents.navigation.controller
 import numpy as np
 
@@ -81,67 +80,11 @@ class CarlaManager:
         self.pedestrian = None
         self.pedestrian_wait_frames = 0
 
-    def getVehicleState(self, actor):
-        """Creates Vehicle State ROS msg"""
-        # TODO: update this class to get Vehicle msg instead of VehicleState msg
-        if actor == None:
-            return None
-
-        vehicle = VehicleState()
-        vehicle.vehicle_location.x = actor.get_transform().location.x
-        vehicle.vehicle_location.y = actor.get_transform().location.y
-        vehicle.vehicle_location.theta = (
-            actor.get_transform().rotation.yaw * np.pi / 180
-        )  # CHECK : Changed this to radians.
-        vehicle.vehicle_speed = (
-            np.sqrt(
-                actor.get_velocity().x ** 2
-                + actor.get_velocity().y ** 2
-                + actor.get_velocity().z ** 2
-            )
-            * 3.6
-        )
-
-        vehicle_bounding_box = actor.bounding_box.extent
-        vehicle.length = (
-            vehicle_bounding_box.x * 2
-        )  # TODO: Check this, do we need to multiply
-        vehicle.width = vehicle_bounding_box.y * 2
-
-        return vehicle
-
-    def getPedestrianState(self, actor, pedestrian_radius=0.5):
-        """Creates pedestrian State ROS msg"""
-        # TODO: update this class to get Pedestrian msg instead of PEdesterianState msg
-        ## TODO: Processing them like vehicles for now
-        if actor == None:
-            return None
-
-        pedestrian_state = Pedestrian()
-        pedestrian_state.exist = True
-        pedestrian_state.pedestrian_location.x = actor.get_transform().location.x
-        pedestrian_state.pedestrian_location.y = actor.get_transform().location.y
-        pedestrian_state.pedestrian_location.theta = (
-            actor.get_transform().rotation.yaw * np.pi / 180
-        )  # CHECK : Changed this to radians.
-        pedestrian_state.radius = pedestrian_radius
-        pedestrian_state.pedestrian_acceleration = 0
-        pedestrian_state.pedestrian_speed = (
-            np.sqrt(
-                actor.get_velocity().x ** 2
-                + actor.get_velocity().y ** 2
-                + actor.get_velocity().z ** 2
-            )
-            * 3.6
-        )
-
-        return pedestrian_state
-
     def pathRequest(self, data):
 
         os.system("clear")
-
-        plan = PathPlan.fromRosMsg(data)
+        print(data)
+        plan = PathPlan.fromRosMsg(data.path_plan)
 
         reset_sim = False
         if self.first_frame_generated:  # have we generated the first frame of
@@ -194,6 +137,7 @@ class CarlaManager:
                                 self.tm.pedestrian_controller.random_spawn()
                             )
                             self.tm.pedestrian_controller.cross_road()
+
                             print("Pedestrian Spawned")
 
                 #### Check Sync ###
@@ -212,7 +156,6 @@ class CarlaManager:
             self.first_frame_generated = True
             self.resetEnv()
 
-        # TODO: Ensure state information is extracted from the right class
         state_information = self.carla_handler.get_state_information_new(
             self.ego_vehicle, self.original_lane
         )
@@ -227,13 +170,18 @@ class CarlaManager:
             actors_in_right_lane,
         ) = state_information
 
-        # TODO: Use the new class functions instead of getLanePoints
         # Current Lane
         if reset_sim == True:
 
             # Current Lane
             self.lane_cur = CurrentLane(
-                lane_vehicles=actors_in_current_lane, lane_points=current_lane_waypoints
+                lane_vehicles=actors_in_current_lane,
+                lane_points=current_lane_waypoints,
+                crossing_pedestrain=[
+                    Pedestrian(self.carla_handler.world, self.pedestrian.id)
+                ]
+                if self.pedestrian is not None
+                else [],
             )
             lane_cur = self.lane_cur
 
@@ -266,19 +214,7 @@ class CarlaManager:
             lane_right = self.lane_right
 
         # Ego vehicle
-        vehicle_ego = self.getVehicleState(self.ego_vehicle)
-
-        # Front vehicle
-        if front_vehicle == None:
-            vehicle_front = vehicle_ego
-        else:
-            vehicle_front = self.getVehicleState(front_vehicle)
-
-        # Rear vehicle
-        if rear_vehicle == None:
-            vehicle_rear = vehicle_ego
-        else:
-            vehicle_rear = self.getVehicleState(rear_vehicle)
+        vehicle_ego = Vehicle(self.carla_handler.world, self.ego_vehicle.id)
 
         reward_info = RewardInfo()
         reward_info.time_elapsed = self.timestamp
@@ -292,8 +228,9 @@ class CarlaManager:
         env_desc.cur_vehicle_state = vehicle_ego
         env_desc.current_lane = lane_cur
         env_desc.adjacent_lanes = [self.lane_left, self.lane_right]
+        env_desc.next_intersection = []
         env_desc.speed_limit = self.speed_limit
-        env_desc.reward = reward_info.toRosMsg()
+        env_desc.reward_info = reward_info
 
         return SimServiceResponse(env_desc.toRosMsg())
 
@@ -420,7 +357,8 @@ class CarlaManager:
 
         # Reset Environment
         self.resetEnv()
-
+        state = self.getVehicleState(self.ego_vehicle)
+        import ipdb; ipdb.set_trace()
         state_information = self.carla_handler.get_state_information_new(
             self.ego_vehicle, self.original_lane
         )
@@ -439,7 +377,13 @@ class CarlaManager:
         # publish the first frame
         # Current Lane
         self.lane_cur = CurrentLane(
-            lane_vehicles=actors_in_current_lane, lane_points=current_lane_waypoints
+            lane_vehicles=actors_in_current_lane,
+            lane_points=current_lane_waypoints,
+            crossing_pedestrain=[
+                Pedestrian(self.carla_handler.world, self.pedestrian.id)
+            ]
+            if self.pedestrian is not None
+            else [],
         )
 
         # Left Lane

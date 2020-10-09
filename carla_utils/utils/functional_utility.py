@@ -16,10 +16,11 @@ class Frenet(object):
 
     @classmethod
     def fromRosMsg(cls, msg):
-        cls.x = msg.x
-        cls.y = msg.y
-        cls.theta = msg.theta
-        return cls
+        obj = cls.__new__(cls)
+        obj.x = msg.x
+        obj.y = msg.y
+        obj.theta = msg.theta
+        return obj
 
     def toRosMsg(self):
         msg = FrenetMsg()
@@ -69,10 +70,11 @@ class Pose2D(object):
 
     @classmethod
     def fromRosMsg(cls, msg):
-        cls.x = msg.x
-        cls.y = msg.y
-        cls.theta = msg.theta
-        return cls
+        obj = cls.__new__(cls)
+        obj.x = msg.x
+        obj.y = msg.y
+        obj.theta = msg.theta
+        return obj
 
     def toRosMsg(self):
         msg = Pose2DMsg()
