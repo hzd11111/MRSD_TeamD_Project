@@ -18,6 +18,9 @@ from carla_handler import CarlaHandler
 
 from grasp_controller import GRASPPIDController
 
+sys.path.insert(1, '/home/grasp/Fall2020/src/carla_utils/utils')
+from actors import *
+
 from scenario_manager import CustomScenario
 from grasp_path_planner.srv import SimService, SimServiceResponse
 from agents.tools.misc import get_speed
@@ -358,7 +361,8 @@ class CarlaManager:
 
         # Reset Environment
         self.resetEnv()
-
+        state = self.getVehicleState(self.ego_vehicle)
+        import ipdb; ipdb.set_trace()
         state_information = self.carla_handler.get_state_information_new(
             self.ego_vehicle, self.original_lane
         )

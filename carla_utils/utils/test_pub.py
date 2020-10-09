@@ -15,17 +15,27 @@ def talker():
     pub = rospy.Publisher(TEST_TOPIC_NAME, EnvDescMsg)
     rospy.init_node(TEST_NODE_NAME, anonymous=True)
     r = rospy.Rate(10) #10hz
-    p = Pedestrian(location_global=Pose2D(1,2,3), priority_status=PedestrainPriority(2))
-    lane = PerpendicularLane(crossing_pedestrain=[p], lane_id=99, origin_global_pose=Pose2D(6,7,8), intersecting_distance = 12)
-    env = EnvDesc(next_intersection=[lane], reward_info=RewardInfo(current_action=RLDecision(1)))
+    p = Pedestrian(priority_status=PedestrainPriority(2))
+    v = Vehicle(world=None, 
+                actor_id=99, 
+                speed=99, 
+                acceleration=99, 
+                location_global=Pose2D(99,99,99), 
+                location_frenet=Frenet(99,99,99), 
+                length=99, 
+                width=99,
+                traffic_light_status=None)
+    
+    lane = PerpendicularLane(crossing_pedestrain=[p])
+    msg = EnvDesc(next_intersection=[lane], reward_info=RewardInfo(current_action=RLDecision(1))).toRosMsg()
+    # msg = p.toRosMsg()
+    # msg = v.toRosMsg()
 
-    # lane = ParallelLane(crossing_pedestrain=[p], lane_id=99, origin_global_pose=Pose2D(6,7,8), lane_distance = 12)
-
-    msg = env.toRosMsg()
     while not rospy.is_shutdown():
         rospy.loginfo(msg)
         pub.publish(msg)
         r.sleep()
+        input()
 
 if __name__ == '__main__':
     try:

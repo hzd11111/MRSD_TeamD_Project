@@ -11,18 +11,16 @@ from carla_utils.msg import ActorMsg, VehicleMsg, PedestrainMsg, FrenetMsg
 from options import TrafficLightStatus, PedestrainPriority
 
 
-class Actor:
-    def __init__(
-        self,
-        world=None,
-        actor_id=0,
-        speed=0.0,
-        acceleration=0.0,
-        location_global=Pose2D(),
-        location_frenet=Frenet(),
-        length=0.0,
-        width=0.0,
-    ):
+class Actor():
+    def __init__(self, 
+                world=None, 
+                actor_id=0, 
+                speed=0.0, 
+                acceleration=0.0, 
+                location_global=Pose2D(), 
+                location_frenet=Frenet(), 
+                length=0.0, 
+                width=0.0):
 
         # system identifiers
         self.world = world
@@ -43,12 +41,13 @@ class Actor:
         self.length = length if self.world is None else self.get_length()
         self.width = width if self.world is None else self.get_width()
 
+        # userful class attributes 
+        self.location = None if self.world is None else self.get_location()
     # -------ROS HELPER METHODS----------------------
 
     @classmethod
     def fromRosMsg(cls, actor_msg):
-        # obj = cls.__new__(cls)
-        obj = cls()
+        obj = cls.__new__(cls)
         obj.speed = actor_msg.speed
         obj.acceleration = actor_msg.acceleration
         obj.location_global = Pose2D.fromRosMsg(actor_msg.location_global)
@@ -132,22 +131,21 @@ class Actor:
         - length (float)
         - width (float)
         """
-        if actor is None:
-            actor = self.actor
+        if actor is None: actor = self.actor
 
         state_dict = {}
-        state_dict["actor_id"] = actor.id
-        state_dict["type_id"] = actor.type_id
+        state_dict['actor_id'] = actor.id
+        state_dict['type_id'] = actor.type_id
 
         # speed
         speed = actor.get_velocity()
-        state_dict["speed_3d"] = [speed.x, speed.y, speed.z]
-        state_dict["speed"] = np.linalg.norm([speed.x, speed.y, speed.z])
+        state_dict['speed_3d'] = [speed.x, speed.y, speed.z]
+        state_dict['speed'] = np.linalg.norm([speed.x, speed.y, speed.z])
 
         # acceleration
         acc = actor.get_acceleration()
-        state_dict["acceleration_3d"] = [acc.x, acc.y, acc.z]
-        state_dict["acceleration"] = np.linalg.norm([acc.x, acc.y, acc.z])
+        state_dict['acceleration_3d'] = [acc.x, acc.y, acc.z]
+        state_dict['acceleration'] = np.linalg.norm([acc.x, acc.y, acc.z])
 
         # actor transform
         trans = actor.get_transform()
@@ -159,8 +157,8 @@ class Actor:
         # frenet_x, frenet_y, theta = Frenet.get_frenet_distance_from_global(loc.x, loc.y, loc.z) #TODO
         frenet_x, frenet_y, theta = [0, 0, 0]  # TODO: implement Frenet
 
-        state_dict["global_location_3d"] = [loc.x, loc.y, loc.z]
-        state_dict["global_location_2d"] = [loc.x, loc.y]
+        state_dict["location_3d"] = {'x':loc.x, 'y':loc.y, 'z':loc.z}
+        state_dict["location_2d"] = {'x':loc.x, 'y':loc.y}
         state_dict["Pose2D"] = Pose2D(loc.x, loc.y, rot.yaw)
         state_dict["location_frenet"] = Frenet(frenet_x, frenet_y, theta)
 
@@ -168,9 +166,9 @@ class Actor:
         state_dict["rpy"] = [rot.roll, rot.pitch, rot.yaw]
 
         # actor dimensions
-        state_dict["length"] = actor.bounding_box.extent.x * 2
-        state_dict["width"] = actor.bounding_box.extent.y * 2
-        state_dict["height"] = actor.bounding_box.extent.z * 2
+        state_dict['length'] = actor.bounding_box.extent.x * 2
+        state_dict['width'] = actor.bounding_box.extent.y * 2
+        state_dict['height'] = actor.bounding_box.extent.z * 2
 
         return state_dict
 
@@ -196,22 +194,41 @@ class Actor:
 
     def get_width(self):
         return self.get_state_dict()["width"]
-
+    
+    def get_location(self):
+        return self.get_state_dict()["location_3d"]
 
 class Vehicle(Actor):
-    def __init__(
-        self,
-        world=None,
-        actor_id=0,
-        speed=0.0,
-        acceleration=0.0,
-        location_global=Pose2D(),
-        location_frenet=Frenet(),
-        length=0.0,
-        width=0.0,
-        traffic_light_status=None,
-    ):
+    def __init__(    def get_velocity(self):
+        return self.get_state_dict()['speed']
+    
+    def get_acceleration(self):
+        return self.get_state_dict()['acceleration']
 
+    def get_location_global(self):
+        '''Returns a Pose2D object'''
+        return self.get_state_dict()['Pose2D']
+    
+    def get_location_frenet(self):
+        '''Returns a Frenet object'''
+        return self.get_state_dict()['location_frenet']
+
+    def get_length(self):
+        return self.get_state_dict()['length']
+        
+    def get_width(self):
+        return self.get_state_dict()['width']
+                self, 
+                world=None, 
+                actor_id=0, 
+                speed=0.0, 
+                acceleration=0.0, 
+                location_global=Pose2D(), 
+                location_frenet=Frenet(), 
+                length=0.0, 
+                width=0.0,
+                traffic_light_status=None):
+        
         super(Vehicle, self).__init__(
             world,
             actor_id,
@@ -225,7 +242,7 @@ class Vehicle(Actor):
         self.traffic_light_status = traffic_light_status
         if self.traffic_light_status is None:
             self.traffic_light_status = TrafficLightStatus.RED
-
+    
     @classmethod
     def fromRosMsg(cls, msg):
         obj = cls.__new__(cls)
@@ -239,22 +256,32 @@ class Vehicle(Actor):
         msg.traffic_light_status = self.traffic_light_status.value
         return msg
 
-    def getClosest(self, adjacent_lane_vehicles, ego_vehicle, n=5):
-        # TODO: ROHAN move to the Vehicle class
-        ego_x = ego_vehicle.vehicle_location.x
-        ego_y = ego_vehicle.vehicle_location.y
+    @staticmethod
+    def getClosest(adjacent_lane_vehicles, ego_vehicle, n=5):
+        """
+        Gets the n closest vehicles to the ego vehicle.
+        Input:
+            adjacent_lane_vehicles(list): list of vehicle objects of class Vehicle
+            ego_vehicle (Vehicle): ego vehicle of class Vehicle
+            n(int): closest n objects
+        Output:
+            closest_n_vehicles (list): list of n closest vehicles
+            sorted_idx (list): list of n vehicles indexes sorted by increasing distance from ego
+        """
+        ego_x = ego_vehicle.location["x"]
+        ego_y = ego_vehicle.location["y"]
 
         distances = [
             (
-                (ego_x - adjacent_lane_vehicles[i].vehicle_location.x) ** 2
-                + (ego_y - adjacent_lane_vehicles[i].vehicle_location.y) ** 2
+                (ego_x - adjacent_lane_vehicles[i].location["x"]) ** 2
+                + (ego_y - adjacent_lane_vehicles[i].location["y"]) ** 2
             )
             for i in range(len(adjacent_lane_vehicles))
         ]
         sorted_idx = np.argsort(distances)[:n]
+        closest_n_vehicles = [adjacent_lane_vehicles[i] for i in sorted_idx]
 
-        return [adjacent_lane_vehicles[i] for i in sorted_idx], sorted_idx
-
+        return closest_n_vehicles, sorted_idx
 
 class Pedestrian(Actor):
     def __init__(
@@ -268,7 +295,7 @@ class Pedestrian(Actor):
         length=0.0,
         width=0.0,
         priority_status=None,
-    ):
+        ):
         super(Pedestrian, self).__init__(
             world,
             actor_id,
@@ -295,6 +322,24 @@ class Pedestrian(Actor):
         msg.actor_msg = super(Pedestrian, self).toRosMsg()
         msg.priority_status = self.priority_status.value
         return msg
+
+    @staticmethod
+    def getClosestPedestrian(pedestrians, ego_vehicle, n=1):
+        # TODO: ROHAN move to the Pedestrian class
+        ego_x = ego_vehicle.location['x']
+        ego_y = ego_vehicle.location['y']
+
+        distances = [
+            (
+                (ego_x - pedestrians[i].location['x']) ** 2
+                + (ego_y - pedestrians[i].location['y']) ** 2
+            )
+            for i in range(len(pedestrians))
+        ]
+        sorted_idx = np.argsort(distances)[:n]
+        closest_n_pedestrians = [pedestrians[i] for i in sorted_idx]
+
+        return closest_n_pedestrians, sorted_idx
 
 
 TEST_NODE_NAME = "actor_listener"
