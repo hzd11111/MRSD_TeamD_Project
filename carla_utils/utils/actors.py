@@ -199,26 +199,7 @@ class Actor():
         return self.get_state_dict()["location_3d"]
 
 class Vehicle(Actor):
-    def __init__(    def get_velocity(self):
-        return self.get_state_dict()['speed']
-    
-    def get_acceleration(self):
-        return self.get_state_dict()['acceleration']
-
-    def get_location_global(self):
-        '''Returns a Pose2D object'''
-        return self.get_state_dict()['Pose2D']
-    
-    def get_location_frenet(self):
-        '''Returns a Frenet object'''
-        return self.get_state_dict()['location_frenet']
-
-    def get_length(self):
-        return self.get_state_dict()['length']
-        
-    def get_width(self):
-        return self.get_state_dict()['width']
-                self, 
+    def __init__(self, 
                 world=None, 
                 actor_id=0, 
                 speed=0.0, 
