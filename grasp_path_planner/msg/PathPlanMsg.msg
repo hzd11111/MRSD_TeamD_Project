@@ -1,4 +1,3 @@
-time sent_time
 geometry_msgs/Pose2D tracking_pose
 geometry_msgs/Pose2D[] future_poses
 float64 tracking_speed

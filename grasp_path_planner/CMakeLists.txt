@@ -88,16 +88,23 @@ add_service_files(
 ##   * uncomment the "generate_dynamic_reconfigure_options" section below
 ##     and list every .cfg file to be processed
 
+## Generate messages in the 'msg' folder
 add_message_files(
   FILES
-  LanePoint.msg
-  Lane.msg
-  VehicleState.msg
-  RewardInfo.msg
-  EnvironmentState.msg
-  RLCommand.msg
-  PathPlan.msg
-  Pedestrian.msg
+  PathPlanMsg.msg
+  EnvDescMsg.msg
+  GlobalPathPointMsg.msg
+  GlobalPathMsg.msg
+  LanePointMsg.msg
+  ActorMsg.msg
+  VehicleMsg.msg
+  PedestrainMsg.msg
+  LaneStatusMsg.msg
+  CurrentLaneMsg.msg
+  ParallelLaneMsg.msg
+  PerpendicularLaneMsg.msg
+  RewardInfoMsg.msg
+  FrenetMsg.msg
 )
 
 generate_messages(
