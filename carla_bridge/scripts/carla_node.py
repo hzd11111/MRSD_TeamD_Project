@@ -191,7 +191,7 @@ class CarlaManager:
                 lane_points=left_lane_waypoints,
                 same_direction=True,
                 left_to_the_current=True,
-                next_lane=True,
+                adjacent_lane=True,
             )
             lane_left = self.lane_left
             # Right Lane
@@ -200,7 +200,7 @@ class CarlaManager:
                 lane_points=right_lane_waypoints,
                 same_direction=True,
                 left_to_the_current=False,
-                next_lane=True,
+                adjacent_lane=True,
             )
             lane_right = self.lane_right
 
@@ -359,7 +359,7 @@ class CarlaManager:
             lane_points=left_lane_waypoints,
             same_direction=True,
             left_to_the_current=True,
-            next_lane=True,
+            adjacent_lane=True,
         )
 
         # Right Lane
@@ -368,7 +368,7 @@ class CarlaManager:
             lane_points=right_lane_waypoints,
             same_direction=True,
             left_to_the_current=False,
-            next_lane=True,
+            adjacent_lane=True,
         )
 
     def spin(self):
