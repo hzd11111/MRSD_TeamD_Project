@@ -39,13 +39,13 @@ class TrajGenerator:
 
         # plan trajectory switch cases
         if self.current_action == RLDecision.CONSTANT_SPEED:
-            return self.constSpeedTraj(env_desc)
+            return self.constSpeedTraj(env_desc).toRosMsg()
         elif self.current_action == RLDecision.ACCELERATE:
-            return self.accelerateTraj(env_desc)
+            return self.accelerateTraj(env_desc).toRosMsg()
         elif self.current_action == RLDecision.DECELERATE:
-            return self.decelerateTraj(env_desc)
+            return self.decelerateTraj(env_desc).toRosMsg()
         elif self.current_action == RLDecision.SWITCH_LANE:
-            pass
+            return self.laneChangeTraj(env_desc).toRosMsg()
         else:
             print("RLDecision ERROR:", action_to_perform)
 
