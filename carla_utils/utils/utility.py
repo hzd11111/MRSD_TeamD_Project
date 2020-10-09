@@ -15,7 +15,7 @@ from carla_utils.msg import LanePointMsg
 
 from actors import *
 from options import *
-from functional_utility import Pose2D
+from functional_utility import Pose2D, Frenet
 
 
 class PathPlan(object):
@@ -215,11 +215,17 @@ class CurrentLane(LaneStatus):
 
     # TODO: add definition
     def VehicleInFront(curret_vehicle):
-        pass
+        vehicle_dummy = Vehicle(
+            actor_id=-1, speed=-1, location_frenet=Pose2D(1000, 1000, 0)
+        )
+        return vehicle_dummy
 
     # TODO: add definition
     def VehicleBehind(curret_vehicle):
-        pass
+        vehicle_dummy = Vehicle(
+            actor_id=-1, speed=-1, location_frenet=Pose2D(1000, 1000, 0)
+        )
+        return vehicle_dummy
 
 
 class ParallelLane(LaneStatus):
