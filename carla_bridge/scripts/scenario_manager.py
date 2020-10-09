@@ -85,7 +85,7 @@ class CustomScenario:
     ) -> Tuple[int, carla.ActorList, int]:
 
         self.target_speed = 15
-        if CURRENT_MODE == Mode.TRAIN:
+        if False:
             (
                 self.spawn_roads,
                 self.left_lane_id,
