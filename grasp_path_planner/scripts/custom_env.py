@@ -57,8 +57,7 @@ class CustomEnv(gym.Env):
         """
         # reset sb_event flag if previously set in previous action
         decision = self.rl_manager.convertDecision(action)
-        env_desc_ros_msg, end_of_action = self.path_planner.performAction(decision)
-        env_desc = EnvDesc.fromRosMsg(env_desc_ros_msg)
+        env_desc, end_of_action = self.path_planner.performAction(decision)
         env_copy = env_desc
         self.rl_manager.reward_manager.update(env_copy, action)
         done = self.rl_manager.terminate(env_copy)
@@ -86,7 +85,7 @@ class CustomEnv(gym.Env):
         Resets the environment
         """
         self.rl_manager.reward_manager.reset()
-        env_desc = EnvDesc.fromRosMsg(self.path_planner.resetSim())
+        env_desc = self.path_planner.resetSim()
         env_copy = env_desc
         env_state = self.rl_manager.makeStateVector(env_copy, self.to_local)
         return env_state

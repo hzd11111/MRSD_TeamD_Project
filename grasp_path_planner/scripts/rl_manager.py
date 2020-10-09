@@ -6,7 +6,7 @@ from carla_utils.msg import EnvDescMsg
 
 # other packages
 from reward_manager import reward_selector
-from settings import Scenario, RLDecision
+from options import Scenario, RLDecision
 from state_manager import StateManager
 
 
@@ -57,8 +57,8 @@ class RLManager:
             return RLDecision.ACCELERATE
         elif action == RLDecision.DECELERATE.value:
             return RLDecision.DECELERATE
-        elif action == RLDecision.SWITCH_LANE.value:
-            return RLDecision.SWITCH_LANE
+        elif action == RLDecision.SWITCH_LANE_LEFT.value:
+            return RLDecision.SWITCH_LANE_LEFT
         else:
             logging.error("Bug in decision conversion")
             raise RuntimeError("Invalid action given")

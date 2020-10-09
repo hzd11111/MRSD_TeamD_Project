@@ -1,12 +1,7 @@
 import os
 from enum import Enum
-
+from options import Scenario
 dir_path = os.path.dirname(os.path.realpath(__file__))
-
-
-class Scenario(Enum):
-    LANE_CHANGE = 0
-    PEDESTRIAN = 1
 
 
 class Mode(Enum):
@@ -82,27 +77,27 @@ SIM_SERVICE_NAME = "simulator"
 NODE_NAME = "full_grasp_planner"
 
 
-if CURRENT_SCENARIO == Scenario.PEDESTRIAN:
+# if CURRENT_SCENARIO == Scenario.PEDESTRIAN:
 
-    class RLDecision(Enum):
-        CONSTANT_SPEED = 0
-        ACCELERATE = 1
-        DECELERATE = 2
-        SWITCH_LANE = 3
-        NO_ACTION = 4
+#     class RLDecision(Enum):
+#         CONSTANT_SPEED = 0
+#         ACCELERATE = 1
+#         DECELERATE = 2
+#         SWITCH_LANE = 3
+#         NO_ACTION = 4
 
-    OLD_REWARD = False
+#     OLD_REWARD = False
 
-else:
+# else:
 
-    class RLDecision(Enum):
-        CONSTANT_SPEED = 0
-        ACCELERATE = 2
-        DECELERATE = 3
-        SWITCH_LANE = 1
-        NO_ACTION = 4
+#     class RLDecision(Enum):
+#         CONSTANT_SPEED = 0
+#         ACCELERATE = 2
+#         DECELERATE = 3
+#         SWITCH_LANE = 1
+#         NO_ACTION = 4
 
-    OLD_REWARD = False
+#     OLD_REWARD = False
 
 
 ###### INIT TO ACTUAL SPEED MAPPINGS FOR EGO VEHICLE ######

@@ -4,6 +4,7 @@ sys.path.append("../../carla_utils/utils")
 from utility import *
 from functional_utility import *
 from options import RLDecision
+import copy
 
 class TrajGenerator:
     SAME_POSE_THRESHOLD = 2
@@ -34,26 +35,26 @@ class TrajGenerator:
 
     def trajPlan(self, rl_decision, env_desc):
         # check the validity of env_desc
-
+        # import ipdb; ipdb.set_trace()
         # continue the previous action if it hasn't ended
         action_to_perform = self.newActionType(rl_decision)
 
         # plan trajectory switch cases
-        if self.current_action == RLDecision.CONSTANT_SPEED:
+        if action_to_perform == RLDecision.CONSTANT_SPEED:
             return self.constSpeedTraj(env_desc).toRosMsg()
-        elif self.current_action == RLDecision.ACCELERATE:
+        elif action_to_perform == RLDecision.ACCELERATE:
             return self.accelerateTraj(env_desc).toRosMsg()
-        elif self.current_action == RLDecision.DECELERATE:
+        elif action_to_perform == RLDecision.DECELERATE:
             return self.decelerateTraj(env_desc).toRosMsg()
-        elif self.current_action == RLDecision.SWITCH_LANE:
+        elif (action_to_perform == RLDecision.SWITCH_LANE_LEFT) or \
+                (action_to_perform == RLDecision.SWITCH_LANE_RIGHT):
             return self.laneChangeTraj(env_desc).toRosMsg()
         else:
             print("RLDecision ERROR:", action_to_perform)
 
-
     # find the next lane point of the current vehicle
     def findNextLanePose(self, curr_vehicle, lane_point_array):
-        vehicle_frenet = curr_vehicle.frenet_pose
+        vehicle_frenet = curr_vehicle.location_frenet
         vehicle_frenet_x = vehicle_frenet.x
 
         for lane_waypoint in lane_point_array:
@@ -72,7 +73,7 @@ class TrajGenerator:
                        sim_data.reward_info.time_elapsed)
 
         # current simulation time
-        new_sim_time = sim_data.reward.time_elapsed
+        new_sim_time = sim_data.reward_info.time_elapsed
 
         # current vehicle state
         curr_vehicle = sim_data.cur_vehicle_state
@@ -106,7 +107,7 @@ class TrajGenerator:
                 self.traj_parameters['action_duration'] - (new_sim_time - self.action_start_time), \
                             self.traj_parameters['action_time_disc']):
             delta_x = ts * self.start_speed / 3.6
-            new_frenet = tracking_pose_frenet.copy()
+            new_frenet = copy.copy(tracking_pose_frenet)
             new_frenet.x += delta_x
             new_global_pose = current_lane.frenetToGlobal(new_frenet)
             new_path_plan.future_poses.append(new_global_pose)
@@ -125,7 +126,7 @@ class TrajGenerator:
                        sim_data.reward_info.time_elapsed)
 
         # current simulation time
-        new_sim_time = sim_data.reward.time_elapsed
+        new_sim_time = sim_data.reward_info.time_elapsed
 
         # current vehicle state
         curr_vehicle = sim_data.cur_vehicle_state
@@ -161,7 +162,7 @@ class TrajGenerator:
                             self.traj_parameters['action_time_disc']):
             delta_x = (ts * (self.start_speed + action_progress * self.traj_parameters['accelerate_amt']) + \
                             acc_per_sec * (ts ** 2.) / 2.) / 3.6
-            new_frenet = tracking_pose_frenet.copy()
+            new_frenet = copy.copy(tracking_pose_frenet)
             new_frenet.x += delta_x
             new_global_pose = current_lane.frenetToGlobal(new_frenet)
             new_path_plan.future_poses.append(new_global_pose)
@@ -180,7 +181,7 @@ class TrajGenerator:
                        sim_data.reward_info.time_elapsed)
 
         # current simulation time
-        new_sim_time = sim_data.reward.time_elapsed
+        new_sim_time = sim_data.reward_info.time_elapsed
 
         # current vehicle state
         curr_vehicle = sim_data.cur_vehicle_state
@@ -217,7 +218,7 @@ class TrajGenerator:
                             self.traj_parameters['action_time_disc']):
             delta_x = (ts * (self.start_speed - action_progress * self.traj_parameters['accelerate_amt']) -\
                             dec_per_sec * (ts**2.) / 2.) / 3.6
-            new_frenet = tracking_pose_frenet.copy()
+            new_frenet = copy.copy(tracking_pose_frenet)
             new_frenet.x += delta_x
             new_global_pose = current_lane.frenetToGlobal(new_frenet)
             new_path_plan.future_poses.append(new_global_pose)
@@ -280,7 +281,7 @@ class TrajGenerator:
                        sim_data.reward_info.time_elapsed)
 
             # current simulation time
-            new_sim_time = sim_data.reward.time_elapsed
+            new_sim_time = sim_data.reward_info.time_elapsed
 
             # current vehicle state
             curr_vehicle = sim_data.cur_vehicle_state

@@ -3,7 +3,7 @@ from abc import ABC, abstractmethod
 # ROS Packages
 from grasp_path_planner.msg import VehicleMsg
 # other packages
-from settings import Scenario, RLDecision
+from options import Scenario, RLDecision
 
 
 # Parent Reward Class

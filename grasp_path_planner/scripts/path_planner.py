@@ -4,7 +4,7 @@ import sys
 sys.path.append("../../carla_utils/utils")
 
 # ROS Packages
-from utility import PathPlan
+from utility import PathPlan, EnvDesc
 from grasp_path_planner.srv import SimService, SimServiceRequest
 from trajectory_generator import TrajGenerator
 # other packages
@@ -50,7 +50,8 @@ class PathPlannerManager:
         path_plan = self.traj_generator.trajPlan(action, self.prev_env_desc)
         req = SimServiceRequest()
         req.path_plan = path_plan
-        self.prev_env_desc = self.sim_service_interface(req).env
+        # import ipdb; ipdb.set_trace()
+        self.prev_env_desc = EnvDesc.fromRosMsg(self.sim_service_interface(req).env)
         return self.prev_env_desc, path_plan.end_of_action
 
     def resetSim(self):
@@ -60,5 +61,5 @@ class PathPlannerManager:
         reset_msg.end_of_action = True
         req = SimServiceRequest()
         req.path_plan = reset_msg
-        self.prev_env_desc = self.sim_service_interface(req).env
+        self.prev_env_desc = EnvDesc.fromRosMsg(self.sim_service_interface(req).env)
         return self.prev_env_desc

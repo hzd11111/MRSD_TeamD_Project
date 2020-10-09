@@ -43,14 +43,15 @@ class StateManager:
         for lane in env_desc.adjacent_lanes:
             if lane.left_to_the_current and lane.adjacent_lane:
                 # Add relevant vehicles
-                for vehicle in lane:
+                for vehicle in lane.lane_vehicles:
+                    # import ipdb; ipdb.set_trace()
                     vehicle_state = [vehicle.location_frenet.x,
                                      vehicle.location_frenet.y,
                                      vehicle.location_frenet.theta,
                                      vehicle.speed]
                     adj_lane_vehicles_states.append(vehicle_state)
                 # Add relevant pedestrians
-                for pedestrian in lane.crossing_pedestrian:
+                for pedestrian in lane.crossing_pedestrain:
                     pedestrian_state = [pedestrian.location_frenet.x,
                                         pedestrian.location_frenet.y,
                                         pedestrian.location_frenet.theta,
@@ -60,27 +61,28 @@ class StateManager:
                 lane_distance = lane.lane_distance
                 break
 
-        if len(adj_lane_vehicles_states) != 5:
-            dummy_vehicle = list(itertools.repeat(dummy_vehicle, 5 - len(adj_lane_vehicles_states)))
-            adj_lane_vehicles_states.append(dummy_vehicle)
+        if len(adj_lane_vehicles_states) < 5:
+            dummy_vehicles = list(itertools.repeat(dummy_vehicle, 5 - len(adj_lane_vehicles_states)))
+            adj_lane_vehicles_states += dummy_vehicles
 
         # extract front vehicle and back vehicle and pedestrian in current lane
         # TODO: Make sure vehicle in front or back are always present
-        current_lane = CurrentLane(env_desc.current_lane)
-        front_vehicle = current_lane.vehicleInFront()
-        back_vehicle = current_lane.vehicleBehind()
+        current_lane = env_desc.current_lane
+        front_vehicle = current_lane.VehicleInFront()
+        back_vehicle = current_lane.VehicleBehind()
 
-        for pedestrian in current_lane.crossing_pedestrian:
+        for pedestrian in current_lane.crossing_pedestrain:
             pedestrian_state = [pedestrian.location_frenet.x,
                                 pedestrian.location_frenet.y,
                                 pedestrian.location_frenet.theta,
                                 pedestrian.speed]
             pedestrian_states.append(pedestrian_state)
 
-        if len(pedestrian_states) != 5:
-            dummy_vehicle = list(itertools.repeat(dummy_vehicle, 5 - len(adj_lane_vehicles_states)))
-            pedestrian.append(dummy_vehicle)
+        if len(pedestrian_states) < 5:
+            dummy_vehicles = list(itertools.repeat(dummy_vehicle, 5 - len(pedestrian_states)))
+            pedestrian_states += dummy_vehicles
 
+        # import ipdb; ipdb.set_trace()
         front_vehicle_state = [front_vehicle.location_frenet.x,
                                front_vehicle.location_frenet.y,
                                front_vehicle.location_frenet.theta,
@@ -94,7 +96,7 @@ class StateManager:
         # concatenate all the states and lane distance
         entire_state = ego_vehicle_state + \
             [coord for state in adj_lane_vehicles_states for coord in state] + \
-            front_vehicle + \
+            front_vehicle_state + \
             back_vehicle_state + \
             [coord for state in pedestrian_states for coord in state] + [lane_distance]
 
