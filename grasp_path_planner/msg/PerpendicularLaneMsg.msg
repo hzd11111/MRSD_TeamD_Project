@@ -1,0 +1,3 @@
+LaneStatusMsg lane_status
+float64 intersecting_distance
+bool directed_right
