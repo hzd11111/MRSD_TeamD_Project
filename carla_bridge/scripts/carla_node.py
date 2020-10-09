@@ -185,9 +185,13 @@ class CarlaManager:
             )
             lane_cur = self.lane_cur
 
+            vehicle_ego = Vehicle(self.carla_handler.world, self.ego_vehicle.id)
+
             # Left Lane
             self.lane_left = ParallelLane(
-                lane_vehicles=actors_in_left_lane,
+                lane_vehicles=Vehicle.getClosest(actors_in_left_lane, vehicle_ego, n=5)[
+                    0
+                ],
                 lane_points=left_lane_waypoints,
                 same_direction=True,
                 left_to_the_current=True,
@@ -196,7 +200,9 @@ class CarlaManager:
             lane_left = self.lane_left
             # Right Lane
             self.lane_right = ParallelLane(
-                lane_vehicles=actors_in_right_lane,
+                lane_vehicles=Vehicle.getClosest(
+                    actors_in_right_lane, vehicle_ego, n=5
+                )[0],
                 lane_points=right_lane_waypoints,
                 same_direction=True,
                 left_to_the_current=False,
@@ -214,7 +220,6 @@ class CarlaManager:
             lane_right = self.lane_right
 
         # Ego vehicle
-        vehicle_ego = Vehicle(self.carla_handler.world, self.ego_vehicle.id)
 
         reward_info = RewardInfo()
         reward_info.time_elapsed = self.timestamp
