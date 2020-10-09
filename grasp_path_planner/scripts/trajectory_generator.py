@@ -1,4 +1,8 @@
-from settings import *
+#!/usr/bin/env python
+import sys
+sys.path.append("../../carla_utils/utils")
+from utility import *
+from options import RLDecision
 
 class TrajGenerator:
     SAME_POSE_THRESHOLD = 2
