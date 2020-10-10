@@ -82,8 +82,6 @@ class CarlaManager:
 
     def pathRequest(self, data):
 
-        os.system("clear")
-        print(data)
         plan = PathPlan.fromRosMsg(data.path_plan)
 
         reset_sim = False
@@ -172,7 +170,6 @@ class CarlaManager:
         vehicle_ego = Vehicle(self.carla_handler.world, self.ego_vehicle.id)
 
         # Current Lane
-        vehicle_ego = Vehicle(self.carla_handler.world, self.ego_vehicle.id)
         if reset_sim == True:
 
             # Current Lane
@@ -212,15 +209,59 @@ class CarlaManager:
 
         else:
             lane_cur = self.lane_cur
+            # Update Values
+            lane_cur.lane_vehicles = actors_in_current_lane
 
             # Left Lane
             lane_left = self.lane_left
+            # Update Values
+            lane_left.lane_vehicles = Vehicle.getClosest(
+                actors_in_left_lane, vehicle_ego, n=5
+            )[0]
 
             # Right Lane
             lane_right = self.lane_right
+            # Update Values
+            lane_right.lane_vehicles = Vehicle.getClosest(
+                actors_in_right_lane, vehicle_ego, n=5
+            )[0]
 
-        # Ego vehicle
+        ego_vehicle_frenet_pose = lane_cur.GlobalToFrenet(vehicle_ego.location_global)
 
+        # Update Frenet Coordinates
+        lane_cur.lane_vehicles = self.update_frenet(
+            ego_vehicle_frenet_pose, lane_cur.lane_vehicles, lane_cur
+        )
+        lane_left.lane_vehicles = self.update_frenet(
+            ego_vehicle_frenet_pose, lane_left.lane_vehicles, lane_cur
+        )
+        lane_right.lane_vehicles = self.update_frenet(
+            ego_vehicle_frenet_pose, lane_right.lane_vehicles, lane_cur
+        )
+
+        for v in lane_left.lane_vehicles:
+            print(
+                ego_vehicle_frenet_pose.x,
+                ego_vehicle_frenet_pose.y,
+                "||",
+                lane_cur.GlobalToFrenet(v.location_global).x,
+                lane_cur.GlobalToFrenet(v.location_global).y,
+                "||",
+                v.location_frenet.x,
+                v.location_frenet.y,
+                "||",
+                v.location_global.x,
+                v.location_global.y,
+                "||",
+                vehicle_ego.location_global.x,
+                vehicle_ego.location_global.y,
+            )
+
+        # import ipdb
+
+        # ipdb.set_trace()
+
+        print("\n")
         reward_info = RewardInfo()
         reward_info.time_elapsed = self.timestamp
         reward_info.new_run = self.first_run
@@ -232,7 +273,7 @@ class CarlaManager:
         env_desc = EnvDesc()
         env_desc.cur_vehicle_state = vehicle_ego
         env_desc.current_lane = lane_cur
-        env_desc.adjacent_lanes = [self.lane_left, self.lane_right]
+        env_desc.adjacent_lanes = [lane_left, lane_right]
         env_desc.next_intersection = []
         env_desc.speed_limit = self.speed_limit
         env_desc.reward_info = reward_info
@@ -260,6 +301,13 @@ class CarlaManager:
 
     def collision_handler(self, event):
         self.collision_marker = 1
+
+    def update_frenet(self, ego_frenet, vehicle_list, current_lane):
+        for i in range(len(vehicle_list)):
+            vehicle_list[i].location_frenet = vehicle_list[i].fromControllingVehicle(
+                ego_frenet, current_lane
+            )
+        return vehicle_list
 
     def resetEnv(self):
 

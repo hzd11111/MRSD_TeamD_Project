@@ -168,6 +168,7 @@ class LaneStatus(object):
         "lane_id",
         "crossing_pedestrain",
         "origin_global_pose",
+        "linestring",
     ]
 
     def __init__(
@@ -184,6 +185,8 @@ class LaneStatus(object):
         self.crossing_pedestrain = crossing_pedestrain
         self.origin_global_pose = origin_global_pose
 
+        self.linestring = get_path_linestring(self.lane_points)
+
     @classmethod
     def fromRosMsg(cls, msg):
         obj = cls.__new__(cls)
@@ -194,6 +197,7 @@ class LaneStatus(object):
             Pedestrian.fromRosMsg(ped) for ped in msg.crossing_pedestrain
         ]
         obj.origin_global_pose = Pose2D.fromRosMsg(msg.origin_global_pose)
+        obj.linestring = get_path_linestring(obj.lane_points)
         return obj
 
     def toRosMsg(self):
@@ -208,9 +212,8 @@ class LaneStatus(object):
     # TODO: add definition (Mayank)
     def frenetToGlobal(self, pose):
 
-        linestring = get_path_linestring(self.lane_points)
         global_pose = get_cartesian_from_frenet(
-            linestring, [pose.x, pose.y], pose.theta
+            self.linestring, [pose.x, pose.y], pose.theta
         )
 
         return Pose2D(x=global_pose[0], y=global_pose[1], theta=global_pose[2])
@@ -218,9 +221,8 @@ class LaneStatus(object):
     # TODO: add definition (Mayank)
     def GlobalToFrenet(self, pose):
 
-        linestring = get_path_linestring(self.lane_points)
         frenet_pose = get_frenet_from_cartesian(
-            linestring, Point(pose.x, pose.y), pose.theta
+            self.linestring, Point(pose.x, pose.y), pose.theta
         )
 
         return Frenet(x=frenet_pose[0], y=frenet_pose[1], theta=frenet_pose[2])

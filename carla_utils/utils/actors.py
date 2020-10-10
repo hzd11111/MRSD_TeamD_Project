@@ -11,16 +11,18 @@ from carla_utils.msg import ActorMsg, VehicleMsg, PedestrainMsg, FrenetMsg
 from options import TrafficLightStatus, PedestrainPriority
 
 
-class Actor():
-    def __init__(self, 
-                world=None, 
-                actor_id=0, 
-                speed=0.0, 
-                acceleration=0.0, 
-                location_global=Pose2D(), 
-                location_frenet=Frenet(), 
-                length=0.0, 
-                width=0.0):
+class Actor:
+    def __init__(
+        self,
+        world=None,
+        actor_id=0,
+        speed=0.0,
+        acceleration=0.0,
+        location_global=Pose2D(),
+        location_frenet=Frenet(),
+        length=0.0,
+        width=0.0,
+    ):
 
         # system identifiers
         self.world = world
@@ -41,8 +43,9 @@ class Actor():
         self.length = length if self.world is None else self.get_length()
         self.width = width if self.world is None else self.get_width()
 
-        # userful class attributes 
+        # userful class attributes
         self.location = None if self.world is None else self.get_location()
+
     # -------ROS HELPER METHODS----------------------
 
     @classmethod
@@ -112,11 +115,19 @@ class Actor():
         """
         return self.actor.destroy()
 
-    def fromControllingVehicle(self, Frenet, current_lane):
+    def fromControllingVehicle(self, frenet, current_lane):
         """
         Gets the distance from the ego/controlling vehicle in frenet coordinate frame
         """
-        pass
+
+        current_global_pose = self.get_state_dict()["Pose2D"]
+
+        current_frenet_pose = current_lane.GlobalToFrenet(current_global_pose)
+
+        relative_s = current_frenet_pose.x - frenet.x
+        relative_d = current_frenet_pose.y - frenet.y
+        relative_theta = current_frenet_pose.theta - frenet.theta
+        return Frenet(x=relative_s, y=relative_d, theta=relative_theta)
 
     # ---------GETTERS------------------------------
 
@@ -131,21 +142,22 @@ class Actor():
         - length (float)
         - width (float)
         """
-        if actor is None: actor = self.actor
+        if actor is None:
+            actor = self.actor
 
         state_dict = {}
-        state_dict['actor_id'] = actor.id
-        state_dict['type_id'] = actor.type_id
+        state_dict["actor_id"] = actor.id
+        state_dict["type_id"] = actor.type_id
 
         # speed
         speed = actor.get_velocity()
-        state_dict['speed_3d'] = [speed.x, speed.y, speed.z]
-        state_dict['speed'] = np.linalg.norm([speed.x, speed.y, speed.z])
+        state_dict["speed_3d"] = [speed.x, speed.y, speed.z]
+        state_dict["speed"] = np.linalg.norm([speed.x, speed.y, speed.z])
 
         # acceleration
         acc = actor.get_acceleration()
-        state_dict['acceleration_3d'] = [acc.x, acc.y, acc.z]
-        state_dict['acceleration'] = np.linalg.norm([acc.x, acc.y, acc.z])
+        state_dict["acceleration_3d"] = [acc.x, acc.y, acc.z]
+        state_dict["acceleration"] = np.linalg.norm([acc.x, acc.y, acc.z])
 
         # actor transform
         trans = actor.get_transform()
@@ -157,8 +169,8 @@ class Actor():
         # frenet_x, frenet_y, theta = Frenet.get_frenet_distance_from_global(loc.x, loc.y, loc.z) #TODO
         frenet_x, frenet_y, theta = [0, 0, 0]  # TODO: implement Frenet
 
-        state_dict["location_3d"] = {'x':loc.x, 'y':loc.y, 'z':loc.z}
-        state_dict["location_2d"] = {'x':loc.x, 'y':loc.y}
+        state_dict["location_3d"] = {"x": loc.x, "y": loc.y, "z": loc.z}
+        state_dict["location_2d"] = {"x": loc.x, "y": loc.y}
         state_dict["Pose2D"] = Pose2D(loc.x, loc.y, rot.yaw * np.pi / 180)
         state_dict["location_frenet"] = Frenet(frenet_x, frenet_y, theta)
 
@@ -166,9 +178,9 @@ class Actor():
         state_dict["rpy"] = [rot.roll, rot.pitch, rot.yaw * np.pi / 180]
 
         # actor dimensions
-        state_dict['length'] = actor.bounding_box.extent.x * 2
-        state_dict['width'] = actor.bounding_box.extent.y * 2
-        state_dict['height'] = actor.bounding_box.extent.z * 2
+        state_dict["length"] = actor.bounding_box.extent.x * 2
+        state_dict["width"] = actor.bounding_box.extent.y * 2
+        state_dict["height"] = actor.bounding_box.extent.z * 2
 
         return state_dict
 
@@ -194,22 +206,25 @@ class Actor():
 
     def get_width(self):
         return self.get_state_dict()["width"]
-    
+
     def get_location(self):
         return self.get_state_dict()["location_3d"]
 
+
 class Vehicle(Actor):
-    def __init__(self, 
-                world=None, 
-                actor_id=0, 
-                speed=0.0, 
-                acceleration=0.0, 
-                location_global=Pose2D(), 
-                location_frenet=Frenet(), 
-                length=0.0, 
-                width=0.0,
-                traffic_light_status=None):
-        
+    def __init__(
+        self,
+        world=None,
+        actor_id=0,
+        speed=0.0,
+        acceleration=0.0,
+        location_global=Pose2D(),
+        location_frenet=Frenet(),
+        length=0.0,
+        width=0.0,
+        traffic_light_status=None,
+    ):
+
         super(Vehicle, self).__init__(
             world,
             actor_id,
@@ -223,7 +238,7 @@ class Vehicle(Actor):
         self.traffic_light_status = traffic_light_status
         if self.traffic_light_status is None:
             self.traffic_light_status = TrafficLightStatus.RED
-    
+
     @classmethod
     def fromRosMsg(cls, msg):
         obj = cls.__new__(cls)
@@ -264,6 +279,7 @@ class Vehicle(Actor):
 
         return closest_n_vehicles, sorted_idx
 
+
 class Pedestrian(Actor):
     def __init__(
         self,
@@ -276,7 +292,7 @@ class Pedestrian(Actor):
         length=0.0,
         width=0.0,
         priority_status=None,
-        ):
+    ):
         super(Pedestrian, self).__init__(
             world,
             actor_id,
@@ -307,13 +323,13 @@ class Pedestrian(Actor):
     @staticmethod
     def getClosestPedestrian(pedestrians, ego_vehicle, n=1):
         # TODO: ROHAN move to the Pedestrian class
-        ego_x = ego_vehicle.location['x']
-        ego_y = ego_vehicle.location['y']
+        ego_x = ego_vehicle.location["x"]
+        ego_y = ego_vehicle.location["y"]
 
         distances = [
             (
-                (ego_x - pedestrians[i].location['x']) ** 2
-                + (ego_y - pedestrians[i].location['y']) ** 2
+                (ego_x - pedestrians[i].location["x"]) ** 2
+                + (ego_y - pedestrians[i].location["y"]) ** 2
             )
             for i in range(len(pedestrians))
         ]

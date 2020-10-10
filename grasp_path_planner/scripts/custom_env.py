@@ -3,6 +3,7 @@ import copy
 import numpy as np
 from typing import Tuple
 import sys
+
 sys.path.append("../../carla_utils/utils")
 
 # RL Packages
@@ -11,6 +12,7 @@ from gym import spaces
 
 # ROS Packages
 from utility import EnvDesc
+
 # other packages
 from settings import Scenario, CONVERT_TO_LOCAL
 from path_planner import PathPlannerManager
@@ -21,9 +23,11 @@ from rl_manager import RLManager
 class CustomEnv(gym.Env):
     """Custom Environment that follows gym interface"""
 
-    metadata = {'render.modes': ['human']}
+    metadata = {"render.modes": ["human"]}
 
-    def __init__(self, path_planner: PathPlannerManager, rl_manager: RLManager, event: Scenario):
+    def __init__(
+        self, path_planner: PathPlannerManager, rl_manager: RLManager, event: Scenario
+    ):
         super(CustomEnv, self).__init__()
         """
         Define the action and state spaces based on the scenario
@@ -57,7 +61,7 @@ class CustomEnv(gym.Env):
         """
         # reset sb_event flag if previously set in previous action
         decision = self.rl_manager.convertDecision(action)
-        print(decision)
+        # print(decision)
         env_desc, end_of_action = self.path_planner.performAction(decision)
         env_copy = env_desc
         self.rl_manager.reward_manager.update(env_copy, action)
@@ -73,9 +77,10 @@ class CustomEnv(gym.Env):
         reward = None
         reward = self.rl_manager.reward_manager.get_reward(env_copy, action)
         # for sending success signal during testing
-        success = not(
+        success = not (
             env_desc.reward_info.collision
-            or (env_desc.reward_info.time_elapsed > self.rl_manager.eps_time))
+            or (env_desc.reward_info.time_elapsed > self.rl_manager.eps_time)
+        )
         info = {}
         info["success"] = success
         # time.sleep(2)
@@ -92,7 +97,7 @@ class CustomEnv(gym.Env):
         return env_state
         # return observation  # reward, done, info can't be included
 
-    def render(self, mode='human'):
+    def render(self, mode="human"):
         pass
 
     def close(self):

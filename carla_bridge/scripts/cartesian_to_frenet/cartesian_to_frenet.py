@@ -73,7 +73,7 @@ def get_frenet_from_cartesian(
     if relative_heading < 0 or relative_heading > 180:
         d = -1 * d
 
-    return s, d, heading_relative_to_local_section_heading, closest_point_on_linestring
+    return s, -d, heading_relative_to_local_section_heading, closest_point_on_linestring
 
 
 def get_cartesian_from_frenet(
