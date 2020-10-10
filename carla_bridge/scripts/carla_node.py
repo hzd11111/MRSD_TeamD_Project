@@ -12,6 +12,7 @@ import carla
 
 import agents.navigation.controller
 import numpy as np
+from shapely.geometry import Point
 
 from carla_handler import CarlaHandler
 
@@ -23,6 +24,14 @@ from agents.tools.misc import get_speed
 
 from utils import *
 
+sys.path.append("../../carla_bridge/scripts/cartesian_to_frenet")
+
+from cartesian_to_frenet import (
+    get_cartesian_from_frenet,
+    get_frenet_from_cartesian,
+    get_path_linestring,
+)
+
 sys.path.append("../../carla_utils/utils")
 from utility import (
     RewardInfo,
@@ -33,7 +42,7 @@ from utility import (
     LanePoint,
     PathPlan,
 )
-from functional_utility import Pose2D
+from functional_utility import Pose2D, Frenet
 
 from actors import Actor, Vehicle, Pedestrian
 
@@ -166,6 +175,7 @@ class CarlaManager:
             actors_in_current_lane,
             actors_in_left_lane,
             actors_in_right_lane,
+            lane_width,
         ) = state_information
         vehicle_ego = Vehicle(self.carla_handler.world, self.ego_vehicle.id)
 
@@ -173,6 +183,14 @@ class CarlaManager:
         if reset_sim == True:
 
             # Current Lane
+            current_lane_linestring = get_path_linestring(current_lane_waypoints)
+            for i, wp in enumerate(current_lane_waypoints):
+                current_lane_waypoints[i].frenet_pose = Frenet(
+                    x=current_lane_linestring.project(
+                        Point(wp.global_pose.x, wp.global_pose.y)
+                    ),
+                    y=0,
+                )
             self.lane_cur = CurrentLane(
                 lane_vehicles=actors_in_current_lane,
                 lane_points=current_lane_waypoints,
@@ -181,10 +199,21 @@ class CarlaManager:
                 ]
                 if self.pedestrian is not None
                 else [],
+                origin_global_pose=current_lane_waypoints[0].global_pose
+                if len(current_lane_waypoints) != 0
+                else Pose2D(),
             )
             lane_cur = self.lane_cur
 
             # Left Lane
+            left_lane_linestring = get_path_linestring(left_lane_waypoints)
+            for i, wp in enumerate(left_lane_waypoints):
+                left_lane_waypoints[i].frenet_pose = Frenet(
+                    x=left_lane_linestring.project(
+                        Point(wp.global_pose.x, wp.global_pose.y)
+                    ),
+                    y=0,
+                )
             self.lane_left = ParallelLane(
                 lane_vehicles=Vehicle.getClosest(actors_in_left_lane, vehicle_ego, n=5)[
                     0
@@ -193,9 +222,22 @@ class CarlaManager:
                 same_direction=True,
                 left_to_the_current=True,
                 adjacent_lane=True,
+                lane_distance=lane_width,
+                origin_global_pose=left_lane_waypoints[0].global_pose
+                if len(left_lane_waypoints) != 0
+                else Pose2D(),
             )
             lane_left = self.lane_left
+
             # Right Lane
+            right_lane_linestring = get_path_linestring(right_lane_waypoints)
+            for i, wp in enumerate(right_lane_waypoints):
+                right_lane_waypoints[i].frenet_pose = Frenet(
+                    x=right_lane_linestring.project(
+                        Point(wp.global_pose.x, wp.global_pose.y)
+                    ),
+                    y=0,
+                )
             self.lane_right = ParallelLane(
                 lane_vehicles=Vehicle.getClosest(
                     actors_in_right_lane, vehicle_ego, n=5
@@ -204,6 +246,10 @@ class CarlaManager:
                 same_direction=True,
                 left_to_the_current=False,
                 adjacent_lane=True,
+                lane_distance=lane_width,
+                origin_global_pose=right_lane_waypoints[0].global_pose
+                if len(right_lane_waypoints) != 0
+                else Pose2D(),
             )
             lane_right = self.lane_right
 
@@ -228,7 +274,7 @@ class CarlaManager:
 
         ego_vehicle_frenet_pose = lane_cur.GlobalToFrenet(vehicle_ego.location_global)
 
-        # Update Frenet Coordinates
+        # Update Frenet Coordinates: Vehicles
         lane_cur.lane_vehicles = self.update_frenet(
             ego_vehicle_frenet_pose, lane_cur.lane_vehicles, lane_cur
         )
@@ -237,6 +283,10 @@ class CarlaManager:
         )
         lane_right.lane_vehicles = self.update_frenet(
             ego_vehicle_frenet_pose, lane_right.lane_vehicles, lane_cur
+        )
+
+        vehicle_ego.location_frenet = lane_cur.GlobalToFrenet(
+            vehicle_ego.location_global
         )
 
         for v in lane_left.lane_vehicles:
@@ -277,6 +327,10 @@ class CarlaManager:
         env_desc.next_intersection = []
         env_desc.speed_limit = self.speed_limit
         env_desc.reward_info = reward_info
+
+        # import ipdb
+
+        # ipdb.set_trace()
 
         return SimServiceResponse(env_desc.toRosMsg())
 
@@ -383,7 +437,7 @@ class CarlaManager:
             self.ego_vehicle, self.original_lane
         )
 
-        ego_vehicle = Vehicle(self.carla_handler.world, self.ego_vehicle.id)
+        vehicle_ego = Vehicle(self.carla_handler.world, self.ego_vehicle.id)
 
         (
             current_lane_waypoints,
@@ -394,11 +448,20 @@ class CarlaManager:
             actors_in_current_lane,
             actors_in_left_lane,
             actors_in_right_lane,
+            lane_width,
         ) = state_information
 
         ##############################################################################################################
         # publish the first frame
         # Current Lane
+        current_lane_linestring = get_path_linestring(current_lane_waypoints)
+        for i, wp in enumerate(current_lane_waypoints):
+            current_lane_waypoints[i].frenet_pose = Frenet(
+                x=current_lane_linestring.project(
+                    Point(wp.global_pose.x, wp.global_pose.y)
+                ),
+                y=0,
+            )
         self.lane_cur = CurrentLane(
             lane_vehicles=actors_in_current_lane,
             lane_points=current_lane_waypoints,
@@ -407,24 +470,51 @@ class CarlaManager:
             ]
             if self.pedestrian is not None
             else [],
+            origin_global_pose=current_lane_waypoints[0].global_pose
+            if len(current_lane_waypoints) != 0
+            else Pose2D(),
         )
 
         # Left Lane
+        left_lane_linestring = get_path_linestring(left_lane_waypoints)
+        for i, wp in enumerate(left_lane_waypoints):
+            left_lane_waypoints[i].frenet_pose = Frenet(
+                x=left_lane_linestring.project(
+                    Point(wp.global_pose.x, wp.global_pose.y)
+                ),
+                y=0,
+            )
         self.lane_left = ParallelLane(
-            lane_vehicles=Vehicle.getClosest(actors_in_left_lane, ego_vehicle, n=5)[0],
+            lane_vehicles=Vehicle.getClosest(actors_in_left_lane, vehicle_ego, n=5)[0],
             lane_points=left_lane_waypoints,
             same_direction=True,
             left_to_the_current=True,
             adjacent_lane=True,
+            lane_distance=lane_width,
+            origin_global_pose=left_lane_waypoints[0].global_pose
+            if len(left_lane_waypoints) != 0
+            else Pose2D(),
         )
 
         # Right Lane
+        right_lane_linestring = get_path_linestring(right_lane_waypoints)
+        for i, wp in enumerate(right_lane_waypoints):
+            right_lane_waypoints[i].frenet_pose = Frenet(
+                x=right_lane_linestring.project(
+                    Point(wp.global_pose.x, wp.global_pose.y)
+                ),
+                y=0,
+            )
         self.lane_right = ParallelLane(
-            lane_vehicles=Vehicle.getClosest(actors_in_right_lane, ego_vehicle, n=5)[0],
+            lane_vehicles=Vehicle.getClosest(actors_in_right_lane, vehicle_ego, n=5)[0],
             lane_points=right_lane_waypoints,
             same_direction=True,
             left_to_the_current=False,
             adjacent_lane=True,
+            lane_distance=lane_width,
+            origin_global_pose=right_lane_waypoints[0].global_pose
+            if len(right_lane_waypoints) != 0
+            else Pose2D(),
         )
 
     def spin(self):

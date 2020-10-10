@@ -77,10 +77,11 @@ class Actor:
             pose_msg.theta = state_dict["Pose2D"].theta
 
             # create the frenet message for actor location
-            frenet_msg = FrenetMsg()
-            frenet_msg.x = state_dict["location_frenet"].x
-            frenet_msg.y = state_dict["location_frenet"].y
-            frenet_msg.theta = state_dict["location_frenet"].theta
+            # frenet_msg = FrenetMsg()
+            # frenet_msg.x = state_dict["location_frenet"].x
+            # frenet_msg.y = state_dict["location_frenet"].y
+            # frenet_msg.theta = state_dict["location_frenet"].theta
+            frenet_msg = self.location_frenet.toRosMsg()
 
             # create the actor message
             msg.actor_id = state_dict["actor_id"]

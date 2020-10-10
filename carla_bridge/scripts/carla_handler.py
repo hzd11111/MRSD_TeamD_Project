@@ -21,7 +21,7 @@ from enum import Enum
 import re
 
 sys.path.append("../../carla_utils/utils")
-from functional_utility import Pose2D
+from functional_utility import Pose2D, Frenet
 from utility import LanePoint
 from actors import Actor, Vehicle, Pedestrian
 
@@ -292,12 +292,12 @@ class CarlaHandler:
             current_lane_waypoints = self.filter_waypoints(
                 self.all_waypoints, nearest_waypoint.road_id, nearest_waypoint.lane_id
             )
-            right_lane_waypoints = self.filter_waypoints(
+            left_lane_waypoints = self.filter_waypoints(
                 self.all_waypoints,
                 nearest_waypoint.get_left_lane().road_id,
                 nearest_waypoint.get_left_lane().lane_id,
             )
-            left_lane_waypoints = self.filter_waypoints(
+            right_lane_waypoints = self.filter_waypoints(
                 self.all_waypoints,
                 nearest_waypoint.get_right_lane().road_id,
                 nearest_waypoint.get_right_lane().lane_id,
@@ -363,6 +363,9 @@ class CarlaHandler:
                                 curr_actor_location_in_ego_vehicle_frame[0][0]
                             )
 
+        # Lane Distance
+        lane_distance = current_lane_waypoints[0].lane_width
+
         current_lane_waypoints = [
             LanePoint(global_pose=self.waypoint_to_pose2D(wp))
             for wp in current_lane_waypoints
@@ -412,4 +415,5 @@ class CarlaHandler:
             actors_in_current_lane,
             actors_in_left_lane,
             actors_in_right_lane,
+            lane_distance,
         )
