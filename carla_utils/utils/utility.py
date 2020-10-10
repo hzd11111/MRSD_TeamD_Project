@@ -1,5 +1,8 @@
 #!/usr/bin/env python
 import rospy
+
+from shapely.geometry import LineString, Point
+
 from geometry_msgs.msg import Pose2D as Pose2DMsg
 from carla_utils.msg import PathPlanMsg
 from carla_utils.msg import GlobalPathPointMsg
@@ -13,9 +16,18 @@ from carla_utils.msg import RewardInfoMsg
 from carla_utils.msg import EnvDescMsg
 from carla_utils.msg import LanePointMsg
 
+
 from actors import *
 from options import *
 from functional_utility import Pose2D, Frenet
+
+sys.path.append("../../carla_bridge/scripts/cartesian_to_frenet")
+
+from cartesian_to_frenet import (
+    get_cartesian_from_frenet,
+    get_frenet_from_cartesian,
+    get_path_linestring,
+)
 
 
 class PathPlan(object):
@@ -194,8 +206,24 @@ class LaneStatus(object):
         return msg
 
     # TODO: add definition (Mayank)
-    def frenetToGlobal(pose):
-        pass
+    def frenetToGlobal(self, pose):
+
+        linestring = get_path_linestring(self.lane_points)
+        global_pose = get_cartesian_from_frenet(
+            linestring, [pose.x, pose.y], pose.theta
+        )
+
+        return Pose2D(x=global_pose[0], y=global_pose[1], theta=global_pose[2])
+
+    # TODO: add definition (Mayank)
+    def GlobalToFrenet(self, pose):
+
+        linestring = get_path_linestring(self.lane_points)
+        frenet_pose = get_frenet_from_cartesian(
+            linestring, [pose.x, pose.y], pose.theta
+        )
+
+        return Frenet(x=frenet_pose[0], y=frenet_pose[1], theta=frenet_pose[2])
 
 
 class CurrentLane(LaneStatus):

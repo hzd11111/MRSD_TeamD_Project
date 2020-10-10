@@ -169,6 +169,7 @@ class CarlaManager:
             actors_in_left_lane,
             actors_in_right_lane,
         ) = state_information
+        vehicle_ego = Vehicle(self.carla_handler.world, self.ego_vehicle.id)
 
         # Current Lane
         if reset_sim == True:
@@ -184,8 +185,6 @@ class CarlaManager:
                 else [],
             )
             lane_cur = self.lane_cur
-
-            vehicle_ego = Vehicle(self.carla_handler.world, self.ego_vehicle.id)
 
             # Left Lane
             self.lane_left = ParallelLane(

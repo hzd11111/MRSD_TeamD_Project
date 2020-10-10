@@ -2,23 +2,10 @@ import sys
 from typing import List, Tuple
 from configparser import ConfigParser
 
-config = ConfigParser()
-config.read("config.ini")
-CARLA_PATH = config.get("main", "CARLA_PATH")
-
-# Enable import of 'carla'
-sys.path.append(CARLA_PATH + "PythonAPI/carla/dist/carla-0.9.9-py3.6-linux-x86_64.egg")
-# Enable import of 'agents' and it's submodules
-sys.path.insert(0, CARLA_PATH + "PythonAPI/carla/")
-# Enable import of utilities from GlobalPathPlanner
-sys.path.insert(0, "../../../global_route_planner/")
-
 import numpy as np
 import carla
 from agents.navigation.local_planner import LocalPlanner
 from shapely.geometry import LineString, Point
-
-from global_planner import get_client, spawn_vehicle, draw_waypoints
 
 
 def get_frenet_from_cartesian(
@@ -147,11 +134,14 @@ def get_cartesian_from_frenet(
     return cartesian_point[0], cartesian_point[1], cartesian_heading
 
 
-def get_path_linestring(waypoints: List[carla.libcarla.Waypoint]) -> LineString:
+def get_path_linestring(lanepoints) -> LineString:
 
+    # coordinates = [
+    #     [waypoint.transform.location.x, waypoint.transform.location.y]
+    #     for waypoint in waypoints
+    # ]
     coordinates = [
-        [waypoint.transform.location.x, waypoint.transform.location.y]
-        for waypoint in waypoints
+        [lanepoint.global_pose.x, lanepoint.global_pose.y] for lanepoint in lanepoints
     ]
     shapely_linestring = LineString(coordinates)
     return shapely_linestring
