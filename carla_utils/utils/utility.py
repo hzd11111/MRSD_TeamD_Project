@@ -220,7 +220,7 @@ class LaneStatus(object):
 
         linestring = get_path_linestring(self.lane_points)
         frenet_pose = get_frenet_from_cartesian(
-            linestring, [pose.x, pose.y], pose.theta
+            linestring, Point(pose.x, pose.y), pose.theta
         )
 
         return Frenet(x=frenet_pose[0], y=frenet_pose[1], theta=frenet_pose[2])
