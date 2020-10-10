@@ -48,7 +48,7 @@ class TrajGenerator:
             return self.decelerateTraj(env_desc).toRosMsg()
         elif (action_to_perform == RLDecision.SWITCH_LANE_LEFT) or \
                 (action_to_perform == RLDecision.SWITCH_LANE_RIGHT):
-            return self.laneChangeTraj(env_desc).toRosMsg()
+            return self.laneChangeTraj(env_desc, rl_decision).toRosMsg()
         else:
             print("RLDecision ERROR:", action_to_perform)
 
@@ -340,7 +340,7 @@ class TrajGenerator:
 
         # current vehicle state
         curr_vehicle = sim_data.cur_vehicle_state
-        curr_vehicle_global_pose = curr_vehicle.global_pose
+        curr_vehicle_global_pose = curr_vehicle.location_global
 
         # find the next tracking point
         while (self.path_pointer < len(self.generated_path)):

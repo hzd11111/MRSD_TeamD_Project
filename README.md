@@ -31,3 +31,9 @@ TO RUN:
 10. Done.
 
 
+## Things to do
+* Replace dummy objects in VehicleInFront and VehicleBehind
+* Use common dummy values [x = 1000, y = 1000, theta = 0 , speed = -1]
+* Shift functionality to extract front and back vehicles to current_lane utility
+* sync settings and options
+* Fix convertdecision based on the new enum in rl_manager.py

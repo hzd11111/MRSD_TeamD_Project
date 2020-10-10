@@ -172,6 +172,7 @@ class CarlaManager:
         vehicle_ego = Vehicle(self.carla_handler.world, self.ego_vehicle.id)
 
         # Current Lane
+        vehicle_ego = Vehicle(self.carla_handler.world, self.ego_vehicle.id)
         if reset_sim == True:
 
             # Current Lane

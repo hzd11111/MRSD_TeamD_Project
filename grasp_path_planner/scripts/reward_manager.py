@@ -450,11 +450,11 @@ class PlainReward(Reward):
         Gives the cost of taking action
         """
         reward = 0
-        if desc.reward.collision:
+        if desc.reward_info.collision:
             reward = reward - 1
             print("Collision")
-        elif desc.reward.path_planner_terminate:
-            reward += desc.reward.action_progress
+        elif desc.reward_info.path_planner_terminate:
+            reward += desc.reward_info.action_progress
         return reward
 
     def reset(self):

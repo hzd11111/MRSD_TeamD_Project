@@ -57,6 +57,7 @@ class CustomEnv(gym.Env):
         """
         # reset sb_event flag if previously set in previous action
         decision = self.rl_manager.convertDecision(action)
+        print(decision)
         env_desc, end_of_action = self.path_planner.performAction(decision)
         env_copy = env_desc
         self.rl_manager.reward_manager.update(env_copy, action)
@@ -73,8 +74,8 @@ class CustomEnv(gym.Env):
         reward = self.rl_manager.reward_manager.get_reward(env_copy, action)
         # for sending success signal during testing
         success = not(
-            env_desc.reward.collision
-            or (env_desc.reward.time_elapsed > self.rl_manager.eps_time))
+            env_desc.reward_info.collision
+            or (env_desc.reward_info.time_elapsed > self.rl_manager.eps_time))
         info = {}
         info["success"] = success
         # time.sleep(2)

@@ -32,15 +32,15 @@ class RLManager:
         """
         if self.event == Scenario.LANE_CHANGE:
             # return true if any of the conditions described in the description is true
-            return env_desc.reward.collision or \
-                env_desc.reward.path_planner_terminate or \
-                env_desc.reward.time_elapsed > self.eps_time
+            return env_desc.reward_info.collision or \
+                env_desc.reward_info.path_planner_terminate or \
+                env_desc.reward_info.time_elapsed > self.eps_time
 
         elif self.event == Scenario.LANE_FOLLOWING:
             # return true if any of the conditions described in the description is true
-            return env_desc.reward.collision or \
-                env_desc.reward.path_planner_terminate or \
-                env_desc.reward.time_elapsed > self.eps_time
+            return env_desc.reward_info.collision or \
+                env_desc.reward_info.path_planner_terminate or \
+                env_desc.reward_info.time_elapsed > self.eps_time
 
     def convertDecision(self, action: int) -> RLDecision:
         """
