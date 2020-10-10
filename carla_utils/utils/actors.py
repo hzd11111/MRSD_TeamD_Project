@@ -159,11 +159,11 @@ class Actor():
 
         state_dict["location_3d"] = {'x':loc.x, 'y':loc.y, 'z':loc.z}
         state_dict["location_2d"] = {'x':loc.x, 'y':loc.y}
-        state_dict["Pose2D"] = Pose2D(loc.x, loc.y, rot.yaw)
+        state_dict["Pose2D"] = Pose2D(loc.x, loc.y, rot.yaw * np.pi / 180)
         state_dict["location_frenet"] = Frenet(frenet_x, frenet_y, theta)
 
         # global rotation
-        state_dict["rpy"] = [rot.roll, rot.pitch, rot.yaw]
+        state_dict["rpy"] = [rot.roll, rot.pitch, rot.yaw * np.pi / 180]
 
         # actor dimensions
         state_dict['length'] = actor.bounding_box.extent.x * 2
