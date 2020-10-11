@@ -5,6 +5,7 @@ sys.path.append("../../carla_utils/utils")
 
 # ROS Packages
 from utility import PathPlan, EnvDesc
+from options import RLDecision
 from grasp_path_planner.srv import SimService, SimServiceRequest
 from trajectory_generator import TrajGenerator
 # other packages
@@ -47,10 +48,16 @@ class PathPlannerManager:
         self.sim_service_interface = rospy.ServiceProxy(SIM_SERVICE_NAME, SimService)
 
     def performAction(self, action):
+        action = RLDecision.CONSTANT_SPEED
+        print("Action: ", action)
         print("CARLA Global Pose x:",self.prev_env_desc.cur_vehicle_state.location_global.x)
         print("CARLA Global Pose y:", self.prev_env_desc.cur_vehicle_state.location_global.y)
         print("CARLA Global Pose theta:", self.prev_env_desc.cur_vehicle_state.location_global.theta)
-
+        print("CARLA Global Pose Converted x:", self.prev_env_desc.current_lane.frenetToGlobal(self.prev_env_desc.cur_vehicle_state.location_frenet).x)
+        print("CARLA Global Pose Converted y:",
+              self.prev_env_desc.current_lane.frenetToGlobal(self.prev_env_desc.cur_vehicle_state.location_frenet).y)
+        print("CARLA Global Pose Converted theta:",
+              self.prev_env_desc.current_lane.frenetToGlobal(self.prev_env_desc.cur_vehicle_state.location_frenet).theta)
         path_plan = self.traj_generator.trajPlan(action, self.prev_env_desc)
 
         print("Tracking Global Pose x:", path_plan.tracking_pose.x)

@@ -60,7 +60,7 @@ class TrajGenerator:
         for lane_waypoint in lane_point_array:
             lane_point_frenet = lane_waypoint.frenet_pose
             lane_point_frenet_x = lane_point_frenet.x
-            frenet_x_diff = vehicle_frenet_x - lane_point_frenet_x
+            frenet_x_diff = lane_point_frenet_x - vehicle_frenet_x
             if frenet_x_diff >= TrajGenerator.SAME_POSE_LOWER_THRESHOLD:
                 return lane_waypoint
         return lane_point_array[-1]
@@ -92,23 +92,37 @@ class TrajGenerator:
             end_of_action = True
             action_progress = 1.
 
+        next_point_frenet = Frenet()
+        next_point_frenet.x = 1.
         new_path_plan = PathPlan()
-        new_path_plan.tracking_pose = next_lane_point.global_pose
+        new_path_plan.tracking_pose = current_lane.frenetToGlobal(next_point_frenet)
         new_path_plan.reset_sim = False
         new_path_plan.tracking_speed = max(self.traj_parameters['min_speed'],self.start_speed)
         new_path_plan.end_of_action = end_of_action
         new_path_plan.action_progress = action_progress
         new_path_plan.path_planner_terminate = False
-
+        print("Frenet Vehicle Pose x:", curr_vehicle.location_frenet.x)
+        print("Frenet Vehicle Pose y:", curr_vehicle.location_frenet.y)
+        print("Frenet Vehicle Pose theta:", curr_vehicle.location_frenet.theta)
+        print("Global Vehicle Pose x:", curr_vehicle.location_global.x)
+        print("Global Vehicle Pose y:", curr_vehicle.location_global.y)
+        print("Global Vehicle Pose theta:", curr_vehicle.location_global.theta)
+        print("Frenet Pose x:", next_point_frenet.x)
+        print("Frenet Pose y:", next_point_frenet.y)
+        print("Frenet Pose theta:", next_point_frenet.theta)
+        print("Global Pose x:", new_path_plan.tracking_pose.x)
+        print("Global Pose y:", new_path_plan.tracking_pose.y)
+        print("Global Pose theta:", new_path_plan.tracking_pose.theta)
         # add future poses
         new_path_plan.future_poses = []
-        tracking_pose_frenet = next_lane_point.frenet_pose
+        tracking_pose_frenet = next_point_frenet
         for ts in np.arange(self.traj_parameters['action_time_disc'], \
                 self.traj_parameters['action_duration'] - (new_sim_time - self.action_start_time), \
                             self.traj_parameters['action_time_disc']):
             delta_x = ts * self.start_speed / 3.6
             new_frenet = copy.copy(tracking_pose_frenet)
             new_frenet.x += delta_x
+
             new_global_pose = current_lane.frenetToGlobal(new_frenet)
             new_path_plan.future_poses.append(new_global_pose)
 
