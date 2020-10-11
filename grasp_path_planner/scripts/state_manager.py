@@ -166,9 +166,15 @@ class StateManager:
         assert(len(entire_state) == 32)
         return np.array(entire_state)
 
-    def createIntersectionState(env_desc, left=True):
+    def createIntersectionTurnState(env_desc, left=True):
         """
-        Create a state for intersection negotiation state
+        Create a state for intersection negotiation state when turning
+        """
+        pass
+
+    def createIntersectionStraightState(env_desc):
+        """
+        Create a state for intersection when going straight
         """
         pass
 
@@ -185,9 +191,12 @@ class StateManager:
             return self.createLaneChangeState(env_desc, left=False)
         elif self.event == Scenario.LANE_FOLLOWING:
             return self.createLaneFollowingState(env_desc)
-        elif self.event == Scenario.GO_STRAIGHT or \
-                self.event == Scenario.LEFT_TURN or \
-                self.event == Scenario.RIGHT_TURN:
-            return self.createIntersectionState(env_desc, left=False)
+        elif self.event == Scenario.GO_STRAIGHT:
+            return self.createIntersectionStraightState(env_desc)
+        elif self.event == Scenario.LEFT_TURN:
+            return self.createIntersectionTurnState(env_desc, left=True)
+        elif self.event == Scenario.RIGHT_TURN:
+            return self.createIntersectionTurnState(env_desc, left=False)
+
         else:
             return {}

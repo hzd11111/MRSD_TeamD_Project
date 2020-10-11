@@ -15,12 +15,23 @@ CURRENT_SCENARIO = Scenario.SWITCH_LANE_LEFT
 CURRENT_MODE = Mode.TRAIN
 
 if CURRENT_SCENARIO == Scenario.LANE_FOLLOWING:
-    MODEL_SAVE_PATH = dir_path + "/Models/DQN_Model_CARLA_Ped"
-    MODEL_LOAD_PATH = dir_path + "/Models/DQN_Model_CARLA_Ped5"
-else:
-    MODEL_SAVE_PATH = dir_path + "/Models/DQN_LANE_SWITCH"
-    MODEL_LOAD_PATH = dir_path + "/Models/DQN_20min"
-
+    MODEL_SAVE_PATH = dir_path + "/Models/DQN_Lane_Following"
+    MODEL_LOAD_PATH = dir_path + "/Models/DQN_Model_Lane_Following"
+elif CURRENT_SCENARIO == Scenario.SWITCH_LANE_LEFT:
+    MODEL_SAVE_PATH = dir_path + "/Models/DQN_Lane_Switch_Left"
+    MODEL_LOAD_PATH = dir_path + "/Models/DQN_Lane_Switch_Left"
+elif CURRENT_SCENARIO == Scenario.SWITCH_LANE_RIGHT:
+    MODEL_SAVE_PATH = dir_path + "/Models/DQN_Lane_Switch_Right"
+    MODEL_LOAD_PATH = dir_path + "/Models/DQN_Lane_Switch_Right"
+elif CURRENT_SCENARIO == Scenario.GO_STRAIGHT:
+    MODEL_SAVE_PATH = dir_path + "/Models/DQN_Straight"
+    MODEL_LOAD_PATH = dir_path + "/Models/DQN_Straight"
+elif CURRENT_SCENARIO == Scenario.RIGHT_TURN:
+    MODEL_SAVE_PATH = dir_path + "/Models/DQN_Right_Turn"
+    MODEL_LOAD_PATH = dir_path + "/Models/DQN_Right_Turn"
+elif CURRENT_SCENARIO == Scenario.LEFT_TURN:
+    MODEL_SAVE_PATH = dir_path + "/Models/DQN_Left_Turn"
+    MODEL_LOAD_PATH = dir_path + "/Models/DQN_Left_Turn"
 
 ################## Test Mode Arguments ######################
 if CURRENT_SCENARIO == Scenario.LANE_FOLLOWING:
@@ -45,8 +56,7 @@ if CURRENT_SCENARIO == Scenario.LANE_FOLLOWING:
     NPC_SPAWN_POINT_GAP_HIGH = 30  # Not required for this scenario
     LIVES_MATTER = False  # Not required for this scenario
 
-else:
-
+elif CURRENT_SCENARIO == Scenario.SWITCH_LANE_LEFT:
     TOWN_ID = "Town05"
 
     ROAD_IDs = [37]
@@ -72,33 +82,8 @@ else:
 # number of heads. We will need a more sophisticated enum
 
 
-N_DISCRETE_ACTIONS = 4
-CONVERT_TO_LOCAL = True
 SIM_SERVICE_NAME = "simulator"
 NODE_NAME = "full_grasp_planner"
-
-
-# if CURRENT_SCENARIO == Scenario.PEDESTRIAN:
-
-#     class RLDecision(Enum):
-#         CONSTANT_SPEED = 0
-#         ACCELERATE = 1
-#         DECELERATE = 2
-#         SWITCH_LANE = 3
-#         NO_ACTION = 4
-
-#     OLD_REWARD = False
-
-# else:
-
-#     class RLDecision(Enum):
-#         CONSTANT_SPEED = 0
-#         ACCELERATE = 2
-#         DECELERATE = 3
-#         SWITCH_LANE = 1
-#         NO_ACTION = 4
-
-#     OLD_REWARD = False
 
 
 ###### INIT TO ACTUAL SPEED MAPPINGS FOR EGO VEHICLE ######

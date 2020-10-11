@@ -38,13 +38,14 @@ class FullPlannerManager:
         env = CustomEnv(self.path_planner, self.behavior_planner, event)
         env = make_vec_env(lambda: env, n_envs=1)
         model = None
-        if self.event == Scenario.SWITCH_LANE_LEFT:
+        if self.event == Scenario.SWITCH_LANE_LEFT or\
+                self.event == Scenario.SWITCH_LANE_RIGHT:
             model = DQN(CustomLaneChangePolicy, env, verbose=1,
                         learning_starts=256, batch_size=16,
                         exploration_fraction=0.9, target_network_update_freq=100,
                         tensorboard_log=dir_path + '/Logs/')
 
-        if self.event == Scenario.PEDESTRIAN:
+        if self.event == Scenario.LANE_FOLLOWING:
             model = DQN(CustomLaneFollowingPolicy, env, verbose=1,
                         learning_starts=256, batch_size=256, exploration_fraction=0.9,
                         target_network_update_freq=100,
