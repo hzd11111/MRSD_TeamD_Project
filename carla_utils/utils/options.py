@@ -8,9 +8,9 @@ class RLDecision(Enum):
     DECELERATE = 2
     SWITCH_LANE_LEFT = 3
     SWITCH_LANE_RIGHT = 4
-    LEFT_TURN = 5
-    RIGHT_TURN = 6
-    GO_STRAIGHT = 7
+    GLOBAL_PATH_CONSTANT_SPEED = 5
+    GLOBAL_PATH_ACCELERATE = 6
+    GLOBAL_PATH_DECELERATE = 7
     STOP = 8
     NO_ACTION = 9
 
@@ -27,11 +27,13 @@ class TrafficLightStatus(Enum):
 
 @unique
 class Scenario(Enum):
-    LANE_CHANGE = 0
-    PEDESTRIAN = 1
-    LEFT_TURN = 2
-    GO_STRAIGHT = 3
-    RIGHT_TURN = 4
+    SWITCH_LANE_LEFT = 0
+    SWITCH_LANE_RIGHT = 1
+    LANE_FOLLOWING = 2
+    LEFT_TURN = 3
+    GO_STRAIGHT = 4
+    RIGHT_TURN = 5
+    PEDESTRIAN = 6  # NEED TO REMOVE THIS. KEPT IT BECAUSE SCENARIO MANAGER IS USING IT
 
 
 @unique

@@ -435,6 +435,7 @@ class PlainReward(Reward):
     '''
     Implements positional costs and basic required interfaces for all rewards
     '''
+
     def __init__(self):
         super().__init__()
         self.max_reward = 1
@@ -455,6 +456,7 @@ class PlainReward(Reward):
             print("Collision")
         elif desc.reward_info.path_planner_terminate:
             reward += desc.reward_info.action_progress
+        print("Reward is ", reward)
         return reward
 
     def reset(self):
@@ -468,7 +470,4 @@ def reward_selector(event):
     """
     Select reward manager based on event
     """
-    if event is Scenario.PEDESTRIAN:
-        return PlainReward()
-    elif event is Scenario.LANE_CHANGE:
-        return PlainReward()
+    return PlainReward()

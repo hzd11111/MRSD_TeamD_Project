@@ -11,10 +11,10 @@ class Mode(Enum):
 
 
 ############ Mode and Model Selection ##############################
-CURRENT_SCENARIO = Scenario.LANE_CHANGE
+CURRENT_SCENARIO = Scenario.SWITCH_LANE_LEFT
 CURRENT_MODE = Mode.TRAIN
 
-if CURRENT_SCENARIO == Scenario.PEDESTRIAN:
+if CURRENT_SCENARIO == Scenario.LANE_FOLLOWING:
     MODEL_SAVE_PATH = dir_path + "/Models/DQN_Model_CARLA_Ped"
     MODEL_LOAD_PATH = dir_path + "/Models/DQN_Model_CARLA_Ped5"
 else:
@@ -23,7 +23,7 @@ else:
 
 
 ################## Test Mode Arguments ######################
-if CURRENT_SCENARIO == Scenario.PEDESTRIAN:
+if CURRENT_SCENARIO == Scenario.LANE_FOLLOWING:
     TOWN_ID = "Town01"
 
     ROAD_IDs = [12]

@@ -12,7 +12,7 @@ from trajectory_generator import TrajGenerator
 from settings import *
 
 TRAJ_PARAM = None
-if(CURRENT_SCENARIO == Scenario.LANE_CHANGE):
+if(CURRENT_SCENARIO == Scenario.SWITCH_LANE_LEFT):
     TRAJ_PARAM = {'look_up_distance' : 0 ,\
         'lane_change_length' : 30,\
         'lane_change_time_constant' : 1.05,\
