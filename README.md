@@ -37,3 +37,4 @@ TO RUN:
 * Shift functionality to extract front and back vehicles to current_lane utility
 * sync settings and options
 * Fix convertdecision based on the new enum in rl_manager.py
+* Remove Pedestrian from scenario manager and settings
