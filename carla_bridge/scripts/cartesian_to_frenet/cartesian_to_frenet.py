@@ -24,7 +24,7 @@ def get_frenet_from_cartesian(
     :param cartesian_point:
         A shapely 'Point' of the point in cartesian frame that has to be represented in the frenet frame.
     :param cartesian_heading:
-        The heading associated with the cartesian point, in degrees.
+        The heading associated with the cartesian point, in radians.
     :param resolution:
         The resolution used to calculate the heading direction of local sections of the lane LineString.
 
@@ -54,8 +54,8 @@ def get_frenet_from_cartesian(
 
     # Find heading in frenet frame.
     heading_relative_to_local_section_heading = (
-        cartesian_heading - local_section_heading_in_cartesian_coordinates
-    )
+        cartesian_heading * 180 / np.pi
+    ) - local_section_heading_in_cartesian_coordinates
 
     # Assign a direction (+ or -) to the distance d.
     heading_of_line_joining_input_points_and_its_closest_point_on_linestring = (
@@ -73,7 +73,12 @@ def get_frenet_from_cartesian(
     if relative_heading < 0 or relative_heading > 180:
         d = -1 * d
 
-    return s, d, heading_relative_to_local_section_heading, closest_point_on_linestring
+    return (
+        s,
+        d,
+        heading_relative_to_local_section_heading * np.pi / 180,
+        closest_point_on_linestring,
+    )
 
 
 def get_cartesian_from_frenet(
@@ -129,7 +134,9 @@ def get_cartesian_from_frenet(
     ]
 
     # Get the heading in cartesian frame.
-    cartesian_heading = local_section_heading_in_cartesian_coordinates + frenet_heading
+    cartesian_heading = (
+        local_section_heading_in_cartesian_coordinates * np.pi / 180 + frenet_heading
+    )
 
     return cartesian_point[0], cartesian_point[1], cartesian_heading
 

@@ -206,14 +206,11 @@ class CarlaManager:
             lane_cur = self.lane_cur
 
             # Left Lane
-            left_lane_linestring = get_path_linestring(left_lane_waypoints)
             for i, wp in enumerate(left_lane_waypoints):
-                left_lane_waypoints[i].frenet_pose = Frenet(
-                    x=left_lane_linestring.project(
-                        Point(wp.global_pose.x, wp.global_pose.y)
-                    ),
-                    y=0,
+                left_lane_waypoints[i].frenet_pose = lane_cur.GlobalToFrenet(
+                    left_lane_waypoints[i].global_pose
                 )
+
             self.lane_left = ParallelLane(
                 lane_vehicles=Vehicle.getClosest(actors_in_left_lane, vehicle_ego, n=5)[
                     0
@@ -230,14 +227,11 @@ class CarlaManager:
             lane_left = self.lane_left
 
             # Right Lane
-            right_lane_linestring = get_path_linestring(right_lane_waypoints)
             for i, wp in enumerate(right_lane_waypoints):
-                right_lane_waypoints[i].frenet_pose = Frenet(
-                    x=right_lane_linestring.project(
-                        Point(wp.global_pose.x, wp.global_pose.y)
-                    ),
-                    y=0,
+                right_lane_waypoints[i].frenet_pose = lane_cur.GlobalToFrenet(
+                    right_lane_waypoints[i].global_pose
                 )
+
             self.lane_right = ParallelLane(
                 lane_vehicles=Vehicle.getClosest(
                     actors_in_right_lane, vehicle_ego, n=5
@@ -285,14 +279,24 @@ class CarlaManager:
             ego_vehicle_frenet_pose, lane_right.lane_vehicles, lane_cur
         )
 
-        vehicle_ego.location_frenet = lane_cur.GlobalToFrenet(
-            vehicle_ego.location_global
+        # Update Frenet Coordinates: LanePoints
+        lane_cur.lane_points = self.update_frenet_lanepoints(
+            ego_vehicle_frenet_pose, lane_cur.lane_points
         )
+        lane_left.lane_points = self.update_frenet_lanepoints(
+            ego_vehicle_frenet_pose, lane_left.lane_points
+        )
+        lane_right.lane_points = self.update_frenet_lanepoints(
+            ego_vehicle_frenet_pose, lane_right.lane_points
+        )
+
+        vehicle_ego.location_frenet = ego_vehicle_frenet_pose
+        vehicle_ego.location_frenet.x = 0
 
         for v in lane_left.lane_vehicles:
             print(
-                ego_vehicle_frenet_pose.x,
-                ego_vehicle_frenet_pose.y,
+                vehicle_ego.location_frenet.x,
+                vehicle_ego.location_frenet.y,
                 "||",
                 lane_cur.GlobalToFrenet(v.location_global).x,
                 lane_cur.GlobalToFrenet(v.location_global).y,
@@ -362,6 +366,11 @@ class CarlaManager:
                 ego_frenet, current_lane
             )
         return vehicle_list
+
+    def update_frenet_lanepoints(self, ego_frenet, lanepoints):
+        for i in range(len(lanepoints)):
+            lanepoints[i].frenet_pose.x = lanepoints[i].frenet_pose.x - ego_frenet.x
+        return lanepoints
 
     def resetEnv(self):
 

@@ -126,9 +126,11 @@ class Actor:
         current_frenet_pose = current_lane.GlobalToFrenet(current_global_pose)
 
         relative_s = current_frenet_pose.x - frenet.x
-        relative_d = current_frenet_pose.y - frenet.y
-        relative_theta = current_frenet_pose.theta - frenet.theta
-        return Frenet(x=relative_s, y=relative_d, theta=relative_theta)
+        # relative_d = current_frenet_pose.y - frenet.y
+        # relative_theta = current_frenet_pose.theta - frenet.theta
+        return Frenet(
+            x=relative_s, y=current_frenet_pose.y, theta=current_frenet_pose.theta
+        )
 
     # ---------GETTERS------------------------------
 
