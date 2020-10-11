@@ -7,6 +7,7 @@ import rospy
 import copy
 import random
 import threading
+import copy
 
 import carla
 
@@ -203,7 +204,7 @@ class CarlaManager:
                 if len(current_lane_waypoints) != 0
                 else Pose2D(),
             )
-            lane_cur = self.lane_cur
+            lane_cur = copy.copy(self.lane_cur)
 
             # Left Lane
             for i, wp in enumerate(left_lane_waypoints):
@@ -224,7 +225,7 @@ class CarlaManager:
                 if len(left_lane_waypoints) != 0
                 else Pose2D(),
             )
-            lane_left = self.lane_left
+            lane_left = copy.copy(self.lane_left)
 
             # Right Lane
             for i, wp in enumerate(right_lane_waypoints):
@@ -245,22 +246,22 @@ class CarlaManager:
                 if len(right_lane_waypoints) != 0
                 else Pose2D(),
             )
-            lane_right = self.lane_right
+            lane_right = copy.copy(self.lane_right)
 
         else:
-            lane_cur = self.lane_cur
+            lane_cur = copy.copy(self.lane_cur)
             # Update Values
             lane_cur.lane_vehicles = actors_in_current_lane
 
             # Left Lane
-            lane_left = self.lane_left
+            lane_left = copy.copy(self.lane_left)
             # Update Values
             lane_left.lane_vehicles = Vehicle.getClosest(
                 actors_in_left_lane, vehicle_ego, n=5
             )[0]
 
             # Right Lane
-            lane_right = self.lane_right
+            lane_right = copy.copy(self.lane_right)
             # Update Values
             lane_right.lane_vehicles = Vehicle.getClosest(
                 actors_in_right_lane, vehicle_ego, n=5
@@ -280,14 +281,17 @@ class CarlaManager:
         )
 
         # Update Frenet Coordinates: LanePoints
+        lane_point_curr = copy.deepcopy(lane_cur.lane_points)
         lane_cur.lane_points = self.update_frenet_lanepoints(
-            ego_vehicle_frenet_pose, lane_cur.lane_points
+            ego_vehicle_frenet_pose, lane_point_curr
         )
+        lane_point_left = copy.deepcopy(lane_left.lane_points)
         lane_left.lane_points = self.update_frenet_lanepoints(
-            ego_vehicle_frenet_pose, lane_left.lane_points
+            ego_vehicle_frenet_pose, lane_point_left
         )
+        lane_point_right = copy.deepcopy(lane_right.lane_points)
         lane_right.lane_points = self.update_frenet_lanepoints(
-            ego_vehicle_frenet_pose, lane_right.lane_points
+            ego_vehicle_frenet_pose, lane_point_right
         )
 
         vehicle_ego.location_frenet = ego_vehicle_frenet_pose
@@ -335,7 +339,7 @@ class CarlaManager:
         # import ipdb
 
         # ipdb.set_trace()
-
+        print(env_desc.current_lane.lane_points[0].toRosMsg())
         return SimServiceResponse(env_desc.toRosMsg())
 
     def destroy_actors_and_sensors(self):
