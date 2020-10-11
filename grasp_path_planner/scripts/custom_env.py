@@ -14,7 +14,7 @@ from gym import spaces
 from utility import EnvDesc
 
 # other packages
-from settings import Scenario, CONVERT_TO_LOCAL
+from options import Scenario
 from path_planner import PathPlannerManager
 from rl_manager import RLManager
 
@@ -37,17 +37,22 @@ class CustomEnv(gym.Env):
         :param event: (Scanrion) An enum which tells what scenario it is to train on
         """
         N_ACTIONS = 0
-        if event == Scenario.PEDESTRIAN:
+        if event == Scenario.GO_STRAIGHT:
             N_ACTIONS = 3
             self.action_space = spaces.Discrete(N_ACTIONS)
-            self.observation_space = spaces.Box(low=-1000, high=1000, shape=(1, 8))
-        elif event == Scenario.LANE_CHANGE:
+            self.observation_space = spaces.Box(low=-1000, high=1000, shape=(1, 32))
+        elif event == Scenario.SWITCH_LANE_LEFT or event == Scenario.SWITCH_LANE_RIGHT:
             N_ACTIONS = 4
             self.action_space = spaces.Discrete(N_ACTIONS)
             self.observation_space = spaces.Box(low=-1000, high=1000, shape=(1, 53))
+        elif event == Scenario.LEFT_TURN or\
+                event == Scenario.RIGHT_TURN or\
+                event == Scenario.GO_STRAIGHT:
+            N_ACTIONS = 3
+            pass
+
         self.path_planner = path_planner
         self.rl_manager = rl_manager
-        self.to_local = CONVERT_TO_LOCAL
 
     def step(self, action: int) -> Tuple[np.ndarray, float, bool, dict]:
         """
@@ -73,7 +78,7 @@ class CustomEnv(gym.Env):
             self.rl_manager.reward_manager.update(env_copy, action)
             done = self.rl_manager.terminate(env_copy)
             end_of_action = end_of_action or done
-        env_state = self.rl_manager.makeStateVector(env_copy, self.to_local)
+        env_state = self.rl_manager.makeStateVector(env_copy)
         reward = None
         reward = self.rl_manager.reward_manager.get_reward(env_copy, action)
         # for sending success signal during testing
@@ -93,7 +98,7 @@ class CustomEnv(gym.Env):
         self.rl_manager.reward_manager.reset()
         env_desc = self.path_planner.resetSim()
         env_copy = env_desc
-        env_state = self.rl_manager.makeStateVector(env_copy, self.to_local)
+        env_state = self.rl_manager.makeStateVector(env_copy)
         return env_state
         # return observation  # reward, done, info can't be included
 

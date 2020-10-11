@@ -30,7 +30,13 @@ class RLManager:
         Returns:
         true if episode must terminate
         """
-        if self.event == Scenario.LANE_CHANGE:
+        if self.event == Scenario.SWITCH_LANE_LEFT:
+            # return true if any of the conditions described in the description is true
+            return env_desc.reward_info.collision or \
+                env_desc.reward_info.path_planner_terminate or \
+                env_desc.reward_info.time_elapsed > self.eps_time
+
+        elif self.event == Scenario.SWITCH_LANE_RIGHT:
             # return true if any of the conditions described in the description is true
             return env_desc.reward_info.collision or \
                 env_desc.reward_info.path_planner_terminate or \
@@ -42,6 +48,85 @@ class RLManager:
                 env_desc.reward_info.path_planner_terminate or \
                 env_desc.reward_info.time_elapsed > self.eps_time
 
+        elif self.event == Scenario.GO_STRAIGHT:
+            # return true if any of the conditions described in the description is true
+            return env_desc.reward_info.collision or \
+                env_desc.reward_info.path_planner_terminate or \
+                env_desc.reward_info.time_elapsed > self.eps_time
+
+        elif self.event == Scenario.LEFT_TURN:
+            # return true if any of the conditions described in the description is true
+            return env_desc.reward_info.collision or \
+                env_desc.reward_info.path_planner_terminate or \
+                env_desc.reward_info.time_elapsed > self.eps_time
+
+        elif self.event == Scenario.RIGHT_TURN:
+            # return true if any of the conditions described in the description is true
+            return env_desc.reward_info.collision or \
+                env_desc.reward_info.path_planner_terminate or \
+                env_desc.reward_info.time_elapsed > self.eps_time
+
+    def convertDecisionSwitchLaneLeft(self, action):
+        """
+        Converts the action in int into an RLDecision enum
+
+        Args:
+        :param action: (int) neural network decision given as an argmax
+        Returns:
+        RLDecision enum
+        """
+
+        if action == 0:
+            return RLDecision.CONSTANT_SPEED
+        elif action == 1:
+            return RLDecision.ACCELERATE
+        elif action == 2:
+            return RLDecision.DECELERATE
+        elif action == 3:
+            return RLDecision.SWITCH_LANE_LEFT
+        else:
+            logging.error("Bug in decision conversion")
+            raise RuntimeError("Invalid action given")
+
+    def convertDecisionSwitchLaneRight(self, action):
+        """
+        Converts the action in int into an RLDecision enum
+
+        Args:
+        :param action: (int) neural network decision given as an argmax
+        Returns:
+        RLDecision enum
+        """
+
+        if action == 0:
+            return RLDecision.CONSTANT_SPEED
+        elif action == 1:
+            return RLDecision.ACCELERATE
+        elif action == 2:
+            return RLDecision.DECELERATE
+        elif action == 3:
+            return RLDecision.SWITCH_LANE_RIGHT
+        else:
+            logging.error("Bug in decision conversion")
+            raise RuntimeError("Invalid action given")
+
+    def convertDecisionIntersection(self, action):
+        """
+        Converts the action in int into an RLDecision enum
+
+        Args:
+        :param action: (int) neural network decision given as an argmax
+        Returns:
+        RLDecision enum
+        """
+
+        if action == 0:
+            return RLDecision.GLOBAL_PATH_CONSTANT_SPEED
+        elif action == 1:
+            return RLDecision.GLOBAL_PATH_ACCELERATE
+        elif action == 2:
+            return RLDecision.GLOBAL_PATH_DECELERATE
+
     def convertDecision(self, action: int) -> RLDecision:
         """
         Converts the action in int into an RLDecision enum
@@ -51,17 +136,17 @@ class RLManager:
         Returns:
         RLDecision enum
         """
-        if action == RLDecision.CONSTANT_SPEED.value:
-            return RLDecision.CONSTANT_SPEED
-        elif action == RLDecision.ACCELERATE.value:
-            return RLDecision.ACCELERATE
-        elif action == RLDecision.DECELERATE.value:
-            return RLDecision.DECELERATE
-        elif action == RLDecision.SWITCH_LANE_LEFT.value:
-            return RLDecision.SWITCH_LANE_LEFT
+        if self.event == Scenario.SWITCH_LANE_LEFT:
+            return self.convertDecisionSwitchLaneLeft(action)
+        if self.event == Scenario.SWITCH_LANE_RIGHT:
+            return self.convertDecisionRightTurn(action)
+        if self.event == Scenario.LEFT_TURN or \
+            self.event == Scenario.RIGHT_TURN or \
+                self.event == Scenario.GO_STRAIGHT:
+            return self.convertDecisionIntersection(action)
         else:
             logging.error("Bug in decision conversion")
-            raise RuntimeError("Invalid action given")
+            raise RuntimeError("Invalid scenario given")
 
     def rewardCalculation(self) -> np.ndarray:
         raise NotImplementedError()
@@ -76,4 +161,4 @@ class RLManager:
         Returns:
         A state embedding vector (np.ndarray)
         """
-        return self.state_manager.embedState(env_desc, self.event, local)
+        return self.state_manager.embedState(env_desc, self.event)
