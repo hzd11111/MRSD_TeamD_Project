@@ -295,6 +295,8 @@ class CarlaManager:
         )
 
         vehicle_ego.location_frenet = ego_vehicle_frenet_pose
+
+        lane_cur.ego_offset = ego_vehicle_frenet_pose.x
         vehicle_ego.location_frenet.x = 0
 
         for v in lane_left.lane_vehicles:
@@ -339,7 +341,6 @@ class CarlaManager:
         # import ipdb
 
         # ipdb.set_trace()
-        print(env_desc.current_lane.lane_points[0].toRosMsg())
         return SimServiceResponse(env_desc.toRosMsg())
 
     def destroy_actors_and_sensors(self):

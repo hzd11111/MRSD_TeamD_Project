@@ -268,26 +268,26 @@ class CarlaHandler:
                 ego_vehicle_location, project_to_road=True
             )
 
-            current_lane_waypoints_ = self.get_next_waypoints(nearest_waypoint, k=300)[
-                ::-1
-            ]
-            left_lane_waypoints_ = self.get_next_waypoints(
-                nearest_waypoint.get_left_lane(), k=300
-            )[
-                ::-1
-            ]  # +
-            right_lane_waypoints_ = self.get_next_waypoints(
-                nearest_waypoint.get_right_lane(), k=300
-            )[
-                ::-1
-            ]  # +
+            # current_lane_waypoints_ = self.get_next_waypoints(nearest_waypoint, k=300)[
+            #     ::-1
+            # ]
+            # left_lane_waypoints_ = self.get_next_waypoints(
+            #     nearest_waypoint.get_left_lane(), k=300
+            # )[
+            #     ::-1
+            # ]  # +
+            # right_lane_waypoints_ = self.get_next_waypoints(
+            #     nearest_waypoint.get_right_lane(), k=300
+            # )[
+            #     ::-1
+            # ]  # +
 
             # self.draw_waypoints(current_lane_waypoints, life_time=5)
             # self.draw_waypoints(left_lane_waypoints, life_time=5, color=True)
 
-            left_lane_ids = list(set([wp.lane_id for wp in left_lane_waypoints_]))
-            current_lane_ids = list(set([wp.lane_id for wp in current_lane_waypoints_]))
-            right_lane_ids = list(set([wp.lane_id for wp in right_lane_waypoints_]))
+            # left_lane_ids = list(set([wp.lane_id for wp in left_lane_waypoints_]))
+            # current_lane_ids = list(set([wp.lane_id for wp in current_lane_waypoints_]))
+            # right_lane_ids = list(set([wp.lane_id for wp in right_lane_waypoints_]))
 
             current_lane_waypoints = self.filter_waypoints(
                 self.all_waypoints, nearest_waypoint.road_id, nearest_waypoint.lane_id
@@ -303,9 +303,9 @@ class CarlaHandler:
                 nearest_waypoint.get_right_lane().lane_id,
             )
 
-            # left_lane_ids = list(set([wp.lane_id for wp in left_lane_waypoints]))
+            left_lane_ids = list(set([wp.lane_id for wp in left_lane_waypoints]))
             # current_lane_ids = list(set([wp.lane_id for wp in current_lane_waypoints]))
-            # right_lane_ids = list(set([wp.lane_id for wp in right_lane_waypoints]))
+            right_lane_ids = list(set([wp.lane_id for wp in right_lane_waypoints]))
 
             # Containers for actors in current, left and right lanes
             actors_in_current_lane = []
