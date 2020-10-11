@@ -80,8 +80,6 @@ class TrajGenerator:
 
         # determine the closest next pose in the current lane
         current_lane = sim_data.current_lane
-        lane_point_array = current_lane.lane_points
-        next_lane_point = self.findNextLanePose(curr_vehicle, lane_point_array)
 
         # determine the action progress
         action_progress = (new_sim_time - self.action_start_time) / self.traj_parameters['action_duration']
@@ -147,8 +145,6 @@ class TrajGenerator:
 
         # determine the closest next pose in the current lane
         current_lane = sim_data.current_lane
-        lane_point_array = current_lane.lane_points
-        next_lane_point = self.findNextLanePose(curr_vehicle, lane_point_array)
 
         # determine the action progress
         action_progress = (new_sim_time - self.action_start_time) / self.traj_parameters['action_duration']
@@ -159,8 +155,10 @@ class TrajGenerator:
             end_of_action = True
             action_progress = 1.
 
+        next_point_frenet = Frenet()
+        next_point_frenet.x = 1.
         new_path_plan = PathPlan()
-        new_path_plan.tracking_pose = next_lane_point.global_pose
+        new_path_plan.tracking_pose = current_lane.frenetToGlobal(next_point_frenet)
         new_path_plan.reset_sim = False
         new_path_plan.tracking_speed = max(self.traj_parameters['min_speed'],self.start_speed + action_progress * self.traj_parameters['accelerate_amt'])
         new_path_plan.end_of_action = end_of_action
@@ -169,7 +167,7 @@ class TrajGenerator:
 
         # add future poses
         new_path_plan.future_poses = []
-        tracking_pose_frenet = next_lane_point.frenet_pose
+        tracking_pose_frenet = next_point_frenet
         acc_per_sec = self.traj_parameters['accelerate_amt'] / self.traj_parameters['action_duration']
         for ts in np.arange(self.traj_parameters['action_time_disc'], \
                 self.traj_parameters['action_duration'] - (new_sim_time - self.action_start_time), \
@@ -214,8 +212,10 @@ class TrajGenerator:
             end_of_action = True
             action_progress = 1.
 
+        next_point_frenet = Frenet()
+        next_point_frenet.x = 1.
         new_path_plan = PathPlan()
-        new_path_plan.tracking_pose = next_lane_point.global_pose
+        new_path_plan.tracking_pose = current_lane.frenetToGlobal(next_point_frenet)
         new_path_plan.reset_sim = False
         new_path_plan.tracking_speed = max(self.traj_parameters['min_speed'],
                                            self.start_speed - action_progress * self.traj_parameters['decelerate_amt'])
@@ -225,7 +225,7 @@ class TrajGenerator:
 
         # add future poses
         new_path_plan.future_poses = []
-        tracking_pose_frenet = next_lane_point.frenet_pose
+        tracking_pose_frenet = next_point_frenet
         dec_per_sec = self.traj_parameters['decelerate_amt'] / self.traj_parameters['action_duration']
         for ts in np.arange(self.traj_parameters['action_time_disc'], \
                 self.traj_parameters['action_duration'] - (new_sim_time - self.action_start_time), \
@@ -323,8 +323,8 @@ class TrajGenerator:
 
             # determine the closest next pose in the current lane
             current_lane = sim_data.current_lane
-            lane_point_array = current_lane.lane_points
-            next_lane_point = self.findNextLanePose(curr_vehicle, lane_point_array)
+            #lane_point_array = current_lane.lane_points
+            #next_lane_point = self.findNextLanePose(curr_vehicle, lane_point_array)
 
             # determine the lane distance
             lane_distance = target_lane.lane_distance
@@ -333,7 +333,7 @@ class TrajGenerator:
             neutral_spline_left = self.cubicSplineGen(lane_distance, sim_data.cur_vehicle_state.speed)
 
             # append neutral spline to the nearest lane point and flip for a right turn
-            x_offset = next_lane_point.frenet_pose.x
+            x_offset = 0.5
             for spline_frenet in neutral_spline_left:
                 spline_frenet[0].x += x_offset
                 if rl_decision == RLDecision.SWITCH_LANE_RIGHT:
