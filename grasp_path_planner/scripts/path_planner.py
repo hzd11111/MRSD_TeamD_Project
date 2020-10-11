@@ -21,11 +21,11 @@ if(CURRENT_SCENARIO == Scenario.LANE_CHANGE):
         'action_duration' : 0.5,\
         'accelerate_amt' : 5,\
         'decelerate_amt' : 5,\
-        'min_speed' : 20
+        'min_speed' : 0
     }
 else:
     TRAJ_PARAM = {'look_up_distance' : 0 ,\
-        'lane_change_length' : 30,\
+        'lane_change_length' : 20,\
         'lane_change_time_constant' : 1.05,\
         'lane_change_time_disc' : 0.4,\
         'action_time_disc' : 0.2,\
@@ -48,21 +48,9 @@ class PathPlannerManager:
         self.sim_service_interface = rospy.ServiceProxy(SIM_SERVICE_NAME, SimService)
 
     def performAction(self, action):
-        action = RLDecision.CONSTANT_SPEED
-        print("Action: ", action)
-        print("CARLA Global Pose x:",self.prev_env_desc.cur_vehicle_state.location_global.x)
-        print("CARLA Global Pose y:", self.prev_env_desc.cur_vehicle_state.location_global.y)
-        print("CARLA Global Pose theta:", self.prev_env_desc.cur_vehicle_state.location_global.theta)
-        print("CARLA Global Pose Converted x:", self.prev_env_desc.current_lane.frenetToGlobal(self.prev_env_desc.cur_vehicle_state.location_frenet).x)
-        print("CARLA Global Pose Converted y:",
-              self.prev_env_desc.current_lane.frenetToGlobal(self.prev_env_desc.cur_vehicle_state.location_frenet).y)
-        print("CARLA Global Pose Converted theta:",
-              self.prev_env_desc.current_lane.frenetToGlobal(self.prev_env_desc.cur_vehicle_state.location_frenet).theta)
-        path_plan = self.traj_generator.trajPlan(action, self.prev_env_desc)
+        action = RLDecision.SWITCH_LANE_LEFT
 
-        print("Tracking Global Pose x:", path_plan.tracking_pose.x)
-        print("Tracking Global Pose y:", path_plan.tracking_pose.y)
-        print("Tracking Global Pose theta:", path_plan.tracking_pose.theta)
+        path_plan = self.traj_generator.trajPlan(action, self.prev_env_desc)
 
         req = SimServiceRequest()
         req.path_plan = path_plan

@@ -155,7 +155,7 @@ class Actor:
         # speed
         speed = actor.get_velocity()
         state_dict["speed_3d"] = [speed.x, speed.y, speed.z]
-        state_dict["speed"] = np.linalg.norm([speed.x, speed.y, speed.z])
+        state_dict["speed"] = np.linalg.norm([speed.x, speed.y, speed.z]) * 3.6
 
         # acceleration
         acc = actor.get_acceleration()

@@ -99,18 +99,7 @@ class TrajGenerator:
         new_path_plan.end_of_action = end_of_action
         new_path_plan.action_progress = action_progress
         new_path_plan.path_planner_terminate = False
-        print("Frenet Vehicle Pose x:", curr_vehicle.location_frenet.x)
-        print("Frenet Vehicle Pose y:", curr_vehicle.location_frenet.y)
-        print("Frenet Vehicle Pose theta:", curr_vehicle.location_frenet.theta)
-        print("Global Vehicle Pose x:", curr_vehicle.location_global.x)
-        print("Global Vehicle Pose y:", curr_vehicle.location_global.y)
-        print("Global Vehicle Pose theta:", curr_vehicle.location_global.theta)
-        print("Frenet Pose x:", next_point_frenet.x)
-        print("Frenet Pose y:", next_point_frenet.y)
-        print("Frenet Pose theta:", next_point_frenet.theta)
-        print("Global Pose x:", new_path_plan.tracking_pose.x)
-        print("Global Pose y:", new_path_plan.tracking_pose.y)
-        print("Global Pose theta:", new_path_plan.tracking_pose.theta)
+
         # add future poses
         new_path_plan.future_poses = []
         tracking_pose_frenet = next_point_frenet
@@ -222,7 +211,6 @@ class TrajGenerator:
         new_path_plan.end_of_action = end_of_action
         new_path_plan.action_progress = action_progress
         new_path_plan.path_planner_terminate = False
-
         # add future poses
         new_path_plan.future_poses = []
         tracking_pose_frenet = next_point_frenet
@@ -247,7 +235,7 @@ class TrajGenerator:
         if v_cur < 5:
             v_cur = 5
         # determine external parameters
-        w = lane_dist / 2.
+        w = lane_dist
         l = self.traj_parameters['lane_change_length']
         r = self.traj_parameters['lane_change_time_constant']
         tf = math.sqrt(l ** 2 + w ** 2) * r / v_cur
@@ -366,7 +354,6 @@ class TrajGenerator:
                 break
 
             self.path_pointer += 1
-
         # determine the action progress
         action_progress = self.path_pointer / float(len(self.generated_path))
 

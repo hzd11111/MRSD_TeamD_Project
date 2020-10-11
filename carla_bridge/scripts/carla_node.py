@@ -407,9 +407,9 @@ class CarlaManager:
                     "dt": self.simulation_sync_timestep,
                 },
                 args_longitudinal={
-                    "K_P": 0.5,
+                    "K_P": 3.5,
                     "K_D": 0,
-                    "K_I": 0,
+                    "K_I": 0.01,
                     "dt": self.simulation_sync_timestep,
                 },
             )

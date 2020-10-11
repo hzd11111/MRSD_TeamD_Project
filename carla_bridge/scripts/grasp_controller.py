@@ -56,13 +56,18 @@ class GRASPPIDController():
         """
 
         # print("Target Pose:", pose)
+        print("Target Speed:", target_speed)
         throttle = self._lon_controller.run_step(target_speed)
         steering = self._lat_controller.run_step(pose)
 
         control = carla.VehicleControl()
         control.steer = steering
-        control.throttle = throttle
+        control.throttle = 0.0
         control.brake = 0.0
+        if throttle > 0.0:
+            control.throttle = throttle
+        else:
+            control.brake = -throttle
         control.hand_brake = False
         control.manual_gear_shift = False
 
@@ -119,8 +124,7 @@ class PIDLongitudinalController():
         else:
             _de = 0.0
             _ie = 0.0
-
-        return np.clip((self._K_P * _e) + (self._K_D * _de / self._dt) + (self._K_I * _ie * self._dt), 0.0, 1.0)
+        return np.clip((self._K_P * _e) + (self._K_D * _de / self._dt) + (self._K_I * _ie * self._dt), -1.0, 1.0)
 
 
 class PIDLateralController():

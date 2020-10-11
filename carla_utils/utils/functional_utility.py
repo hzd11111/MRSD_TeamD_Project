@@ -124,8 +124,8 @@ class Pose2D(object):
 class PoseSpeed(Pose2D):
     __slots__ = ["speed"]
 
-    def __init__(self, speed: float = 0):
-        Pose2D.__init__(self)
+    def __init__(self, pose: Pose2D, speed: float = 0):
+        Pose2D.__init__(self, pose.x, pose.y, pose.theta)
         self.speed = speed
 
     def addToPose(self, pose: Pose2D):
