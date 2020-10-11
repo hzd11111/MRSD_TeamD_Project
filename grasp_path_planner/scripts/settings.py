@@ -1,6 +1,7 @@
 import os
 from enum import Enum
 from options import Scenario
+
 dir_path = os.path.dirname(os.path.realpath(__file__))
 
 
@@ -54,11 +55,11 @@ else:
 
     EGO_INIT_SPEED = 30  # 30 for high speed on road40
     NPC_INIT_SPEED = 20
-    EGO_SPAWN_IDX = 320
+    EGO_SPAWN_IDX = 470
     EGO_VEHICLE_MAKE = "model3"
 
-    LOW_NUM_VEHICLES = 45
-    HIGH_NUM_VEHICLES = 46
+    LOW_NUM_VEHICLES = 30
+    HIGH_NUM_VEHICLES = 35
 
     NPC_SPAWN_POINT_GAP_LOW = 15
     NPC_SPAWN_POINT_GAP_HIGH = 30

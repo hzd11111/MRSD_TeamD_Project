@@ -71,7 +71,7 @@ class CarlaHandler:
                 actor.destroy()
         print("All actors destroyed..\n")
 
-    def get_waypoints(self, distance=1):
+    def get_waypoints(self, distance=10):
 
         return self.world_map.generate_waypoints(distance=distance)
 
