@@ -16,42 +16,8 @@ from grasp_path_planner.msg import PathPlan
 from grasp_path_planner.srv import SimService, SimServiceResponse, SimServiceRequest
 # other packages
 from settings import *
+from state_manager import convertToLocal
 
-# Convert to local
-def convert_to_local(cur_vehicle, adj_vehicle):
-        result_state = VehicleState()
-        x = adj_vehicle.vehicle_location.x
-        y = adj_vehicle.vehicle_location.y
-        theta = adj_vehicle.vehicle_location.theta
-        speed = adj_vehicle.vehicle_speed
-        vx = speed*np.cos(theta)
-        vy = speed*np.sin(theta)
-        # get current_vehicle_speeds
-        cvx = cur_vehicle.vehicle_speed*np.cos(cur_vehicle.vehicle_location.theta)
-        cvy = cur_vehicle.vehicle_speed*np.sin(cur_vehicle.vehicle_location.theta)
-        # make homogeneous transform
-        H_Rot = np.eye(3)
-        H_Rot[-1,-1] = 1
-        H_Rot[0,-1] = 0
-        H_Rot[1,-1] = 0
-        H_Rot[0,0] = np.cos(cur_vehicle.vehicle_location.theta)
-        H_Rot[0,1] = -np.sin(cur_vehicle.vehicle_location.theta)
-        H_Rot[1,0] = np.sin(cur_vehicle.vehicle_location.theta)
-        H_Rot[1,1] = np.cos(cur_vehicle.vehicle_location.theta)
-        H_trans = np.eye(3)
-        H_trans[0,-1] = -cur_vehicle.vehicle_location.x
-        H_trans[1,-1] = -cur_vehicle.vehicle_location.y
-        H = np.matmul(H_Rot,H_trans)
-        # calculate and set relative position
-        res = np.matmul(H, np.array([x,y,1]).reshape(3,1))
-        result_state.vehicle_location.x = res[0,0]
-        result_state.vehicle_location.y = res[1,0]
-        # calculate and set relative orientation
-        result_state.vehicle_location.theta = theta-cur_vehicle.vehicle_location.theta
-        # calculate and set relative speed
-        res_vel = np.array([vx-cvx,vy-cvy])
-        result_state.vehicle_speed = speed # np.linalg.norm(res_vel)
-        return result_state
 
 # Parent Reward Class
 class Reward(ABC):
@@ -235,6 +201,7 @@ class LaneChangeReward(Reward):
     
     def update(self,desc,action):
         cur_dist = self.get_closest_distance(desc)
+        # print("Closest Distance Now:", cur_dist)
         if self.closest_dist > cur_dist:
             self.closest_dist=cur_dist
         self.cum_vel_err+=self.get_velocity_error(desc.cur_vehicle_state.vehicle_speed)
@@ -257,13 +224,14 @@ class PedestrianReward(Reward):
         if desc.nearest_pedestrian.exist:
             ped_vehicle.vehicle_location = desc.nearest_pedestrian.pedestrian_location
             ped_vehicle.vehicle_speed = desc.nearest_pedestrian.pedestrian_speed
-            relative_pose = convert_to_local(desc.cur_vehicle_state,ped_vehicle)
+            relative_pose = convertToLocal(desc.cur_vehicle_state,ped_vehicle)
+
 
         # check if pedestrian collided
         if desc.reward.collision:
             return -self.max_reward
         # check if pedestrian avoided
-        elif desc.nearest_pedestrian.exist and relative_pose.vehicle_location.x < -1:
+        elif desc.nearest_pedestrian.exist and relative_pose.vehicle_location.x < -10:
             reward=self.max_reward
         # add costs of overspeeding
         reward-=self.vel_cost()

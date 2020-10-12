@@ -109,31 +109,31 @@ print("Closest waypoint in the right lane:", right_lane_nearest_waypoint, "\n")
 
 # while(True):
 # # Get all actors
-# 	all_actors = carla_handler_1.world.get_actors()
+#	all_actors = carla_handler_1.world.get_actors()
 
-# 	actors_in_current_lane = []
-# 	actors_in_other_lane = []
-# 	for actor in all_actors.filter('vehicle.*'):
-# 		actor_nearest_waypoint = carla_handler_1.world_map.get_waypoint(actor.get_location(), project_to_road=True)
-# 		if(actor_nearest_waypoint.road_id == current_road_ID):
+#	actors_in_current_lane = []
+#	actors_in_other_lane = []
+#	for actor in all_actors.filter('vehicle.*'):
+#		actor_nearest_waypoint = carla_handler_1.world_map.get_waypoint(actor.get_location(), project_to_road=True)
+#		if(actor_nearest_waypoint.road_id == current_road_ID):
 			
-# 			if(actor_nearest_waypoint.lane_id == current_lane_ID):
-# 				actors_in_current_lane.append(actor.id)
-# 				tmp_vehicle = actor
-# 				tmp_transform = tmp_vehicle.get_transform()
-# 				tmp_bounding_box = tmp_vehicle.bounding_box
-# 				tmp_bounding_box.location += tmp_transform.location
-# 				carla_handler_1.world.debug.draw_box(tmp_bounding_box, tmp_transform.rotation, life_time=0.05)
-# 			else:
-# 				actors_in_other_lane.append(actor.id)
-# 				# Draw bounding boxes
+#			if(actor_nearest_waypoint.lane_id == current_lane_ID):
+#				actors_in_current_lane.append(actor.id)
+#				tmp_vehicle = actor
+#				tmp_transform = tmp_vehicle.get_transform()
+#				tmp_bounding_box = tmp_vehicle.bounding_box
+#				tmp_bounding_box.location += tmp_transform.location
+#				carla_handler_1.world.debug.draw_box(tmp_bounding_box, tmp_transform.rotation, life_time=0.05)
+#			else:
+#				actors_in_other_lane.append(actor.id)
+#				# Draw bounding boxes
 
 
 
-# 	print("Actors in current lane:", actors_in_current_lane)
-# 	print("Actors in other lane:", actors_in_other_lane, "\n")
+#	print("Actors in current lane:", actors_in_current_lane)
+#	print("Actors in other lane:", actors_in_other_lane, "\n")
 
-# 	time.sleep(1)
+#	time.sleep(1)
 
 
 ################################################################################################################################

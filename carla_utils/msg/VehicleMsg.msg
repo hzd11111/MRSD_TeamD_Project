@@ -1,0 +1,2 @@
+ActorMsg actor_msg
+int64 traffic_light_status
