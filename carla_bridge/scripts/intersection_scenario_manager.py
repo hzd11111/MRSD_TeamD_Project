@@ -68,7 +68,6 @@ class IntersectionScenario:
                     if intersection_connection_lanes[i] in used_intersection_lane_IDs:
                         continue
                     used_intersection_lane_IDs.append(intersection_connection_lanes[i])
-                # used_intersection_lane_IDs = tuple(used_intersection_lane_IDs)
 
                 if direction == "forward":
                     incoming_road_lane_id_set.add((road_1_id, lane_1_id))
@@ -131,25 +130,20 @@ class IntersectionScenario:
             incoming_road_lane_id_to_outgoing_lane_id_dict[key] = list(
                 set(incoming_road_lane_id_to_outgoing_lane_id_dict[key])
             )
-        # return (
-        #     incoming_road_lane_id_set,
-        #     outgoing_road_lane_id_set,
-        #     incoming_road_lane_id_to_outgoing_lane_id_dict,
-        # )
 
         synchronous_master = False
 
         # try:
 
-        # settings = self.world.get_settings()
-        # self.traffic_manager.set_synchronous_mode(True)
-        # if not settings.synchronous_mode:
-        #     synchronous_master = True
-        #     settings.synchronous_mode = True
-        #     settings.fixed_delta_seconds = 0.05
-        #     self.world.apply_settings(settings)
-        # else:
-        #     synchronous_master = False
+        settings = self.world.get_settings()
+        self.traffic_manager.set_synchronous_mode(True)
+        if not settings.synchronous_mode:
+            synchronous_master = True
+            settings.synchronous_mode = True
+            settings.fixed_delta_seconds = 0.05
+            self.world.apply_settings(settings)
+        else:
+            synchronous_master = False
 
         blueprints = self.world.get_blueprint_library().filter("vehicle.*")
 
@@ -259,15 +253,9 @@ class IntersectionScenario:
                 self.traffic_manager.ignore_lights_percentage(v, 100)
                 self.traffic_manager.distance_to_leading_vehicle(v, 1)
 
-            # while True:
-            #     if synchronous_master:
-            #         self.world.tick()
-            #     else:
-            #         self.world.wait_for_tick()
-
-            # warm_start_curr = 0
-            # while warm_start_curr < warm_start_duration:
-            #     warm_start_curr += 0.1
+        warm_start_curr = 0
+        while warm_start_curr < warm_start_duration:
+            warm_start_curr += 0.1
             if synchronous_master:
                 self.world.tick()
             else:
