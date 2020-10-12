@@ -74,7 +74,8 @@ class FullPlannerManager:
             count += 1
             if info[0]["success"]:
                 success += 1
-            print("Count ", count, "Success ", success, "Success Rate:", success * 100 / float(count), "%")
+            print("Count ", count, "Success ", success,
+                  "Success Rate:", success * 100 / float(count), "%")
         print("Success Rate ", success / count, success, count)
 
 

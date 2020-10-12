@@ -26,7 +26,7 @@ class StateManager:
 
     def selectLane(self, lane, left=True):
         """
-        Select the right lane
+        Select the right or left lane lane
         """
         if (left):
             return lane.left_to_the_current and lane.adjacent_lane
@@ -35,8 +35,9 @@ class StateManager:
 
     def createLaneChangeState(self, env_desc, left=True):
         """
-        Create a dictionary of states. They keys are "adjacent", "front", "back", "pedestrians", "lane_distance".
-        Each value for the actor types is a numpy array of the size (n X 6), where is the number of actors of that type
+        Create a dictionary of states. They keys are "adjacent", "front", "back", "pedestrians",
+        "lane_distance". Each value for the actor types is a numpy array of the size (n X 6),
+        where is the number of actors of that type
         """
         # extract all vehicles from adjacent lanes
         # TODO: Should I choose vehicles only from the lane to which we are shifting or all adjacent lanes?
@@ -55,16 +56,22 @@ class StateManager:
                 # Add relevant vehicles
                 for vehicle in lane.lane_vehicles:
                     # import ipdb; ipdb.set_trace()
-                    vehicle_state = [vehicle.location_frenet.x,
-                                     vehicle.location_frenet.y,
-                                     vehicle.location_frenet.theta,
+                    vehicle_in_ego = vehicle.fromControlling(
+                        env_desc.current_vehicle_state.location_frenet,
+                        env_desc.current_lane)
+                    vehicle_state = [vehicle_in_ego.x,
+                                     vehicle_in_ego.y,
+                                     vehicle_in_ego.theta,
                                      vehicle.speed]
                     adj_lane_vehicles_states.append(vehicle_state)
                 # Add relevant pedestrians
                 for pedestrian in lane.crossing_pedestrain:
-                    pedestrian_state = [pedestrian.location_frenet.x,
-                                        pedestrian.location_frenet.y,
-                                        pedestrian.location_frenet.theta,
+                    pedestrian_in_ego = pedestrian.fromControlling(
+                        env_desc.current_vehicle_state.location_frenet,
+                        env_desc.current_lane)
+                    pedestrian_state = [pedestrian_in_ego.location_frenet.x,
+                                        pedestrian_in_ego.location_frenet.y,
+                                        pedestrian_in_ego.location_frenet.theta,
                                         pedestrian.speed]
                     pedestrian_states.append(pedestrian_state)
                 # Get the lane distance
@@ -83,9 +90,12 @@ class StateManager:
         back_vehicle = current_lane.VehicleBehind()
 
         for pedestrian in current_lane.crossing_pedestrain:
-            pedestrian_state = [pedestrian.location_frenet.x,
-                                pedestrian.location_frenet.y,
-                                pedestrian.location_frenet.theta,
+            pedestrian_in_ego = pedestrian.fromControlling(
+                env_desc.current_vehicle_state.location_frenet,
+                env_desc.current_lane)
+            pedestrian_state = [pedestrian_in_ego.location_frenet.x,
+                                pedestrian_in_ego.location_frenet.y,
+                                pedestrian_in_ego.location_frenet.theta,
                                 pedestrian.speed]
             pedestrian_states.append(pedestrian_state)
 
@@ -93,8 +103,8 @@ class StateManager:
             dummy_vehicles = list(itertools.repeat(
                 dummy_vehicle, 5 - len(pedestrian_states)))
             pedestrian_states += dummy_vehicles
-
-        # import ipdb; ipdb.set_trace()
+        # TODO: Should I consider when pedestrians are more than 5? How to sort?
+        # TODO: Should I use global speed after converting to frenet?
         front_vehicle_state = [front_vehicle.location_frenet.x,
                                front_vehicle.location_frenet.y,
                                front_vehicle.location_frenet.theta,
@@ -135,9 +145,12 @@ class StateManager:
         back_vehicle = current_lane.VehicleBehind()
 
         for pedestrian in current_lane.crossing_pedestrain:
-            pedestrian_state = [pedestrian.location_frenet.x,
-                                pedestrian.location_frenet.y,
-                                pedestrian.location_frenet.theta,
+            pedestrian_in_ego = pedestrian.fromControlling(
+                env_desc.current_vehicle_state.location_frenet,
+                env_desc.current_lane)
+            pedestrian_state = [pedestrian_in_ego.location_frenet.x,
+                                pedestrian_in_ego.location_frenet.y,
+                                pedestrian_in_ego.location_frenet.theta,
                                 pedestrian.speed]
             pedestrian_states.append(pedestrian_state)
 
@@ -146,7 +159,6 @@ class StateManager:
                 dummy_vehicle, 5 - len(pedestrian_states)))
             pedestrian_states += dummy_vehicles
 
-        # import ipdb; ipdb.set_trace()
         front_vehicle_state = [front_vehicle.location_frenet.x,
                                front_vehicle.location_frenet.y,
                                front_vehicle.location_frenet.theta,
@@ -166,17 +178,340 @@ class StateManager:
         assert(len(entire_state) == 32)
         return np.array(entire_state)
 
-    def createIntersectionTurnState(env_desc, left=True):
+    def createIntersectionStraightState(env_desc):
         """
         Create a state for intersection negotiation state when turning
         """
-        pass
+        dummy_vehicle = [1000, 1000, 0, 0]
+        pedestrian_states = []
+        ego_vehicle_state = [
+            env_desc.cur_vehicle_state.location_frenet.x,
+            env_desc.cur_vehicle_state.location_frenet.y,
+            env_desc.cur_vehicle_state.location_frenet.theta,
+            env_desc.cur_vehicle_state.speed]
 
-    def createIntersectionStraightState(env_desc):
+        # extract front vehicle and back vehicle and pedestrian in current lane
+        # TODO: Make sure vehicle in front or back are always present
+        current_lane = env_desc.current_lane
+        front_vehicle = current_lane.VehicleInFront()
+        back_vehicle = current_lane.VehicleBehind()
+
+        for pedestrian in current_lane.crossing_pedestrain:
+            pedestrian_in_ego = pedestrian.fromControlling(
+                env_desc.current_vehicle_state.location_frenet,
+                env_desc.current_lane)
+            pedestrian_state = [pedestrian_in_ego.x,
+                                pedestrian_in_ego.y,
+                                pedestrian_in_ego.theta,
+                                pedestrian.speed]
+            pedestrian_states.append(pedestrian_state)
+
+        if len(pedestrian_states) < 3:
+            dummy_vehicles = list(itertools.repeat(
+                dummy_vehicle, 3 - len(pedestrian_states)))
+            pedestrian_states += dummy_vehicles
+
+        front_vehicle_state = [front_vehicle.location_frenet.x,
+                               front_vehicle.location_frenet.y,
+                               front_vehicle.location_frenet.theta,
+                               front_vehicle.speed]
+
+        back_vehicle_state = [back_vehicle.location_frenet.x,
+                              back_vehicle.location_frenet.y,
+                              back_vehicle.location_frenet.theta,
+                              back_vehicle.speed]
+
+        # identify vehicles from perpendicular lanes within 20m
+        # TODO: How to select within 20m. Is it frenet x, or global distance
+        # identify the vehicles from left turning opposite lane
+        opposite_left_turning_lane_vehs = []
+        perpendicular_lane_vehs = []
+        for lane in env_desc.next_intersection:
+            for vehicle in lane.lane_vehicles:
+                perpendicular_lane_vehs.append(vehicle)
+
+        for lane in env_desc.adjacent_lanes:
+            if lane.same_direction is False and lane.left_turning_lane is True:
+                for vehicle in lane.lane_vehicles:
+                    opposite_left_turning_lane_vehs.append(vehicle)
+
+        # take 10 vehicles with the smalled abs frenet x from perpendicular_lane_vehs
+        perpendicular_lane_vehs_in_ego = []
+        for vehicle in perpendicular_lane_vehs:
+            veh_in_ego = vehicle.fromControlling(env_desc.cur_vehicle_state.location_frenet,
+                                                 env_desc.current_lane)
+            perpendicular_lane_vehs_in_ego.append([veh_in_ego.x,
+                                                   veh_in_ego.y,
+                                                   veh_in_ego.theta,
+                                                   vehicle.speed])
+        if len(perpendicular_lane_vehs_in_ego) > 10:
+            perpendicular_lane_vehs_in_ego = sorted(
+                perpendicular_lane_vehs_in_ego, key=lambda item: abs(item[0]))
+            perpendicular_lane_vehs_in_ego = perpendicular_lane_vehs_in_ego[:10]
+        else:
+            dummy_vehicles = list(itertools.repeat(
+                dummy_vehicle, 10 - len(perpendicular_lane_vehs_in_ego)))
+            perpendicular_lane_vehs_in_ego += dummy_vehicles
+
+        # take 5 closest in the opposite_left_turning_lane_vehs
+        opposite_left_turning_lane_vehs_in_ego = []
+        # if there are more than 5 vehicles than sort them globally and select 5 closest
+        if len(opposite_left_turning_lane_vehs) > 5:
+            opposite_left_turning_lane_vehs = sorted(
+                opposite_left_turning_lane_vehs,
+                key=lambda item: item.location_global.distance(
+                    env_desc.current_vehicle_state.location_global))
+            opposite_left_turning_lane_vehs = opposite_left_turning_lane_vehs[:5]
+
+        # collect the frenet coordinates
+        for vehicle in opposite_left_turning_lane_vehs:
+            veh_in_ego = vehicle.fromControlling(env_desc.cur_vehicle_state.location_frenet,
+                                                 env_desc.current_lane)
+            opposite_left_turning_lane_vehs_in_ego.append([veh_in_ego.x,
+                                                           veh_in_ego.y,
+                                                           veh_in_ego.theta,
+                                                           vehicle.speed])
+
+        # if the number of vehicles in the opposite left_turning_lane are less than 5 add dummy
+        if len(opposite_left_turning_lane_vehs_in_ego) < 5:
+            dummy_vehicles = list(itertools.repeat(
+                dummy_vehicle, 10 - len(opposite_left_turning_lane_vehs_in_ego)))
+            opposite_left_turning_lane_vehs_in_ego += dummy_vehicles
+
+        # TODO:add light statuses of the lanes
+        # concatenate all the states and lane distance
+        entire_state = ego_vehicle_state + \
+            front_vehicle_state + \
+            back_vehicle_state + \
+            [coord for state in pedestrian_states for coord in state] + \
+            [coord for state in perpendicular_lane_vehs_in_ego for coord in state] + \
+            [coord for state in opposite_left_turning_lane_vehs_in_ego for coord in state]
+
+        assert(len(entire_state) == 84)
+        return np.array(entire_state)
+
+    def createIntersectionLeftTurnState(env_desc):
         """
-        Create a state for intersection when going straight
+        Create a state for intersection when taking a left turn
         """
-        pass
+        dummy_vehicle = [1000, 1000, 0, 0]
+        pedestrian_states = []
+        ego_vehicle_state = [
+            env_desc.cur_vehicle_state.location_frenet.x,
+            env_desc.cur_vehicle_state.location_frenet.y,
+            env_desc.cur_vehicle_state.location_frenet.theta,
+            env_desc.cur_vehicle_state.speed]
+
+        # extract front vehicle and back vehicle and pedestrian in current lane
+        # TODO: Make sure vehicle in front or back are always present
+        current_lane = env_desc.current_lane
+        front_vehicle = current_lane.VehicleInFront()
+        back_vehicle = current_lane.VehicleBehind()
+
+        # select pedestrians from all perpendicular lanes with directed_right = false
+        for lane in env_desc.next_intersection:
+            if lane.directed_right is False:
+                for pedestrian in lane.crossing_pedestrain:
+                    pedestrian_in_ego = pedestrian.fromControlling(
+                        env_desc.current_vehicle_state.location_frenet,
+                        env_desc.current_lane)
+                    pedestrian_state = [pedestrian_in_ego.x,
+                                        pedestrian_in_ego.y,
+                                        pedestrian_in_ego.theta,
+                                        pedestrian.speed]
+                    pedestrian_states.append(pedestrian_state)
+
+        # filter out pedestrians with negative x frenet
+        pedestrian_states = filter(lambda item: item[0] >= 0, pedestrian_states)
+        # select top3 or add dummy pedestrians
+        if len(pedestrian_states) > 3:
+            pedestrian_states = sorted(pedestrian_states, lambda item: item[1])[:3]
+        elif len(pedestrian_states) < 3:
+            dummy_vehicles = list(itertools.repeat(
+                dummy_vehicle, 3 - len(pedestrian_states)))
+            pedestrian_states += dummy_vehicles
+
+        front_vehicle_state = [front_vehicle.location_frenet.x,
+                               front_vehicle.location_frenet.y,
+                               front_vehicle.location_frenet.theta,
+                               front_vehicle.speed]
+
+        back_vehicle_state = [back_vehicle.location_frenet.x,
+                              back_vehicle.location_frenet.y,
+                              back_vehicle.location_frenet.theta,
+                              back_vehicle.speed]
+
+        # identify vehicles from perpendicular lanes within 20m
+        # TODO: How to select within 20m. Is it frenet x, or global distance
+        parallel_lane_vehs = []
+        perpendicular_lane_vehs = []
+        for lane in env_desc.next_intersection:
+            for vehicle in lane.lane_vehicles:
+                perpendicular_lane_vehs.append(vehicle)
+
+        # identify the vehicles from parallel lane
+        for lane in env_desc.adjacent_lanes:
+            if lane.same_direction is False:
+                for vehicle in lane.lane_vehicles:
+                    parallel_lane_vehs.append(vehicle)
+
+        # take 10 vehicles with the smalled abs frenet x from perpendicular_lane_vehs
+        perpendicular_lane_vehs_in_ego = []
+        for vehicle in perpendicular_lane_vehs:
+            veh_in_ego = vehicle.fromControlling(env_desc.cur_vehicle_state.location_frenet,
+                                                 env_desc.current_lane)
+            perpendicular_lane_vehs_in_ego.append([veh_in_ego.x,
+                                                   veh_in_ego.y,
+                                                   veh_in_ego.theta,
+                                                   vehicle.speed])
+        if len(perpendicular_lane_vehs_in_ego) > 10:
+            perpendicular_lane_vehs_in_ego = sorted(
+                perpendicular_lane_vehs_in_ego, key=lambda item: abs(item[0]))
+            perpendicular_lane_vehs_in_ego = perpendicular_lane_vehs_in_ego[:10]
+        elif len(perpendicular_lane_vehs_in_ego) < 10:
+            dummy_vehicles = list(itertools.repeat(
+                dummy_vehicle, 10 - len(perpendicular_lane_vehs_in_ego)))
+            perpendicular_lane_vehs_in_ego += dummy_vehicles
+
+        # take 10 closest in the parallel lane
+        parallel_lane_vehs_in_ego = []
+        # if there are more than 10 vehicles than sort them globally and select 10 closest
+        # collect the frenet coordinates
+        for vehicle in parallel_lane_vehs:
+            veh_in_ego = vehicle.fromControlling(env_desc.cur_vehicle_state.location_frenet,
+                                                 env_desc.current_lane)
+            parallel_lane_vehs_in_ego.append([veh_in_ego.x,
+                                              veh_in_ego.y,
+                                              veh_in_ego.theta,
+                                              vehicle.speed])
+
+        # filter out vehicles with negative x frenet
+        parallel_lane_vehs_in_ego = filter(lambda item: item >= 0, parallel_lane_vehs_in_ego)
+        # if the number of vehicles in the parallel lanes are less than 10 add dummy
+        if len(parallel_lane_vehs_in_ego) > 10:
+            parallel_lane_vehs_in_ego = parallel_lane_vehs_in_ego[:10]
+        elif len(parallel_lane_vehs_in_ego) < 10:
+            dummy_vehicles = list(itertools.repeat(
+                dummy_vehicle, 10 - len(parallel_lane_vehs_in_ego)))
+            parallel_lane_vehs_in_ego += dummy_vehicles
+
+        # TODO:add light statuses of the lanes
+        # concatenate all the states and lane distance
+        entire_state = ego_vehicle_state + \
+            front_vehicle_state + \
+            back_vehicle_state + \
+            [coord for state in pedestrian_states for coord in state] + \
+            [coord for state in perpendicular_lane_vehs_in_ego for coord in state] + \
+            [coord for state in parallel_lane_vehs_in_ego for coord in state]
+
+        assert(len(entire_state) == 104)  # TODO: Update this after adding lights
+        return np.array(entire_state)
+
+    def createIntersectionRightTurnState(env_desc):
+        """
+        Create a state for intersection when taking a right turn
+        """
+        dummy_vehicle = [1000, 1000, 0, 0]
+        pedestrian_states_perp = []
+        pedestrian_states_curr = []
+        perpendicular_lane_vehs = []
+        ego_vehicle_state = [
+            env_desc.cur_vehicle_state.location_frenet.x,
+            env_desc.cur_vehicle_state.location_frenet.y,
+            env_desc.cur_vehicle_state.location_frenet.theta,
+            env_desc.cur_vehicle_state.speed]
+
+        # extract front vehicle and back vehicle and pedestrian in current lane
+        # TODO: Make sure vehicle in front or back are always present
+        current_lane = env_desc.current_lane
+        front_vehicle = current_lane.VehicleInFront()
+        back_vehicle = current_lane.VehicleBehind()
+
+        # select pedestrians from all perpendicular lanes which we turn into
+        for lane in env_desc.next_intersection:
+            if lane.right_most_lane is True and lane.directed_right is True:
+                for pedestrian in lane.crossing_pedestrain:
+                    pedestrian_in_ego = pedestrian.fromControlling(
+                        env_desc.current_vehicle_state.location_frenet,
+                        env_desc.current_lane)
+                    pedestrian_state = [pedestrian_in_ego.x,
+                                        pedestrian_in_ego.y,
+                                        pedestrian_in_ego.theta,
+                                        pedestrian.speed]
+                    pedestrian_states_perp.append(pedestrian_state)
+                # identify vehicles from perpendicular lanes within 20m
+                # TODO: How to select within 20m. Is it frenet x, or global distance
+                for vehicle in lane.lane_vehicles:
+                    perpendicular_lane_vehs.append(vehicle)
+
+        # select smallest 3 y frenet pedestrians or add dummy pedestrians
+        # TODO: Do i have to filter for positive x like in left turn?
+        if len(pedestrian_states_perp) > 3:
+            pedestrian_states_perp = sorted(pedestrian_states_perp, lambda item: item[1])[:3]
+        elif len(pedestrian_states_perp) < 3:
+            dummy_vehicles = list(itertools.repeat(
+                dummy_vehicle, 3 - len(pedestrian_states_perp)))
+            pedestrian_states_perp += dummy_vehicles
+
+        # select pedestrians from current_lane
+        for pedestrian in env_desc.current_lane:
+            pedestrian_in_ego = pedestrian.fromControlling(
+                env_desc.current_vehicle_state.location_frenet,
+                env_desc.current_lane)
+            pedestrian_state = [pedestrian_in_ego.x,
+                                pedestrian_in_ego.y,
+                                pedestrian_in_ego.theta,
+                                pedestrian.speed]
+            pedestrian_states_curr.append(pedestrian_state)
+
+        # select smallest 3 y frenet pedestrians or add dummy pedestrians
+        # TODO: Do i have to filter for positive x like in left turn?
+        if len(pedestrian_states_curr) > 3:
+            pedestrian_states_curr = sorted(pedestrian_states_curr, lambda item: item[1])[:3]
+        elif len(pedestrian_states_curr) < 3:
+            dummy_vehicles = list(itertools.repeat(
+                dummy_vehicle, 3 - len(pedestrian_states_curr)))
+            pedestrian_states_curr += dummy_vehicles
+
+        front_vehicle_state = [front_vehicle.location_frenet.x,
+                               front_vehicle.location_frenet.y,
+                               front_vehicle.location_frenet.theta,
+                               front_vehicle.speed]
+
+        back_vehicle_state = [back_vehicle.location_frenet.x,
+                              back_vehicle.location_frenet.y,
+                              back_vehicle.location_frenet.theta,
+                              back_vehicle.speed]
+
+        # take 5 vehicles with the smalled abs frenet x from perpendicular_lane_vehs
+        perpendicular_lane_vehs_in_ego = []
+        for vehicle in perpendicular_lane_vehs:
+            veh_in_ego = vehicle.fromControlling(env_desc.cur_vehicle_state.location_frenet,
+                                                 env_desc.current_lane)
+            perpendicular_lane_vehs_in_ego.append([veh_in_ego.x,
+                                                   veh_in_ego.y,
+                                                   veh_in_ego.theta,
+                                                   vehicle.speed])
+        if len(perpendicular_lane_vehs_in_ego) > 5:
+            perpendicular_lane_vehs_in_ego = sorted(
+                perpendicular_lane_vehs_in_ego, key=lambda item: abs(item[0]))
+            perpendicular_lane_vehs_in_ego = perpendicular_lane_vehs_in_ego[:5]
+        elif len(perpendicular_lane_vehs_in_ego) < 5:
+            dummy_vehicles = list(itertools.repeat(
+                dummy_vehicle, 5 - len(perpendicular_lane_vehs_in_ego)))
+            perpendicular_lane_vehs_in_ego += dummy_vehicles
+
+        # TODO:add light statuses of the lanes
+        # concatenate all the states and lane distance
+        entire_state = ego_vehicle_state + \
+            front_vehicle_state + \
+            back_vehicle_state + \
+            [coord for state in pedestrian_states_curr for coord in state] + \
+            [coord for state in pedestrian_states_perp for coord in state] + \
+            [coord for state in perpendicular_lane_vehs_in_ego for coord in state]
+
+        assert(len(entire_state) == 56)  # TODO: Update this after adding lights
+        return np.array(entire_state
 
     def embedState(self, env_desc: EnvDesc, scenario: Scenario) -> np.ndarray:
         """
