@@ -4,18 +4,9 @@ from typing import Dict, Any, List, Tuple
 from configparser import ConfigParser
 import xml.etree.ElementTree as ET
 
-config = ConfigParser()
-config.read("config.ini")
-CARLA_PATH = config.get("main", "CARLA_PATH")
-# Enable import of 'carla'
-sys.path.append(CARLA_PATH + "PythonAPI/carla/dist/carla-0.9.9-py3.6-linux-x86_64.egg")
-
-# Enable import of utilities from GlobalPathPlanner
-sys.path.insert(0, "../../../global_route_planner/")
 
 import carla
 
-from global_planner import get_client, draw_waypoints, spawn_vehicle
 from cartesian_to_frenet import get_frenet_from_cartesian, get_path_linestring
 
 
@@ -106,12 +97,8 @@ def get_junction_roads_topology(
         predecessor_road = link.find("predecessor")
         successor_road = link.find("successor")
 
-        if predecessor_road.get("contactPoint") == "end":
-            p_ID = int(predecessor_road.get("elementId"))
-            s_ID = int(successor_road.get("elementId"))
-        else:
-            s_ID = int(predecessor_road.get("elementId"))
-            p_ID = int(successor_road.get("elementId"))
+        p_ID = int(predecessor_road.get("elementId"))
+        s_ID = int(successor_road.get("elementId"))
 
         lanes = road.findall(".//lane")
 
@@ -128,19 +115,23 @@ def get_junction_roads_topology(
             if lane_link is not None:
                 pred_lane_ID = int(lane_link.find("predecessor").get("id"))
                 succ_lane_ID = int(lane_link.find("successor").get("id"))
-                local_connections.append([pred_lane_ID, lane_ID, succ_lane_ID])
+                direction = lane.find("userData").find("vectorLane").get("travelDir")
+
+                local_connections.append(
+                    [direction, pred_lane_ID, lane_ID, succ_lane_ID]
+                )
 
             else:
-                direct_connections.append([lane_ID, lane_ID, lane_ID])
+                direct_connections.append(["forward", lane_ID, lane_ID, lane_ID])
 
         connections = []
         for item in copy.deepcopy(local_connections):
             flag = 0
             for connection in connections:
 
-                if connection[-1] == item[1] and connection[-2] == item[0]:
+                if connection[-1] == item[2] and connection[-2] == item[1]:
                     flag = 1
-                    connection.append(item[2])
+                    connection.append(item[3])
             if flag == 0:
                 connections.append(item)
 

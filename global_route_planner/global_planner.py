@@ -3,15 +3,6 @@ import sys
 from typing import Optional, List
 from configparser import ConfigParser
 
-config = ConfigParser()
-config.read("config.ini")
-CARLA_PATH = config.get("main", "CARLA_PATH")
-
-# Enable import of 'carla'
-sys.path.append(CARLA_PATH + "PythonAPI/carla/dist/carla-0.9.9-py3.6-linux-x86_64.egg")
-# Enable import of 'agents' and it's submodules
-sys.path.insert(0, CARLA_PATH + "PythonAPI/carla/")
-
 import carla
 import agents
 from agents.navigation.global_route_planner_dao import GlobalRoutePlannerDAO
