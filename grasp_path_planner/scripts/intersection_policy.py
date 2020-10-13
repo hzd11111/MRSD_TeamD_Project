@@ -222,8 +222,8 @@ class CustomIntersectionLeftTurn(DQNPolicy):
     def __init__(self, sess, ob_space, ac_space, n_env, n_steps, n_batch, reuse=False,
                  obs_phs=None, dueling=False, **kwargs):
         super(CustomIntersectionLeftTurn, self).__init__(sess, ob_space, ac_space, n_env, n_steps,
-                                                     n_batch, dueling=dueling, reuse=reuse,
-                                                     scale=False, obs_phs=obs_phs)
+                                                         n_batch, dueling=dueling, reuse=reuse,
+                                                         scale=False, obs_phs=obs_phs)
         with tf.variable_scope("model", reuse=reuse):
             veh_state_len = 7
             ped_state_len = 6
@@ -334,30 +334,30 @@ class CustomIntersectionRightTurn(DQNPolicy):
     :param _kwargs: (dict) Extra keyword arguments for the nature CNN feature extraction
     """
 
-    def embedding_net_pedestrian(self, input_vec):
+    def embedding_net_ped_perp(self, input_vec):
         out = input_vec
-        with tf.variable_scope("embedding_network_pedestrian", reuse=tf.compat.v1.AUTO_REUSE):
+        with tf.variable_scope("embedding_network_pedestrian_perp", reuse=tf.compat.v1.AUTO_REUSE):
             out = tf_layers.fully_connected(
                 out, num_outputs=32, activation_fn=tf.nn.relu)
         return out
 
-    def embedding_net_front(self, input_vec):
+    def embedding_net_ped_cur(self, input_vec):
         out = input_vec
-        with tf.variable_scope("embedding_network_front", reuse=tf.compat.v1.AUTO_REUSE):
+        with tf.variable_scope("embedding_network_pedestrian_current", reuse=tf.compat.v1.AUTO_REUSE):
             out = tf_layers.fully_connected(
                 out, num_outputs=32, activation_fn=tf.nn.relu)
         return out
 
-    def embedding_net_back(self, input_vec):
+    def embedding_net_front_back(self, input_vec):
         out = input_vec
-        with tf.variable_scope("embedding_network_back", reuse=tf.compat.v1.AUTO_REUSE):
+        with tf.variable_scope("embedding_network_front_back", reuse=tf.compat.v1.AUTO_REUSE):
             out = tf_layers.fully_connected(
                 out, num_outputs=32, activation_fn=tf.nn.relu)
         return out
 
-    def embedding_net_adjacent(self, input_vec):
+    def embedding_net_perp_veh(self, input_vec):
         out = input_vec
-        with tf.variable_scope("embedding_network_adjacent", reuse=tf.compat.v1.AUTO_REUSE):
+        with tf.variable_scope("embedding_network_perpendicular_vehicles", reuse=tf.compat.v1.AUTO_REUSE):
             out = tf_layers.fully_connected(
                 out, num_outputs=32, activation_fn=tf.nn.relu)
         return out
@@ -375,49 +375,77 @@ class CustomIntersectionRightTurn(DQNPolicy):
 
     def __init__(self, sess, ob_space, ac_space, n_env, n_steps, n_batch, reuse=False,
                  obs_phs=None, dueling=False, **kwargs):
-        super(CustomIntersectionRightTurn, self).__init__(sess, ob_space, ac_space, n_env, n_steps,
-                                                     n_batch, dueling=dueling, reuse=reuse,
-                                                     scale=False, obs_phs=obs_phs)
-
+        super(CustomIntersectionLeftTurn, self).__init__(sess, ob_space, ac_space, n_env, n_steps,
+                                                         n_batch, dueling=dueling, reuse=reuse,
+                                                         scale=False, obs_phs=obs_phs)
         with tf.variable_scope("model", reuse=reuse):
+            veh_state_len = 7
+            ped_state_len = 6
+            current_lane_len = 8
             out_ph = tf.layers.flatten(self.processed_obs)
-            embed_adjacent_vehicles = []
-            i = 0
-            # Add adjacent vehicles
-            for j in range(5):
-                embed_adjacent_vehicles.append(
-                    self.embedding_net_adjacent(
-                        tf.concat([out_ph[:, :4], out_ph[:, (i + 1) * 4:(i + 2) * 4]], axis=1)))
-                i += 1
 
             # Add front vehicle
+            front_veh_start = current_lane_len + veh_state_len
             embed_front_vehicle = []
             embed_front_vehicle.append(
-                self.embedding_net_front(
-                    tf.concat([out_ph[:, :4], out_ph[:, (i + 1) * 4:(i + 2) * 4]], axis=1)))
-            i += 1
+                self.embedding_net_front_back(
+                    tf.concat([out_ph[:, current_lane_len:current_lane_len + veh_state_len],
+                               out_ph[:, front_veh_start:front_veh_start * veh_state_len]],
+                              axis=1)))
 
             # Add back vehicle
+            back_veh_start = current_lane_len + 2 * veh_state_len
             embed_back_vehicle = []
             embed_back_vehicle.append(
-                self.embedding_net_back(
-                    tf.concat([out_ph[:, :4], out_ph[:, (i + 1) * 4:(i + 2) * 4]], axis=1)))
-            i += 1
+                self.embedding_net_front_back(
+                    tf.concat([out_ph[:, current_lane_len:current_lane_len + veh_state_len],
+                               out_ph[:, back_veh_start:back_veh_start + veh_state_len]], axis=1)))
 
             # Add pedestrians
-            embed_pedestrians = []
-            for j in range(5):
-                embed_pedestrians.append(
-                    self.embedding_net_pedestrian(
-                        tf.concat([out_ph[:, :4], out_ph[:, (i + 1) * 4:(i + 2) * 4]], axis=1)))
-                i += 1
+            cur_ped_start_index = current_lane_len + 3 * veh_state_len
+            embed_pedestrians_cur = []
+            for j in range(3):
+                embed_pedestrians_cur.append(
+                    self.embedding_net_ped_cur(
+                        tf.concat(
+                            [out_ph[:, current_lane_len:current_lane_len + veh_state_len],
+                             out_ph[:, cur_ped_start_index + j * ped_state_len:
+                                    cur_ped_start_index + (j + 1) * ped_state_len]],
+                            axis=1)))
 
-            embed_list = embed_adjacent_vehicles + embed_front_vehicle + \
-                embed_back_vehicle + embed_pedestrians
+            # Add perpendicular lane vehicles
+            perp_ped_start_index = current_lane_len + 3 * veh_state_len + 3 * ped_state_len
+            embedding_pedestrians_perp = []
+            for j in range(10):
+                embedding_pedestrians_perp.append(
+                    self.embedding_net_perpendicular(
+                        tf.concat(
+                            [out_ph[:, current_lane_len:current_lane_len + veh_state_len],
+                             out_ph[:, perp_ped_start_index + j * veh_state_len:
+                                    perp_ped_start_index + (j + 1) * veh_state_len]],
+                            axis=1)))
+
+            # Add opposite lane vehicles
+            perp_start_index = current_lane_len + 3 * veh_state_len + \
+                3 * ped_state_len + 3 * ped_state_len
+            embed_perp_lane_vehs = []
+            for j in range(10):
+                embed_perp_lane_vehs.append(
+                    self.embedding_net_opposite(
+                        tf.concat(
+                            [out_ph[:, current_lane_len:current_lane_len + veh_state_len],
+                             out_ph[:, perp_start_index + j * veh_state_len:
+                                    perp_start_index + (j + 1) * veh_state_len]],
+                            axis=1)))
+
+            # stack them and take max
+            embed_list = embed_front_vehicle + embed_back_vehicle + embed_pedestrians_cur + \
+                embedding_pedestrians_perp + embed_perp_lane_vehs
             stacked_out = tf.stack(embed_list, axis=1)
             max_out = tf.reduce_max(stacked_out, axis=1)
-            # concatenate the lane distance
-            max_out = tf.concat([max_out, out_ph[:, -1][:, None]], axis=1)
+
+            # concatenate the current_lane_status
+            max_out = tf.concat([max_out, out_ph[:, :8][:, None]], axis=1)
             q_out = self.q_net(max_out, ac_space.n)
 
         self.q_values = q_out
