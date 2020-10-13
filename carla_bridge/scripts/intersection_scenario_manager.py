@@ -10,6 +10,7 @@ from topology_extraction import (
     get_junction_topology,
     get_junction_roads_topology,
 )
+from utils import get_intersection_topology
 
 
 class IntersectionScenario:
@@ -133,8 +134,6 @@ class IntersectionScenario:
 
         synchronous_master = False
 
-        # try:
-
         settings = self.world.get_settings()
         self.traffic_manager.set_synchronous_mode(True)
         if not settings.synchronous_mode:
@@ -155,7 +154,7 @@ class IntersectionScenario:
         blueprints = [x for x in blueprints if not x.id.endswith("cybertruck")]
         blueprints = [x for x in blueprints if not x.id.endswith("t2")]
 
-        waypoints = self.world.get_map().generate_waypoints(distance=5)
+        waypoints = self.world.get_map().generate_waypoints(distance=4)
         road_waypoints = []
         for waypoint in waypoints:
             if waypoint.road_id in road_id_set:
@@ -225,6 +224,7 @@ class IntersectionScenario:
             transform.location.z += 2.0
             batch.append(
                 SpawnActor(blueprint, transform).then(SetAutopilot(FutureActor, True))
+                # SpawnActor(blueprint, transform)
             )
 
         ego_vehicle_id = None
@@ -242,7 +242,18 @@ class IntersectionScenario:
                 self.vehicles_list.append(response.actor_id)
 
         my_vehicles = self.world.get_actors(self.vehicles_list)
-        ego_vehicle = self.world.get_actors([ego_vehicle_id])
+        ego_vehicle = self.world.get_actors([ego_vehicle_id])[0]
+        waypoints = self.world.get_map().generate_waypoints(distance=1)
+
+        ego_key = (ego_road_waypoints[0].road_id, ego_road_waypoints[0].lane_id)
+
+        intersection_topology = get_intersection_topology(
+            waypoints,
+            incoming_road_lane_id_set,
+            outgoing_road_lane_id_set,
+            junction_id,
+            ego_key,
+        )
 
         for n, v in enumerate(my_vehicles):
 
@@ -261,22 +272,15 @@ class IntersectionScenario:
             else:
                 self.world.wait_for_tick()
 
+        self.client.apply_batch_sync(
+            [SetAutopilot(ego_vehicle, False)], synchronous_master
+        )
+
         print("Control handed to system....")
 
-        return ego_vehicle, my_vehicles, incoming_road_lane_id_to_outgoing_lane_id_dict
-
-        # finally:
-
-        #     if synchronous_master:
-        #         settings = self.world.get_settings()
-        #         settings.synchronous_mode = False
-        #         settings.fixed_delta_seconds = None
-        #         self.world.apply_settings(settings)
-
-        #     print("\ndestroying %d vehicles" % len(self.vehicles_list))
-        #     self.client.apply_batch(
-        #         [carla.command.DestroyActor(x) for x in self.vehicles_list]
-        #     )
-        #     self.vehicles_list = []
-
-        #     time.sleep(0.5)
+        return (
+            ego_vehicle,
+            my_vehicles,
+            incoming_road_lane_id_to_outgoing_lane_id_dict,
+            intersection_topology,
+        )
