@@ -15,6 +15,7 @@ from stable_baselines.common.cmd_util import make_vec_env
 from path_planner import PathPlannerManager
 from rl_manager import RLManager
 from lane_change_policy import CustomLaneChangePolicy
+from intersection_policy import CustomIntersectionStraight, CustomIntersectionLeftTurn, CustomIntersectionRightTurn
 from lane_following_policy import CustomLaneFollowingPolicy
 from custom_env import CustomEnv
 from options import Scenario, RLDecision
@@ -52,19 +53,19 @@ class FullPlannerManager:
                         tensorboard_log=dir_path + '/Logs/Follow', gamma=0.93, learning_rate=0.0001)
 
         if self.event == Scenario.GO_STRAIGHT:
-            model = DQN(CustomLaneFollowingPolicy, env, verbose=1,
+            model = DQN(CustomIntersectionStraight, env, verbose=1,
                         learning_starts=256, batch_size=256, exploration_fraction=0.9,
                         target_network_update_freq=100,
                         tensorboard_log=dir_path + '/Logs/Straight', gamma=0.93, learning_rate=0.0001)
 
         if self.event == Scenario.LEFT_TURN:
-            model = DQN(CustomLaneFollowingPolicy, env, verbose=1,
+            model = DQN(CustomIntersectionLeftTurn, env, verbose=1,
                         learning_starts=256, batch_size=256, exploration_fraction=0.9,
                         target_network_update_freq=100,
                         tensorboard_log=dir_path + '/Logs/LeftTurn', gamma=0.93, learning_rate=0.0001)
 
         if self.event == Scenario.RIGHT_TURN:
-            model = DQN(CustomLaneFollowingPolicy, env, verbose=1,
+            model = DQN(CustomIntersectionRightTurn, env, verbose=1,
                         learning_starts=256, batch_size=256, exploration_fraction=0.9,
                         target_network_update_freq=100,
                         tensorboard_log=dir_path + '/Logs/RightTurn', gamma=0.93, learning_rate=0.0001)
