@@ -1,4 +1,4 @@
-from options import Scenario
+from options import Scenario, TrafficLightStatus, PedestrainPriority, StopLineStatus
 from utility import EnvDesc
 import numpy as np
 import itertools
@@ -32,6 +32,36 @@ class StateManager:
             return lane.left_to_the_current and lane.adjacent_lane
         else:
             return (not lane.left_to_the_current) and lane.adjacent_lane
+
+    def createTrafficLightOneHotVec(self, light, pedestrian=False):
+        """
+        Create a light to one-hot-vec based on type of light
+        """
+        if pedestrian:
+            if light is PedestrainPriority.GREEN:
+                return [0, 0, 1]
+            elif light is PedestrainPriority.RED:
+                return [0, 1, 0]
+        else:
+            if light is TrafficLightStatus.GREEN:
+                return [0, 0, 1]
+            elif light is TrafficLightStatus.YELLOW:
+                return [0, 1, 0]
+            else:
+                return [0, 0, 1]
+
+    def createStopLineToOneHotVec(self, stop_line):
+        """
+        Create a one hot vec for stop line status
+        """
+        if stop_line is StopLineStatus.NO_STOP:
+            return [1, 0, 0, 0]
+        elif stop_line is StopLineStatus.STRAIGHT_STOP:
+            return [0, 1, 0, 0]
+        elif stop_line is StopLineStatus.LEFT_TURN_STOP:
+            return [0, 0, 1, 0]
+        elif stop_line is StopLineStatus.RIGHT_TURN_STOP:
+            return [0, 0, 0, 1]
 
     def createLaneChangeState(self, env_desc, left=True):
         """
@@ -182,7 +212,8 @@ class StateManager:
         """
         Create a state for intersection negotiation state when turning
         """
-        dummy_vehicle = [1000, 1000, 0, 0]
+        dummy_vehicle = [1000, 1000, 0, 0] + [0, 0, 1]
+        dummy_ped = [1000, 1000, 0, 0] + [0, 1]
         pedestrian_states = []
         ego_vehicle_state = [
             env_desc.cur_vehicle_state.location_frenet.x,
@@ -203,23 +234,26 @@ class StateManager:
             pedestrian_state = [pedestrian_in_ego.x,
                                 pedestrian_in_ego.y,
                                 pedestrian_in_ego.theta,
-                                pedestrian.speed]
+                                pedestrian.speed] +
+            self.createTrafficLightOneHotVec(pedestrian.priority_status, True)
             pedestrian_states.append(pedestrian_state)
 
         if len(pedestrian_states) < 3:
-            dummy_vehicles = list(itertools.repeat(
-                dummy_vehicle, 3 - len(pedestrian_states)))
-            pedestrian_states += dummy_vehicles
+            dummy_peds = list(itertools.repeat(
+                dummy_ped, 3 - len(pedestrian_states)))
+            pedestrian_states += dummy_peds
 
         front_vehicle_state = [front_vehicle.location_frenet.x,
                                front_vehicle.location_frenet.y,
                                front_vehicle.location_frenet.theta,
-                               front_vehicle.speed]
+                               front_vehicle.speed] +
+        self.createTrafficLightOneHotVec(front_vehicle.traffic_light_status)
 
         back_vehicle_state = [back_vehicle.location_frenet.x,
                               back_vehicle.location_frenet.y,
                               back_vehicle.location_frenet.theta,
-                              back_vehicle.speed]
+                              back_vehicle.speed] +
+        self.createTrafficLightOneHotVec(back_vehicle.traffic_light_status)
 
         # identify vehicles from perpendicular lanes within 20m
         # TODO: How to select within 20m. Is it frenet x, or global distance
@@ -243,7 +277,10 @@ class StateManager:
             perpendicular_lane_vehs_in_ego.append([veh_in_ego.x,
                                                    veh_in_ego.y,
                                                    veh_in_ego.theta,
-                                                   vehicle.speed])
+                                                   vehicle.speed] +
+                                                  self.createTrafficLightOneHotVec(
+                                                      vehicle.traffic_light_status))
+
         if len(perpendicular_lane_vehs_in_ego) > 10:
             perpendicular_lane_vehs_in_ego = sorted(
                 perpendicular_lane_vehs_in_ego, key=lambda item: abs(item[0]))
@@ -270,7 +307,9 @@ class StateManager:
             opposite_left_turning_lane_vehs_in_ego.append([veh_in_ego.x,
                                                            veh_in_ego.y,
                                                            veh_in_ego.theta,
-                                                           vehicle.speed])
+                                                           vehicle.speed] +
+                                                          self.createTrafficLightOneHotVec(
+                                                              vehicle.traffic_light_status))
 
         # if the number of vehicles in the opposite left_turning_lane are less than 5 add dummy
         if len(opposite_left_turning_lane_vehs_in_ego) < 5:
@@ -278,23 +317,32 @@ class StateManager:
                 dummy_vehicle, 10 - len(opposite_left_turning_lane_vehs_in_ego)))
             opposite_left_turning_lane_vehs_in_ego += dummy_vehicles
 
-        # TODO:add light statuses of the lanes
+        # Add the stop line status and segment start distance for current lane
+        current_lane_status = []
+        current_lane_status += self.createTrafficLightOneHotVec(
+            env_desc.cur_vehicle_state.traffic_light_status)
+        for point in env_desc.current_lane.lane_points:
+            if point.lane_start is True:
+                current_lane_status += self.createStopLineToOneHotVec(point.stop_line)
+                current_lane_status += point.frenet_pose.x
+                break
         # concatenate all the states and lane distance
-        entire_state = ego_vehicle_state + \
+        entire_state = current_lane_status + ego_vehicle_state + \
             front_vehicle_state + \
             back_vehicle_state + \
             [coord for state in pedestrian_states for coord in state] + \
             [coord for state in perpendicular_lane_vehs_in_ego for coord in state] + \
             [coord for state in opposite_left_turning_lane_vehs_in_ego for coord in state]
 
-        assert(len(entire_state) == 84)
+        assert(len(entire_state) == 149)
         return np.array(entire_state)
 
     def createIntersectionLeftTurnState(env_desc):
         """
         Create a state for intersection when taking a left turn
         """
-        dummy_vehicle = [1000, 1000, 0, 0]
+        dummy_vehicle = [1000, 1000, 0, 0] + [0, 0, 1]
+        dummy_ped = [1000, 1000, 0, 0] + [0, 1]
         pedestrian_states = []
         ego_vehicle_state = [
             env_desc.cur_vehicle_state.location_frenet.x,
@@ -318,7 +366,8 @@ class StateManager:
                     pedestrian_state = [pedestrian_in_ego.x,
                                         pedestrian_in_ego.y,
                                         pedestrian_in_ego.theta,
-                                        pedestrian.speed]
+                                        pedestrian.speed] +
+                    self.createTrafficLightOneHotVec(pedestrian.priority_status, True)
                     pedestrian_states.append(pedestrian_state)
 
         # filter out pedestrians with negative x frenet
@@ -327,19 +376,21 @@ class StateManager:
         if len(pedestrian_states) > 3:
             pedestrian_states = sorted(pedestrian_states, lambda item: item[1])[:3]
         elif len(pedestrian_states) < 3:
-            dummy_vehicles = list(itertools.repeat(
-                dummy_vehicle, 3 - len(pedestrian_states)))
-            pedestrian_states += dummy_vehicles
+            dummy_peds = list(itertools.repeat(
+                dummy_ped, 3 - len(pedestrian_states)))
+            pedestrian_states += dummy_peds
 
         front_vehicle_state = [front_vehicle.location_frenet.x,
                                front_vehicle.location_frenet.y,
                                front_vehicle.location_frenet.theta,
-                               front_vehicle.speed]
+                               front_vehicle.speed] +
+        self.createTrafficLightOneHotVec(front_vehicle.traffic_light_status)
 
         back_vehicle_state = [back_vehicle.location_frenet.x,
                               back_vehicle.location_frenet.y,
                               back_vehicle.location_frenet.theta,
-                              back_vehicle.speed]
+                              back_vehicle.speed] +
+        self.createTrafficLightOneHotVec(back_vehicle.traffic_light_status)
 
         # identify vehicles from perpendicular lanes within 20m
         # TODO: How to select within 20m. Is it frenet x, or global distance
@@ -363,7 +414,9 @@ class StateManager:
             perpendicular_lane_vehs_in_ego.append([veh_in_ego.x,
                                                    veh_in_ego.y,
                                                    veh_in_ego.theta,
-                                                   vehicle.speed])
+                                                   vehicle.speed] +
+                                                  self.createTrafficLightOneHotVec(
+                                                      vehicle.traffic_light_status))
         if len(perpendicular_lane_vehs_in_ego) > 10:
             perpendicular_lane_vehs_in_ego = sorted(
                 perpendicular_lane_vehs_in_ego, key=lambda item: abs(item[0]))
@@ -383,7 +436,9 @@ class StateManager:
             parallel_lane_vehs_in_ego.append([veh_in_ego.x,
                                               veh_in_ego.y,
                                               veh_in_ego.theta,
-                                              vehicle.speed])
+                                              vehicle.speed] +
+                                             self.createTrafficLightOneHotVec(
+                                                 vehicle.traffic_light_status))
 
         # filter out vehicles with negative x frenet
         parallel_lane_vehs_in_ego = filter(lambda item: item >= 0, parallel_lane_vehs_in_ego)
@@ -395,9 +450,26 @@ class StateManager:
                 dummy_vehicle, 10 - len(parallel_lane_vehs_in_ego)))
             parallel_lane_vehs_in_ego += dummy_vehicles
 
-        # TODO:add light statuses of the lanes
+        # get the stopline distance, light status and merging lane distance
+        current_lane_status = []
+        current_lane_status += self.createTrafficLightOneHotVec(
+            env_desc.cur_vehicle_state.traffic_light_status)
+        for point in env_desc.current_lane.lane_points:
+            if point.lane_start is True:
+                current_lane_status += self.createStopLineToOneHotVec(point.stop_line)
+                break
+        # get the merging distance
+        min_merging_dist = 1e5
+        for lane in env_desc.next_intersection:
+            if lane.directed_right is False:
+                for point in lane.lane_points:
+                    if point.lane_start is True:
+                        if min_merging_dist > point.location_frenet.x:
+                            min_merging_dist = point.location_frenet.x
+                        break
+        current_lane_status += min_merging_dist
         # concatenate all the states and lane distance
-        entire_state = ego_vehicle_state + \
+        entire_state = current_lane_status + ego_vehicle_state + \
             front_vehicle_state + \
             back_vehicle_state + \
             [coord for state in pedestrian_states for coord in state] + \
@@ -411,7 +483,8 @@ class StateManager:
         """
         Create a state for intersection when taking a right turn
         """
-        dummy_vehicle = [1000, 1000, 0, 0]
+        dummy_vehicle = [1000, 1000, 0, 0] + [0, 0, 1]
+        dummy_ped = [1000, 1000, 0, 0] + [0, 1]
         pedestrian_states_perp = []
         pedestrian_states_curr = []
         perpendicular_lane_vehs = []
@@ -437,7 +510,8 @@ class StateManager:
                     pedestrian_state = [pedestrian_in_ego.x,
                                         pedestrian_in_ego.y,
                                         pedestrian_in_ego.theta,
-                                        pedestrian.speed]
+                                        pedestrian.speed] +
+                    self.createTrafficLightOneHotVec(pedestrian.priority_status, True)
                     pedestrian_states_perp.append(pedestrian_state)
                 # identify vehicles from perpendicular lanes within 20m
                 # TODO: How to select within 20m. Is it frenet x, or global distance
@@ -449,9 +523,9 @@ class StateManager:
         if len(pedestrian_states_perp) > 3:
             pedestrian_states_perp = sorted(pedestrian_states_perp, lambda item: item[1])[:3]
         elif len(pedestrian_states_perp) < 3:
-            dummy_vehicles = list(itertools.repeat(
-                dummy_vehicle, 3 - len(pedestrian_states_perp)))
-            pedestrian_states_perp += dummy_vehicles
+            dummy_peds = list(itertools.repeat(
+                dummy_ped, 3 - len(pedestrian_states_perp)))
+            pedestrian_states_perp += dummy_peds
 
         # select pedestrians from current_lane
         for pedestrian in env_desc.current_lane:
@@ -461,7 +535,8 @@ class StateManager:
             pedestrian_state = [pedestrian_in_ego.x,
                                 pedestrian_in_ego.y,
                                 pedestrian_in_ego.theta,
-                                pedestrian.speed]
+                                pedestrian.speed] +
+            self.createTrafficLightOneHotVec(pedestrian.priority_status, True)
             pedestrian_states_curr.append(pedestrian_state)
 
         # select smallest 3 y frenet pedestrians or add dummy pedestrians
@@ -469,19 +544,21 @@ class StateManager:
         if len(pedestrian_states_curr) > 3:
             pedestrian_states_curr = sorted(pedestrian_states_curr, lambda item: item[1])[:3]
         elif len(pedestrian_states_curr) < 3:
-            dummy_vehicles = list(itertools.repeat(
-                dummy_vehicle, 3 - len(pedestrian_states_curr)))
-            pedestrian_states_curr += dummy_vehicles
+            dummy_peds = list(itertools.repeat(
+                dummy_ped, 3 - len(pedestrian_states_curr)))
+            pedestrian_states_curr += dummy_peds
 
         front_vehicle_state = [front_vehicle.location_frenet.x,
                                front_vehicle.location_frenet.y,
                                front_vehicle.location_frenet.theta,
-                               front_vehicle.speed]
+                               front_vehicle.speed] +
+        self.createTrafficLightOneHotVec(front_vehicle.traffic_light_status)
 
         back_vehicle_state = [back_vehicle.location_frenet.x,
                               back_vehicle.location_frenet.y,
                               back_vehicle.location_frenet.theta,
-                              back_vehicle.speed]
+                              back_vehicle.speed] +
+        self.createTrafficLightOneHotVec(back_vehicle.traffic_light_status)
 
         # take 5 vehicles with the smalled abs frenet x from perpendicular_lane_vehs
         perpendicular_lane_vehs_in_ego = []
@@ -491,7 +568,10 @@ class StateManager:
             perpendicular_lane_vehs_in_ego.append([veh_in_ego.x,
                                                    veh_in_ego.y,
                                                    veh_in_ego.theta,
-                                                   vehicle.speed])
+                                                   vehicle.speed] +
+                                                  self.createTrafficLightOneHotVec(
+                                                      vehicle.traffic_light_status))
+
         if len(perpendicular_lane_vehs_in_ego) > 5:
             perpendicular_lane_vehs_in_ego = sorted(
                 perpendicular_lane_vehs_in_ego, key=lambda item: abs(item[0]))
@@ -501,9 +581,27 @@ class StateManager:
                 dummy_vehicle, 5 - len(perpendicular_lane_vehs_in_ego)))
             perpendicular_lane_vehs_in_ego += dummy_vehicles
 
-        # TODO:add light statuses of the lanes
+        # get the stopline distance, light status and merging lane distance
+        current_lane_status = []
+        current_lane_status += self.createTrafficLightOneHotVec(
+            env_desc.cur_vehicle_state.traffic_light_status)
+        for point in env_desc.current_lane.lane_points:
+            if point.lane_start is True:
+                current_lane_status += self.createStopLineToOneHotVec(point.stop_line)
+                break
+        # get the merging distance
+        min_merging_dist = 1e5
+        for lane in env_desc.next_intersection:
+            if lane.directed_right is False:
+                for point in lane.lane_points:
+                    if point.lane_start is True:
+                        if min_merging_dist > point.location_frenet.x:
+                            min_merging_dist = point.location_frenet.x
+                        break
+        current_lane_status += min_merging_dist
+
         # concatenate all the states and lane distance
-        entire_state = ego_vehicle_state + \
+        entire_state = current_lane_status + ego_vehicle_state + \
             front_vehicle_state + \
             back_vehicle_state + \
             [coord for state in pedestrian_states_curr for coord in state] + \
