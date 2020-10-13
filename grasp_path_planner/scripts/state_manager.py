@@ -372,7 +372,7 @@ class StateManager:
 
         # filter out pedestrians with negative x frenet
         pedestrian_states = filter(lambda item: item[0] >= 0, pedestrian_states)
-        # select top3 or add dummy pedestrians
+        # select top 3 or add dummy pedestrians
         if len(pedestrian_states) > 3:
             pedestrian_states = sorted(pedestrian_states, lambda item: item[1])[:3]
         elif len(pedestrian_states) < 3:
