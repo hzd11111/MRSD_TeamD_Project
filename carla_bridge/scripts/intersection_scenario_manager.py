@@ -41,7 +41,9 @@ class IntersectionScenario:
         self.walkers_list = []
 
         if junction_id is None:
-            junction_id, _ = random.choice(list(self.junction_topology.items()))
+            junction_id, _ = random.choice(
+                [53]  # , 905, 599, 965]
+            )  # random.choice(list(self.junction_topology.items()))
         print("generating scenario at junction id: ", junction_id)
 
         incoming_road_lane_id_set = set([])
@@ -132,10 +134,10 @@ class IntersectionScenario:
                 set(incoming_road_lane_id_to_outgoing_lane_id_dict[key])
             )
 
-        synchronous_master = False
+        synchronous_master = True
 
         # settings = self.world.get_settings()
-        # self.traffic_manager.set_synchronous_mode(True)
+        self.traffic_manager.set_synchronous_mode(True)
         # if not settings.synchronous_mode:
         #     synchronous_master = True
         #     settings.synchronous_mode = True
@@ -201,8 +203,8 @@ class IntersectionScenario:
             transform = t.transform
             transform.location.z += 2.0
             ego_batch.append(
-                # SpawnActor(blueprint, transform).then(SetAutopilot(FutureActor, True))
-                SpawnActor(blueprint, transform)
+                SpawnActor(blueprint, transform).then(SetAutopilot(FutureActor, True))
+                # SpawnActor(blueprint, transform)
             )
 
         for n, t in enumerate(road_waypoints):
@@ -223,8 +225,8 @@ class IntersectionScenario:
             transform = t.transform
             transform.location.z += 2.0
             batch.append(
-                # SpawnActor(blueprint, transform).then(SetAutopilot(FutureActor, True))
-                SpawnActor(blueprint, transform)
+                SpawnActor(blueprint, transform).then(SetAutopilot(FutureActor, True))
+                # SpawnActor(blueprint, transform)
             )
 
         ego_vehicle_id = None
@@ -265,26 +267,26 @@ class IntersectionScenario:
             incoming_road_lane_id_to_outgoing_lane_id_dict,
         )
 
-        for n, v in enumerate(my_vehicles):
+        # for n, v in enumerate(my_vehicles):
 
-            self.traffic_manager.auto_lane_change(v, False)
-            if follow_traffic_rules is not True:
-                print("breaking traffic rules")
-                self.traffic_manager.auto_lane_change(v, True)
-                self.traffic_manager.ignore_lights_percentage(v, 100)
-                self.traffic_manager.distance_to_leading_vehicle(v, 1)
+        #     self.traffic_manager.auto_lane_change(v, False)
+        #     if follow_traffic_rules is not True:
+        #         print("breaking traffic rules")
+        #         self.traffic_manager.auto_lane_change(v, True)
+        #         self.traffic_manager.ignore_lights_percentage(v, 100)
+        #         self.traffic_manager.distance_to_leading_vehicle(v, 1)
 
-        # warm_start_curr = 0
-        # while warm_start_curr < warm_start_duration:
-        #     warm_start_curr += 0.1
-        #     if synchronous_master:
-        #         self.world.tick()
-        #     else:
-        #         self.world.wait_for_tick()
+        warm_start_curr = 0
+        while warm_start_curr < warm_start_duration:
+            warm_start_curr += 0.1
+            if synchronous_master:
+                self.world.tick()
+            else:
+                self.world.wait_for_tick()
 
-        # self.client.apply_batch_sync(
-        #     [SetAutopilot(ego_vehicle, False)], synchronous_master
-        # )
+        self.client.apply_batch_sync(
+            [SetAutopilot(ego_vehicle, False)], synchronous_master
+        )
 
         print("Control handed to system....")
 

@@ -252,6 +252,120 @@ class CarlaHandler:
 
         return Pose2D(x=x, y=y, theta=theta)
 
+    def get_actors(self, all_vehicles, road_id, lane_id):
+
+        filtered_actors = []
+
+        for actor in all_vehicles:
+            actor_nearest_waypoint = self.world_map.get_waypoint(
+                actor.get_location(), project_to_road=True
+            )
+            if (
+                actor_nearest_waypoint.road_id == road_id
+                and actor_nearest_waypoint.lane_id == lane_id
+            ):
+                filtered_actors.append(actor)
+
+        return filtered_actors
+
+    def get_lane_info(self, all_vehicles, lane_list, ego_road_lane_ID_pair=None):
+
+        full_info = []
+        ego_lane_info = []
+
+        for elem in lane_list:
+
+            if len(elem) == 2:
+                this_connection_waypoints = self.filter_waypoints(
+                    self.all_waypoints, elem[0], elem[1]
+                )
+                this_connection_actors = self.get_actors(all_vehicles, elem[0], elem[1])
+            else:
+                this_connection_waypoints = self.filter_waypoints(
+                    self.all_waypoints, elem[0][0], elem[0][1]
+                )
+                this_connection_actors = self.get_actors(
+                    all_vehicles, elem[0][0], elem[0][1]
+                )
+
+                this_connection_waypoints.extend(
+                    self.filter_waypoints(self.all_waypoints, elem[1][0], elem[1][1])
+                )
+                this_connection_actors.extend(
+                    self.get_actors(all_vehicles, elem[1][0], elem[1][1])
+                )
+
+                this_connection_waypoints.extend(
+                    self.filter_waypoints(self.all_waypoints, elem[2][0], elem[2][1])
+                )
+                this_connection_actors.extend(
+                    self.get_actors(all_vehicles, elem[2][0], elem[2][1])
+                )
+
+                this_connection_actors = [
+                    Vehicle(self.world, vehicle.id)
+                    for vehicle in this_connection_actors
+                ]
+                this_connection_waypoints = [
+                    LanePoint(global_pose=self.waypoint_to_pose2D(wp))
+                    for wp in this_connection_waypoints
+                ]
+                # HACK
+                for i in range(len(this_connection_waypoints)):
+                    pose = this_connection_waypoints[i].global_pose
+                    this_connection_waypoints[i].frenet_pose = Frenet(
+                        x=pose.x, y=pose.y, theta=pose.theta
+                    )
+                for i in range(len(this_connection_actors)):
+                    pose = this_connection_actors[i].location_global
+                    this_connection_actors[i].frenet_pose = Frenet(
+                        x=pose.x, y=pose.y, theta=pose.theta
+                    )
+
+            if ego_road_lane_ID_pair is not None and ego_road_lane_ID_pair in elem:
+                ego_lane_info.append(
+                    [this_connection_actors, this_connection_waypoints]
+                )
+            else:
+                full_info.append([this_connection_actors, this_connection_waypoints])
+
+        return full_info, ego_lane_info
+
+    def get_state_information_intersection(
+        self,
+        ego_vehicle=None,
+        ego_road_lane_ID_pair=None,
+        intersection_topology=None,
+    ):
+
+        (
+            intersecting_left,
+            intersecting_right,
+            parallel_same_dir,
+            parallel_opposite_dir,
+        ) = intersection_topology
+
+        all_vehicles = self.world.get_actors().filter("vehicle.*")
+
+        intersecting_left_info, _ = self.get_lane_info(all_vehicles, intersecting_left)
+        intersecting_right_info, _ = self.get_lane_info(
+            all_vehicles, intersecting_right
+        )
+        parallel_same_dir_info, ego_lane_info = self.get_lane_info(
+            all_vehicles, parallel_same_dir, ego_road_lane_ID_pair
+        )
+        parallel_opposite_dir_info, _ = self.get_lane_info(
+            all_vehicles, parallel_opposite_dir
+        )
+
+        return (
+            intersecting_left_info,
+            intersecting_right_info,
+            parallel_same_dir_info,
+            parallel_opposite_dir_info,
+            ego_lane_info,
+        )
+
     def get_state_information_new(
         self,
         ego_vehicle=None,
@@ -267,27 +381,6 @@ class CarlaHandler:
             nearest_waypoint = self.world_map.get_waypoint(
                 ego_vehicle_location, project_to_road=True
             )
-
-            # current_lane_waypoints_ = self.get_next_waypoints(nearest_waypoint, k=300)[
-            #     ::-1
-            # ]
-            # left_lane_waypoints_ = self.get_next_waypoints(
-            #     nearest_waypoint.get_left_lane(), k=300
-            # )[
-            #     ::-1
-            # ]  # +
-            # right_lane_waypoints_ = self.get_next_waypoints(
-            #     nearest_waypoint.get_right_lane(), k=300
-            # )[
-            #     ::-1
-            # ]  # +
-
-            # self.draw_waypoints(current_lane_waypoints, life_time=5)
-            # self.draw_waypoints(left_lane_waypoints, life_time=5, color=True)
-
-            # left_lane_ids = list(set([wp.lane_id for wp in left_lane_waypoints_]))
-            # current_lane_ids = list(set([wp.lane_id for wp in current_lane_waypoints_]))
-            # right_lane_ids = list(set([wp.lane_id for wp in right_lane_waypoints_]))
 
             current_lane_waypoints = self.filter_waypoints(
                 self.all_waypoints, nearest_waypoint.road_id, nearest_waypoint.lane_id

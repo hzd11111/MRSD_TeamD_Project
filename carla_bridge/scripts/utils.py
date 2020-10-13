@@ -277,7 +277,7 @@ def get_angles(ego_key, road_lane_to_init_point):
 
         curr_angle = angle(ego_vec, vec)
 
-        if abs(curr_angle) < 0.01:
+        if abs(curr_angle) < 0.1:
             curr_angle = angle2(ego_vec, vec)
 
         out[key] = curr_angle
@@ -295,14 +295,22 @@ def get_parallel_and_perpendicular_keys(ego_key, road_lane_to_init_point):
     parallel_opposite_direction_keys = []
 
     for key in angles_with_other_lanes:
+        # print(angles_with_other_lanes[key])
         if (abs(angles_with_other_lanes[key])) < 0.1:
             parallel_same_direction_keys.append(key)
+            # print("Same", key)
+
         elif abs(angles_with_other_lanes[key]) >= 3:
             parallel_opposite_direction_keys.append(key)
+            # print("Opposite", key)
+
         elif angles_with_other_lanes[key] > 0.1 and angles_with_other_lanes[key] < 3:
             perpendicular_right_keys.append(key)
+            # print("right", key)
+
         elif angles_with_other_lanes[key] < -0.1 and angles_with_other_lanes[key] > -3:
             perpendicular_left_keys.append(key)
+            # print("left", key)
 
     return (
         perpendicular_left_keys,
