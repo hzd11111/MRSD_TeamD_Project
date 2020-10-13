@@ -10,7 +10,7 @@ from topology_extraction import (
     get_junction_topology,
     get_junction_roads_topology,
 )
-from utils import get_intersection_topology
+from utils import get_intersection_topology, get_full_lanes
 
 
 class IntersectionScenario:
@@ -134,15 +134,15 @@ class IntersectionScenario:
 
         synchronous_master = False
 
-        settings = self.world.get_settings()
-        self.traffic_manager.set_synchronous_mode(True)
-        if not settings.synchronous_mode:
-            synchronous_master = True
-            settings.synchronous_mode = True
-            settings.fixed_delta_seconds = 0.05
-            self.world.apply_settings(settings)
-        else:
-            synchronous_master = False
+        # settings = self.world.get_settings()
+        # self.traffic_manager.set_synchronous_mode(True)
+        # if not settings.synchronous_mode:
+        #     synchronous_master = True
+        #     settings.synchronous_mode = True
+        #     settings.fixed_delta_seconds = 0.05
+        #     self.world.apply_settings(settings)
+        # else:
+        #     synchronous_master = False
 
         blueprints = self.world.get_blueprint_library().filter("vehicle.*")
 
@@ -201,8 +201,8 @@ class IntersectionScenario:
             transform = t.transform
             transform.location.z += 2.0
             ego_batch.append(
-                SpawnActor(blueprint, transform).then(SetAutopilot(FutureActor, True))
-                # SpawnActor(blueprint, transform)
+                # SpawnActor(blueprint, transform).then(SetAutopilot(FutureActor, True))
+                SpawnActor(blueprint, transform)
             )
 
         for n, t in enumerate(road_waypoints):
@@ -223,8 +223,8 @@ class IntersectionScenario:
             transform = t.transform
             transform.location.z += 2.0
             batch.append(
-                SpawnActor(blueprint, transform).then(SetAutopilot(FutureActor, True))
-                # SpawnActor(blueprint, transform)
+                # SpawnActor(blueprint, transform).then(SetAutopilot(FutureActor, True))
+                SpawnActor(blueprint, transform)
             )
 
         ego_vehicle_id = None
@@ -255,6 +255,16 @@ class IntersectionScenario:
             ego_key,
         )
 
+        # Adding ego key to parallel lane same dir list
+        intersection_topology[2].append(ego_key)
+        intersection_topology = get_full_lanes(
+            intersection_topology[0],
+            intersection_topology[1],
+            intersection_topology[2],
+            intersection_topology[3],
+            incoming_road_lane_id_to_outgoing_lane_id_dict,
+        )
+
         for n, v in enumerate(my_vehicles):
 
             self.traffic_manager.auto_lane_change(v, False)
@@ -264,17 +274,17 @@ class IntersectionScenario:
                 self.traffic_manager.ignore_lights_percentage(v, 100)
                 self.traffic_manager.distance_to_leading_vehicle(v, 1)
 
-        warm_start_curr = 0
-        while warm_start_curr < warm_start_duration:
-            warm_start_curr += 0.1
-            if synchronous_master:
-                self.world.tick()
-            else:
-                self.world.wait_for_tick()
+        # warm_start_curr = 0
+        # while warm_start_curr < warm_start_duration:
+        #     warm_start_curr += 0.1
+        #     if synchronous_master:
+        #         self.world.tick()
+        #     else:
+        #         self.world.wait_for_tick()
 
-        self.client.apply_batch_sync(
-            [SetAutopilot(ego_vehicle, False)], synchronous_master
-        )
+        # self.client.apply_batch_sync(
+        #     [SetAutopilot(ego_vehicle, False)], synchronous_master
+        # )
 
         print("Control handed to system....")
 
@@ -283,4 +293,5 @@ class IntersectionScenario:
             my_vehicles,
             incoming_road_lane_id_to_outgoing_lane_id_dict,
             intersection_topology,
+            ego_key,
         )

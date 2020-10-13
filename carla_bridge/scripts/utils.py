@@ -385,3 +385,83 @@ def get_intersection_topology(
                 continue
 
     return get_parallel_and_perpendicular_keys(ego_key, road_lane_to_init_point)
+
+
+def get_full_lanes(
+    intersecting_left,
+    intersecting_right,
+    parallel_same_dir,
+    parallel_opposite_dir,
+    incoming_road_lane_id_to_outgoing_lane_id_dict,
+):
+
+    full_parallel_opposite_dir = []
+
+    for key in parallel_opposite_dir:
+
+        if key not in incoming_road_lane_id_to_outgoing_lane_id_dict:
+            continue
+
+        for elem in incoming_road_lane_id_to_outgoing_lane_id_dict[key]:
+            if (elem[0], elem[1]) in parallel_opposite_dir:
+                full_parallel_opposite_dir.append(
+                    [key, (elem[2], elem[3][0]), (elem[0], elem[1])]
+                )
+
+    if len(full_parallel_opposite_dir) == 0:
+        full_parallel_opposite_dir = parallel_opposite_dir
+
+    full_parallel_same_dir = []
+
+    for key in parallel_same_dir:
+
+        if key not in incoming_road_lane_id_to_outgoing_lane_id_dict:
+            continue
+
+        for elem in incoming_road_lane_id_to_outgoing_lane_id_dict[key]:
+            if (elem[0], elem[1]) in parallel_same_dir:
+                full_parallel_same_dir.append(
+                    [key, (elem[2], elem[3][0]), (elem[0], elem[1])]
+                )
+
+    if len(full_parallel_same_dir) == 0:
+        full_parallel_same_dir = parallel_same_dir
+
+    full_intersecting_right = []
+
+    for key in intersecting_right:
+
+        if key not in incoming_road_lane_id_to_outgoing_lane_id_dict:
+            continue
+
+        for elem in incoming_road_lane_id_to_outgoing_lane_id_dict[key]:
+            if (elem[0], elem[1]) in intersecting_right:
+                full_intersecting_right.append(
+                    [key, (elem[2], elem[3][0]), (elem[0], elem[1])]
+                )
+
+    if len(full_intersecting_right) == 0:
+        full_intersecting_right = intersecting_right
+
+    full_intersecting_left = []
+
+    for key in intersecting_left:
+
+        if key not in incoming_road_lane_id_to_outgoing_lane_id_dict:
+            continue
+
+        for elem in incoming_road_lane_id_to_outgoing_lane_id_dict[key]:
+            if (elem[0], elem[1]) in intersecting_left:
+                full_intersecting_left.append(
+                    [key, (elem[2], elem[3][0]), (elem[0], elem[1])]
+                )
+
+    if len(full_intersecting_left) == 0:
+        full_intersecting_left = intersecting_left
+
+    return (
+        full_intersecting_left,
+        full_intersecting_right,
+        full_parallel_same_dir,
+        full_parallel_opposite_dir,
+    )
