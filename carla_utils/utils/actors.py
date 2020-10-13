@@ -120,8 +120,10 @@ class Actor:
         """
         Gets the distance from the ego/controlling vehicle in frenet coordinate frame
         """
-
-        current_global_pose = self.get_state_dict()["Pose2D"]
+        if self.actor is None:
+            current_global_pose = self.location_global
+        else:
+            current_global_pose = self.get_state_dict()["Pose2D"]
 
         current_frenet_pose = current_lane.GlobalToFrenet(current_global_pose)
 
