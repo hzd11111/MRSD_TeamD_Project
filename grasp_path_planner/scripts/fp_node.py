@@ -43,23 +43,39 @@ class FullPlannerManager:
             model = DQN(CustomLaneChangePolicy, env, verbose=1,
                         learning_starts=256, batch_size=16,
                         exploration_fraction=0.9, target_network_update_freq=100,
-                        tensorboard_log=dir_path + '/Logs/')
+                        tensorboard_log=dir_path + '/Logs/LaneChange')
 
         if self.event == Scenario.LANE_FOLLOWING:
             model = DQN(CustomLaneFollowingPolicy, env, verbose=1,
                         learning_starts=256, batch_size=256, exploration_fraction=0.9,
                         target_network_update_freq=100,
-                        tensorboard_log=dir_path + '/Logs/Ped', gamma=0.93, learning_rate=0.0001)
+                        tensorboard_log=dir_path + '/Logs/Follow', gamma=0.93, learning_rate=0.0001)
+
+        if self.event == Scenario.GO_STRAIGHT:
+            model = DQN(CustomLaneFollowingPolicy, env, verbose=1,
+                        learning_starts=256, batch_size=256, exploration_fraction=0.9,
+                        target_network_update_freq=100,
+                        tensorboard_log=dir_path + '/Logs/Straight', gamma=0.93, learning_rate=0.0001)
+
+        if self.event == Scenario.LEFT_TURN:
+            model = DQN(CustomLaneFollowingPolicy, env, verbose=1,
+                        learning_starts=256, batch_size=256, exploration_fraction=0.9,
+                        target_network_update_freq=100,
+                        tensorboard_log=dir_path + '/Logs/LeftTurn', gamma=0.93, learning_rate=0.0001)
+
+        if self.event == Scenario.RIGHT_TURN:
+            model = DQN(CustomLaneFollowingPolicy, env, verbose=1,
+                        learning_starts=256, batch_size=256, exploration_fraction=0.9,
+                        target_network_update_freq=100,
+                        tensorboard_log=dir_path + '/Logs/RightTurn', gamma=0.93, learning_rate=0.0001)
+
         model.learn(total_timesteps=20000)
         model.save(MODEL_SAVE_PATH)
 
     def run_test(self):
         env = CustomEnv(self.path_planner, self.behavior_planner, event)
         env = make_vec_env(lambda: env, n_envs=1)
-        if(self.event == Scenario.SWITCH_LANE_LEFT):
-            model = DQN.load(MODEL_LOAD_PATH)
-        if(self.event == Scenario.PEDESTRIAN):
-            model = DQN.load(MODEL_LOAD_PATH)
+        model = DQN.load(MODEL_LOAD_PATH)
         obs = env.reset()
         count = 0
         success = 0
