@@ -38,3 +38,4 @@ TO RUN:
 * sync settings and options
 * Fix convertdecision based on the new enum in rl_manager.py
 * Remove Pedestrian from scenario manager and settings
+* Add init after new

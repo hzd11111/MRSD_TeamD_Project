@@ -85,7 +85,6 @@ class StateManager:
             if self.selectLane(lane, left):
                 # Add relevant vehicles
                 for vehicle in lane.lane_vehicles:
-                    # import ipdb; ipdb.set_trace()
                     vehicle_in_ego = vehicle.fromControllingVehicle(
                         env_desc.cur_vehicle_state.location_frenet,
                         env_desc.current_lane)

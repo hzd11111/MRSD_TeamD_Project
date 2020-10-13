@@ -51,6 +51,7 @@ class Actor:
     @classmethod
     def fromRosMsg(cls, actor_msg):
         obj = cls.__new__(cls)
+        obj.__init__()
         obj.speed = actor_msg.speed
         obj.acceleration = actor_msg.acceleration
         obj.location_global = Pose2D.fromRosMsg(actor_msg.location_global)
