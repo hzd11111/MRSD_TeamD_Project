@@ -43,6 +43,8 @@ from utility import (
     PerpendicularLane,
     LanePoint,
     PathPlan,
+    GlobalPathPoint,
+    GlobalPath,
 )
 from functional_utility import Pose2D, Frenet
 
@@ -97,6 +99,7 @@ class CarlaManager:
         self.intersection_connections = None
         self.adjacent_lanes = None
         self.next_insersection = None
+        self.global_path_in_intersection = None
 
     def pathRequest(self, data):
 
@@ -230,6 +233,12 @@ class CarlaManager:
 
         next_intersection = copy.copy(self.next_insersection)
 
+        global_path = [
+            self.waypoint_to_pose2D(wp) for wp in self.global_path_in_intersection
+        ]
+        global_path = [GlobalPathPoint(global_pose=pose) for pose in global_path]
+        global_path = GlobalPath(path_points=global_path)
+
         # ego_vehicle_frenet_pose = lane_cur.GlobalToFrenet(vehicle_ego.location_global)
 
         # # Update Frenet Coordinates: Vehicles
@@ -262,10 +271,6 @@ class CarlaManager:
         # lane_cur.ego_offset = ego_vehicle_frenet_pose.x
         # vehicle_ego.location_frenet.x = 0
 
-        # import ipdb
-
-        # ipdb.set_trace()
-
         self.speed_limit = 25
 
         # print("\n")
@@ -284,6 +289,12 @@ class CarlaManager:
         env_desc.next_intersection = next_intersection
         env_desc.speed_limit = self.speed_limit
         env_desc.reward_info = reward_info
+        env_desc.global_path = global_path
+
+        # import ipdb
+
+        # ipdb.set_trace()
+
         return SimServiceResponse(env_desc.toRosMsg())
 
     def destroy_actors_and_sensors(self):
@@ -302,6 +313,14 @@ class CarlaManager:
 
     def collision_handler(self, event):
         self.collision_marker = 1
+
+    def waypoint_to_pose2D(self, waypoint):
+
+        x = waypoint.transform.location.x
+        y = waypoint.transform.location.y
+        theta = waypoint.transform.rotation.yaw * np.pi / 180
+
+        return Pose2D(x=x, y=y, theta=theta)
 
     def update_frenet(self, ego_frenet, vehicle_list, current_lane):
         for i in range(len(vehicle_list)):
@@ -330,6 +349,7 @@ class CarlaManager:
                 self.intersection_connections,
                 self.intersection_topology,
                 self.ego_start_road_lane_pair,
+                self.global_path_in_intersection,
             ) = self.tm.reset(num_vehicles=10, junction_id=53, warm_start_duration=15)
             ## Handing over control
             del self.collision_sensor

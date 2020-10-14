@@ -290,10 +290,34 @@ class IntersectionScenario:
 
         print("Control handed to system....")
 
+        connecting_elem = incoming_road_lane_id_to_outgoing_lane_id_dict[ego_key][0]
+
+        connection_key = (connecting_elem[2], connecting_elem[3][0])
+        next_road_key = (connecting_elem[0], connecting_elem[1])
+
+        ego_wps = [
+            wp
+            for wp in waypoints
+            if wp.road_id == ego_key[0] and wp.lane_id == ego_key[1]
+        ]
+        connection_wps = [
+            wp
+            for wp in waypoints
+            if wp.road_id == connection_key[0] and wp.lane_id == connection_key[1]
+        ]
+        next_wps = [
+            wp
+            for wp in waypoints
+            if wp.road_id == next_road_key[0] and wp.lane_id == next_road_key[1]
+        ]
+
+        global_path_wps = ego_wps + connection_wps + next_wps
+
         return (
             ego_vehicle,
             my_vehicles,
             incoming_road_lane_id_to_outgoing_lane_id_dict,
             intersection_topology,
             ego_key,
+            global_path_wps,
         )
