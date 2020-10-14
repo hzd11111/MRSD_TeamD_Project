@@ -236,7 +236,7 @@ class CustomIntersectionLeftTurn(DQNPolicy):
             embed_front_vehicle.append(
                 self.embedding_net_front_back(
                     tf.concat([out_ph[:, current_lane_len:current_lane_len + veh_state_len],
-                               out_ph[:, front_veh_start:front_veh_start * veh_state_len]],
+                               out_ph[:, front_veh_start:front_veh_start + veh_state_len]],
                               axis=1)))
 
             # Add back vehicle
@@ -263,6 +263,7 @@ class CustomIntersectionLeftTurn(DQNPolicy):
             perp_start_index = current_lane_len + 3 * veh_state_len + 3 * ped_state_len
             embed_perp_lane_vehs = []
             for j in range(10):
+                # import ipdb; ipdb.set_trace()
                 embed_perp_lane_vehs.append(
                     self.embedding_net_perpendicular(
                         tf.concat(
@@ -291,7 +292,7 @@ class CustomIntersectionLeftTurn(DQNPolicy):
             max_out = tf.reduce_max(stacked_out, axis=1)
 
             # concatenate the current_lane_status
-            max_out = tf.concat([max_out, out_ph[:, :8][:, None]], axis=1)
+            max_out = tf.concat([max_out, out_ph[:, :8]], axis=1)
             q_out = self.q_net(max_out, ac_space.n)
 
         self.q_values = q_out

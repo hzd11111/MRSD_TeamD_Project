@@ -347,7 +347,8 @@ class StateManager:
             env_desc.cur_vehicle_state.location_frenet.x,
             env_desc.cur_vehicle_state.location_frenet.y,
             env_desc.cur_vehicle_state.location_frenet.theta,
-            env_desc.cur_vehicle_state.speed]
+            env_desc.cur_vehicle_state.speed] + \
+            self.createTrafficLightOneHotVec(env_desc.cur_vehicle_state.traffic_light_status)
 
         # extract front vehicle and back vehicle and pedestrian in current lane
         # TODO: Make sure vehicle in front or back are always present
@@ -370,7 +371,7 @@ class StateManager:
                     pedestrian_states.append(pedestrian_state)
 
         # filter out pedestrians with negative x frenet
-        pedestrian_states = filter(lambda item: item[0] >= 0, pedestrian_states)
+        pedestrian_states = list(filter(lambda item: item[0] >= 0, pedestrian_states))
         # select top 3 or add dummy pedestrians
         if len(pedestrian_states) > 3:
             pedestrian_states = sorted(pedestrian_states, lambda item: item[1])[:3]
@@ -409,7 +410,7 @@ class StateManager:
         perpendicular_lane_vehs_in_ego = []
         for vehicle in perpendicular_lane_vehs:
             veh_in_ego = vehicle.fromControllingVehicle(env_desc.cur_vehicle_state.location_frenet,
-                                                 env_desc.current_lane)
+                                                        env_desc.current_lane)
             perpendicular_lane_vehs_in_ego.append([veh_in_ego.x,
                                                    veh_in_ego.y,
                                                    veh_in_ego.theta,
@@ -431,7 +432,7 @@ class StateManager:
         # collect the frenet coordinates
         for vehicle in parallel_lane_vehs:
             veh_in_ego = vehicle.fromControllingVehicle(env_desc.cur_vehicle_state.location_frenet,
-                                                 env_desc.current_lane)
+                                                        env_desc.current_lane)
             parallel_lane_vehs_in_ego.append([veh_in_ego.x,
                                               veh_in_ego.y,
                                               veh_in_ego.theta,
@@ -440,7 +441,7 @@ class StateManager:
                                                  vehicle.traffic_light_status))
 
         # filter out vehicles with negative x frenet
-        parallel_lane_vehs_in_ego = filter(lambda item: item >= 0, parallel_lane_vehs_in_ego)
+        parallel_lane_vehs_in_ego = list(filter(lambda item: item[0] >= 0, parallel_lane_vehs_in_ego))
         # if the number of vehicles in the parallel lanes are less than 10 add dummy
         if len(parallel_lane_vehs_in_ego) > 10:
             parallel_lane_vehs_in_ego = parallel_lane_vehs_in_ego[:10]
@@ -466,7 +467,10 @@ class StateManager:
                         if min_merging_dist > point.location_frenet.x:
                             min_merging_dist = point.location_frenet.x
                         break
-        current_lane_status += min_merging_dist
+        current_lane_status += [min_merging_dist]
+        if len(current_lane_status) != 8:
+            current_lane_status += list(itertools.repeat(
+                0, 8 - len(current_lane_status)))
         # concatenate all the states and lane distance
         entire_state = current_lane_status + ego_vehicle_state + \
             front_vehicle_state + \
@@ -475,7 +479,8 @@ class StateManager:
             [coord for state in perpendicular_lane_vehs_in_ego for coord in state] + \
             [coord for state in parallel_lane_vehs_in_ego for coord in state]
 
-        assert(len(entire_state) == 104)  # TODO: Update this after adding lights
+        print(len(entire_state))
+        assert(len(entire_state) == 187)  # TODO: Update this after adding lights
         return np.array(entire_state)
 
     def createIntersectionRightTurnState(self, env_desc):
@@ -563,7 +568,7 @@ class StateManager:
         perpendicular_lane_vehs_in_ego = []
         for vehicle in perpendicular_lane_vehs:
             veh_in_ego = vehicle.fromControllingVehicle(env_desc.cur_vehicle_state.location_frenet,
-                                                 env_desc.current_lane)
+                                                        env_desc.current_lane)
             perpendicular_lane_vehs_in_ego.append([veh_in_ego.x,
                                                    veh_in_ego.y,
                                                    veh_in_ego.theta,
@@ -607,7 +612,7 @@ class StateManager:
             [coord for state in pedestrian_states_perp for coord in state] + \
             [coord for state in perpendicular_lane_vehs_in_ego for coord in state]
 
-        assert(len(entire_state) == 56)  # TODO: Update this after adding lights
+        assert(len(entire_state) == 100)  # TODO: Update this after adding lights
         return np.array(entire_state)
 
     def embedState(self, env_desc: EnvDesc, scenario: Scenario):
@@ -626,8 +631,8 @@ class StateManager:
         elif self.event == Scenario.GO_STRAIGHT:
             return self.createIntersectionStraightState(env_desc)
         elif self.event == Scenario.LEFT_TURN:
-            return self.createIntersectionTurnState(env_desc, left=True)
+            return self.createIntersectionLeftTurnState(env_desc)
         elif self.event == Scenario.RIGHT_TURN:
-            return self.createIntersectionTurnState(env_desc, left=False)
+            return self.createIntersectionRightTurnState(env_desc)
         else:
             return {}
