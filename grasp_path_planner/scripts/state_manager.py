@@ -496,7 +496,8 @@ class StateManager:
             env_desc.cur_vehicle_state.location_frenet.x,
             env_desc.cur_vehicle_state.location_frenet.y,
             env_desc.cur_vehicle_state.location_frenet.theta,
-            env_desc.cur_vehicle_state.speed]
+            env_desc.cur_vehicle_state.speed] + \
+            self.createTrafficLightOneHotVec(env_desc.cur_vehicle_state)
 
         # extract front vehicle and back vehicle and pedestrian in current lane
         # TODO: Make sure vehicle in front or back are always present
@@ -505,8 +506,9 @@ class StateManager:
         back_vehicle = current_lane.VehicleBehind()
 
         # select pedestrians from all perpendicular lanes which we turn into
+        # TODO: Fix this after right_most lane is added to message lane.right_most_lane
         for lane in env_desc.next_intersection:
-            if lane.right_most_lane is True and lane.directed_right is True:
+            if True is True and lane.directed_right is True:
                 for pedestrian in lane.crossing_pedestrain:
                     pedestrian_in_ego = pedestrian.fromControllingVehicle(
                         env_desc.cur_vehicle_state.location_frenet,
@@ -532,7 +534,7 @@ class StateManager:
             pedestrian_states_perp += dummy_peds
 
         # select pedestrians from current_lane
-        for pedestrian in env_desc.current_lane:
+        for pedestrian in env_desc.current_lane.crossing_pedestrain:
             pedestrian_in_ego = pedestrian.fromControllingVehicle(
                 env_desc.cur_vehicle_state.location_frenet,
                 env_desc.current_lane)
@@ -602,7 +604,10 @@ class StateManager:
                         if min_merging_dist > point.location_frenet.x:
                             min_merging_dist = point.location_frenet.x
                         break
-        current_lane_status += min_merging_dist
+        current_lane_status += [min_merging_dist]
+        if len(current_lane_status) != 8:
+            current_lane_status += list(itertools.repeat(
+                0, 8 - len(current_lane_status)))
 
         # concatenate all the states and lane distance
         entire_state = current_lane_status + ego_vehicle_state + \
