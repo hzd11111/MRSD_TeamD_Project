@@ -105,7 +105,6 @@ def get_cartesian_from_frenet(
         Tuple of (x, y, heading), in the cartesian frame.
     """
 
-    print("input:", frenet_point[0], frenet_point[1], frenet_heading)
 
     s = frenet_point[0]
     d = frenet_point[1]

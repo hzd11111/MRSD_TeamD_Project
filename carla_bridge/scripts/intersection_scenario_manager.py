@@ -290,7 +290,7 @@ class IntersectionScenario:
 
         print("Control handed to system....")
 
-        connecting_elem = incoming_road_lane_id_to_outgoing_lane_id_dict[ego_key][0]
+        connecting_elem = incoming_road_lane_id_to_outgoing_lane_id_dict[ego_key][1]
 
         connection_key = (connecting_elem[2], connecting_elem[3][0])
         next_road_key = (connecting_elem[0], connecting_elem[1])
