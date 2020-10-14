@@ -207,7 +207,7 @@ class StateManager:
         assert(len(entire_state) == 32)
         return np.array(entire_state)
 
-    def createIntersectionStraightState(env_desc):
+    def createIntersectionStraightState(self, env_desc):
         """
         Create a state for intersection negotiation state when turning
         """
@@ -218,7 +218,8 @@ class StateManager:
             env_desc.cur_vehicle_state.location_frenet.x,
             env_desc.cur_vehicle_state.location_frenet.y,
             env_desc.cur_vehicle_state.location_frenet.theta,
-            env_desc.cur_vehicle_state.speed]
+            env_desc.cur_vehicle_state.speed] + \
+            self.createTrafficLightOneHotVec(env_desc.cur_vehicle_state.traffic_light_status)
 
         # extract front vehicle and back vehicle and pedestrian in current lane
         # TODO: Make sure vehicle in front or back are always present
@@ -263,8 +264,9 @@ class StateManager:
             for vehicle in lane.lane_vehicles:
                 perpendicular_lane_vehs.append(vehicle)
 
+        # TODO: lane.left_turning_lane needs to be added into the paralllel lane message
         for lane in env_desc.adjacent_lanes:
-            if lane.same_direction is False and lane.left_turning_lane is True:
+            if lane.same_direction is False and True is True:
                 for vehicle in lane.lane_vehicles:
                     opposite_left_turning_lane_vehs.append(vehicle)
 
@@ -333,7 +335,12 @@ class StateManager:
             [coord for state in perpendicular_lane_vehs_in_ego for coord in state] + \
             [coord for state in opposite_left_turning_lane_vehs_in_ego for coord in state]
 
-        assert(len(entire_state) == 149)
+        if len(current_lane_status) != 8:
+            current_lane_status += list(itertools.repeat(
+                0, 8 - len(current_lane_status)))
+
+        print(len(entire_state))
+        assert(len(entire_state) == 182)
         return np.array(entire_state)
 
     def createIntersectionLeftTurnState(self, env_desc):

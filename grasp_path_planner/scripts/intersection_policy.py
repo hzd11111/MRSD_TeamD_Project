@@ -82,7 +82,7 @@ class CustomIntersectionStraight(DQNPolicy):
             embed_front_vehicle.append(
                 self.embedding_net_front_back(
                     tf.concat([out_ph[:, current_lane_len:current_lane_len + veh_state_len],
-                               out_ph[:, front_veh_start:front_veh_start * veh_state_len]], axis=1)))
+                               out_ph[:, front_veh_start:front_veh_start + veh_state_len]], axis=1)))
 
             # Add back vehicle
             back_veh_start = current_lane_len + 2 * veh_state_len
@@ -136,7 +136,7 @@ class CustomIntersectionStraight(DQNPolicy):
             max_out = tf.reduce_max(stacked_out, axis=1)
 
             # concatenate the current_lane_status
-            max_out = tf.concat([max_out, out_ph[:, :8][:, None]], axis=1)
+            max_out = tf.concat([max_out, out_ph[:, :8]], axis=1)
             q_out = self.q_net(max_out, ac_space.n)
 
         self.q_values = q_out
