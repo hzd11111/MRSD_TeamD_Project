@@ -37,7 +37,7 @@ class CustomEnv(gym.Env):
         :param event: (Scanrion) An enum which tells what scenario it is to train on
         """
         N_ACTIONS = 0
-        if event == Scenario.GO_STRAIGHT:
+        if event == Scenario.LANE_FOLLOWING:
             N_ACTIONS = 3
             self.action_space = spaces.Discrete(N_ACTIONS)
             self.observation_space = spaces.Box(low=-1000, high=1000, shape=(1, 32))
@@ -49,7 +49,8 @@ class CustomEnv(gym.Env):
                 event == Scenario.RIGHT_TURN or\
                 event == Scenario.GO_STRAIGHT:
             N_ACTIONS = 3
-            pass
+            self.action_space = spaces.Discrete(N_ACTIONS)
+            self.observation_space = spaces.Box(low=-1000, high=1000, shape=(1, 53))
 
         self.path_planner = path_planner
         self.rl_manager = rl_manager

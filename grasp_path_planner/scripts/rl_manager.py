@@ -127,6 +127,23 @@ class RLManager:
         elif action == 2:
             return RLDecision.GLOBAL_PATH_DECELERATE
 
+    def convertDecisionLaneFollowing(self, action):
+        """
+        Converts the action in int into an RLDecision enum
+
+        Args:
+        :param action: (int) neural network decision given as an argmax
+        Returns:
+        RLDecision enum
+        """
+
+        if action == 0:
+            return RLDecision.CONSTANT_SPEED
+        elif action == 1:
+            return RLDecision.ACCELERATE
+        elif action == 2:
+            return RLDecision.DECELERATE
+
     def convertDecision(self, action: int) -> RLDecision:
         """
         Converts the action in int into an RLDecision enum
@@ -144,6 +161,8 @@ class RLManager:
             self.event == Scenario.RIGHT_TURN or \
                 self.event == Scenario.GO_STRAIGHT:
             return self.convertDecisionIntersection(action)
+        if self.event == Scenario.LANE_FOLLOWING:
+            return self.convertDecisionLaneFollowing(action)
         else:
             logging.error("Bug in decision conversion")
             raise RuntimeError("Invalid scenario given")
