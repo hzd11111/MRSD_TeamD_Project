@@ -131,8 +131,8 @@ class TrajGenerator:
 
     def globalAccelerateTraj(self, sim_data):
         # check if this is a new action
-        if not self.current_action == RLDecision.CONSTANT_SPEED:
-            self.reset(RLDecision.CONSTANT_SPEED,
+        if not self.current_action == RLDecision.GLOBAL_PATH_ACCELERATE:
+            self.reset(RLDecision.GLOBAL_PATH_ACCELERATE,
                        sim_data.cur_vehicle_state.speed,
                        sim_data.reward_info.time_elapsed)
 
@@ -150,10 +150,10 @@ class TrajGenerator:
         tracking_pose_ind = False
         for point_ind, path_point in enumerate(global_path_points):
             single_pose = path_point.global_pose
+            tracking_pose = single_pose
+            tracking_pose_ind = point_ind
             if single_pose.isInfrontOf(curr_vehicle_global_pose) and \
                    single_pose.distance(curr_vehicle_global_pose) > TrajGenerator.SAME_POSE_LOWER_THRESHOLD:
-                tracking_pose = single_pose
-                tracking_pose_ind = point_ind
                 break
 
         if not tracking_pose:
@@ -189,8 +189,8 @@ class TrajGenerator:
 
     def globalDecelerateTraj(self, sim_data):
         # check if this is a new action
-        if not self.current_action == RLDecision.CONSTANT_SPEED:
-            self.reset(RLDecision.CONSTANT_SPEED,
+        if not self.current_action == RLDecision.GLOBAL_PATH_DECELERATE:
+            self.reset(RLDecision.GLOBAL_PATH_DECELERATE,
                        sim_data.cur_vehicle_state.speed,
                        sim_data.reward_info.time_elapsed)
 
@@ -248,8 +248,8 @@ class TrajGenerator:
 
     def constSpeedTraj(self, sim_data):
         # check if this is a new action
-        if not self.current_action == RLDecision.CONSTANT_SPEED:
-            self.reset(RLDecision.CONSTANT_SPEED,
+        if not self.current_action == RLDecision.GLOBAL_PATH_CONSTANT_SPEED:
+            self.reset(RLDecision.GLOBAL_PATH_CONSTANT_SPEED,
                        sim_data.cur_vehicle_state.speed,
                        sim_data.reward_info.time_elapsed)
 
