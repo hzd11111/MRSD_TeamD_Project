@@ -63,5 +63,8 @@ class PathPlannerManager:
         reset_msg.end_of_action = True
         req = SimServiceRequest()
         req.path_plan = reset_msg
-        self.prev_env_desc = EnvDesc.fromRosMsg(self.sim_service_interface(req).env)
+        try:
+            self.prev_env_desc = EnvDesc.fromRosMsg(self.sim_service_interface(req).env)
+        except:
+            import ipdb; ipdb.set_trace()
         return self.prev_env_desc

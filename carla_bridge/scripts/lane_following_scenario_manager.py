@@ -30,6 +30,7 @@ class LaneFollowingScenario:
         self.carla_handler = carla_handler
         self.Map = self.world.get_map()
         self.spectator = self.world.get_spectator()
+        self.pedestrian_mode = None
 
         self.traffic_manager = self.client.get_trafficmanager(8000)
         self.vehicles_list = []

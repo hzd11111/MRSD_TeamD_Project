@@ -20,6 +20,7 @@ from carla_handler import CarlaHandler
 from grasp_controller import GRASPPIDController
 
 from scenario_manager import CustomScenario
+from lane_following_scenario_manager import LaneFollowingScenario
 from grasp_path_planner.srv import SimService, SimServiceResponse
 from agents.tools.misc import get_speed
 
@@ -442,7 +443,7 @@ class CarlaManager:
         settings.fixed_delta_seconds = self.simulation_sync_timestep
         self.carla_handler.world.apply_settings(settings)
 
-        self.tm = CustomScenario(self.client, self.carla_handler)
+        self.tm = LaneFollowingScenario(self.client, self.carla_handler)
 
         # Reset Environment
         self.resetEnv()
