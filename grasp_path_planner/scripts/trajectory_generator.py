@@ -49,6 +49,12 @@ class TrajGenerator:
         elif (action_to_perform == RLDecision.SWITCH_LANE_LEFT) or \
                 (action_to_perform == RLDecision.SWITCH_LANE_RIGHT):
             return self.laneChangeTraj(env_desc, rl_decision).toRosMsg()
+        elif action_to_perform == RLDecision.GLOBAL_PATH_CONSTANT_SPEED:
+            return self.globalConstSpeedTraj(env_desc).toRosMsg()
+        elif action_to_perform == RLDecision.GLOBAL_PATH_ACCELERATE:
+            return self.globalAccelerateTraj(env_desc).toRosMsg()
+        elif action_to_perform == RLDecision.GLOBAL_PATH_DECELERATE:
+            return self.globalDecelerateTraj(env_desc).toRosMsg()
         else:
             print("RLDecision ERROR:", action_to_perform)
 
@@ -64,6 +70,181 @@ class TrajGenerator:
             if frenet_x_diff >= TrajGenerator.SAME_POSE_LOWER_THRESHOLD:
                 return lane_waypoint
         return lane_point_array[-1]
+
+    def globalConstSpeedTraj(self, sim_data):
+        # check if this is a new action
+        if not self.current_action == RLDecision.CONSTANT_SPEED:
+            self.reset(RLDecision.CONSTANT_SPEED,
+                       sim_data.cur_vehicle_state.speed,
+                       sim_data.reward_info.time_elapsed)
+
+        # current simulation time
+        new_sim_time = sim_data.reward_info.time_elapsed
+
+        # current vehicle state
+        curr_vehicle = sim_data.cur_vehicle_state
+        curr_vehicle_global_pose = curr_vehicle.location_global
+
+        # determine the closest next pose in the global path
+        global_path = sim_data.global_path
+        global_path_points = global_path.path_points
+        tracking_pose = False
+        tracking_pose_ind = False
+        for point_ind, path_point in enumerate(global_path_points):
+            single_pose = path_point.global_pose
+            if single_pose.isInfrontOf(curr_vehicle_global_pose) and \
+                   single_pose.distance(curr_vehicle_global_pose) > TrajGenerator.SAME_POSE_LOWER_THRESHOLD:
+                tracking_pose = single_pose
+                tracking_pose_ind = point_ind
+                break
+
+        if not tracking_pose:
+            print("--------------- Global Path Error --------------")
+
+        # determine the action progress
+        action_progress = (new_sim_time - self.action_start_time) / self.traj_parameters['action_duration']
+
+        # determine if this is the end of an action
+        end_of_action = False
+        if action_progress >= 1.:
+            end_of_action = True
+            action_progress = 1.
+
+        new_path_plan = PathPlan()
+        new_path_plan.tracking_pose = tracking_pose
+        new_path_plan.reset_sim = False
+        new_path_plan.tracking_speed = max(self.traj_parameters['min_speed'],self.start_speed)
+        new_path_plan.end_of_action = end_of_action
+        new_path_plan.action_progress = action_progress
+        new_path_plan.path_planner_terminate = False
+
+        # add future poses ToDo
+        new_path_plan.future_poses = []
+        for i in range(tracking_pose_ind, tracking_pose_ind + 5):
+            if i < len(global_path_points):
+                new_path_plan.future_poses.append(global_path_points[i].global_pose)
+
+        if end_of_action:
+            self.reset()
+
+        return new_path_plan
+
+    def globalAccelerateTraj(self, sim_data):
+        # check if this is a new action
+        if not self.current_action == RLDecision.CONSTANT_SPEED:
+            self.reset(RLDecision.CONSTANT_SPEED,
+                       sim_data.cur_vehicle_state.speed,
+                       sim_data.reward_info.time_elapsed)
+
+        # current simulation time
+        new_sim_time = sim_data.reward_info.time_elapsed
+
+        # current vehicle state
+        curr_vehicle = sim_data.cur_vehicle_state
+        curr_vehicle_global_pose = curr_vehicle.location_global
+
+        # determine the closest next pose in the global path
+        global_path = sim_data.global_path
+        global_path_points = global_path.path_points
+        tracking_pose = False
+        tracking_pose_ind = False
+        for point_ind, path_point in enumerate(global_path_points):
+            single_pose = path_point.global_pose
+            if single_pose.isInfrontOf(curr_vehicle_global_pose) and \
+                   single_pose.distance(curr_vehicle_global_pose) > TrajGenerator.SAME_POSE_LOWER_THRESHOLD:
+                tracking_pose = single_pose
+                tracking_pose_ind = point_ind
+                break
+
+        if not tracking_pose:
+            print("--------------- Global Path Error --------------")
+
+        # determine the action progress
+        action_progress = (new_sim_time - self.action_start_time) / self.traj_parameters['action_duration']
+
+        # determine if this is the end of an action
+        end_of_action = False
+        if action_progress >= 1.:
+            end_of_action = True
+            action_progress = 1.
+
+        new_path_plan = PathPlan()
+        new_path_plan.tracking_pose = tracking_pose
+        new_path_plan.reset_sim = False
+        new_path_plan.tracking_speed = max(self.traj_parameters['min_speed'],self.start_speed + action_progress * self.traj_parameters['accelerate_amt'])
+        new_path_plan.end_of_action = end_of_action
+        new_path_plan.action_progress = action_progress
+        new_path_plan.path_planner_terminate = False
+
+        # add future poses ToDo
+        new_path_plan.future_poses = []
+        for i in range(tracking_pose_ind, tracking_pose_ind + 5):
+            if i < len(global_path_points):
+                new_path_plan.future_poses.append(global_path_points[i].global_pose)
+
+        if end_of_action:
+            self.reset()
+
+        return new_path_plan
+
+    def globalDecelerateTraj(self, sim_data):
+        # check if this is a new action
+        if not self.current_action == RLDecision.CONSTANT_SPEED:
+            self.reset(RLDecision.CONSTANT_SPEED,
+                       sim_data.cur_vehicle_state.speed,
+                       sim_data.reward_info.time_elapsed)
+
+        # current simulation time
+        new_sim_time = sim_data.reward_info.time_elapsed
+
+        # current vehicle state
+        curr_vehicle = sim_data.cur_vehicle_state
+        curr_vehicle_global_pose = curr_vehicle.location_global
+
+        # determine the closest next pose in the global path
+        global_path = sim_data.global_path
+        global_path_points = global_path.path_points
+        tracking_pose = False
+        tracking_pose_ind = False
+        for point_ind, path_point in enumerate(global_path_points):
+            single_pose = path_point.global_pose
+            if single_pose.isInfrontOf(curr_vehicle_global_pose) and \
+                   single_pose.distance(curr_vehicle_global_pose) > TrajGenerator.SAME_POSE_LOWER_THRESHOLD:
+                tracking_pose = single_pose
+                tracking_pose_ind = point_ind
+                break
+
+        if not tracking_pose:
+            print("--------------- Global Path Error --------------")
+
+        # determine the action progress
+        action_progress = (new_sim_time - self.action_start_time) / self.traj_parameters['action_duration']
+
+        # determine if this is the end of an action
+        end_of_action = False
+        if action_progress >= 1.:
+            end_of_action = True
+            action_progress = 1.
+
+        new_path_plan = PathPlan()
+        new_path_plan.tracking_pose = tracking_pose
+        new_path_plan.reset_sim = False
+        new_path_plan.tracking_speed = max(self.traj_parameters['min_speed'],
+                                           self.start_speed - action_progress * self.traj_parameters['decelerate_amt'])
+        new_path_plan.end_of_action = end_of_action
+        new_path_plan.action_progress = action_progress
+        new_path_plan.path_planner_terminate = False
+
+        # add future poses ToDo
+        new_path_plan.future_poses = []
+        for i in range(tracking_pose_ind, tracking_pose_ind + 5):
+            if i < len(global_path_points):
+                new_path_plan.future_poses.append(global_path_points[i].global_pose)
+
+        if end_of_action:
+            self.reset()
+
+        return new_path_plan
 
     def constSpeedTraj(self, sim_data):
         # check if this is a new action
