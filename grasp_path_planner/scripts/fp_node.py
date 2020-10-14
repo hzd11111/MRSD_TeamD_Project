@@ -99,7 +99,7 @@ class FullPlannerManager:
 if __name__ == '__main__':
     try:
         event = CURRENT_SCENARIO
-        full_planner = FullPlannerManager(Scenario.SWITCH_LANE_LEFT)
+        full_planner = FullPlannerManager(event)
         full_planner.initialize()
 
         if(CURRENT_MODE == Mode.TEST):
