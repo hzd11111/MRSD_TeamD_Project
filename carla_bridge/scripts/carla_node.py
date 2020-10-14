@@ -350,7 +350,7 @@ class CarlaManager:
                 self.intersection_topology,
                 self.ego_start_road_lane_pair,
                 self.global_path_in_intersection,
-            ) = self.tm.reset(num_vehicles=10, junction_id=53, warm_start_duration=15)
+            ) = self.tm.reset(num_vehicles=10, junction_id=53, warm_start_duration=3)
             ## Handing over control
             del self.collision_sensor
             self.collision_sensor = self.carla_handler.world.spawn_actor(
