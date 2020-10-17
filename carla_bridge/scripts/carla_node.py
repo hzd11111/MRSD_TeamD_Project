@@ -150,6 +150,17 @@ class CarlaManager:
             self.ego_vehicle, self.ego_start_road_lane_pair, self.intersection_topology
         )
 
+        ego_nearest_waypoint = self.carla_handler.world_map.get_waypoint(
+            self.ego_vehicle.get_location(), project_to_road=True
+        )
+        self.carla_handler.world.debug.draw_string(
+            ego_nearest_waypoint.transform.location,
+            "O",
+            draw_shadow=False,
+            color=carla.Color(r=0, g=255, b=0),
+            life_time=1,
+        )
+
         vehicle_ego = Vehicle(self.carla_handler.world, self.ego_vehicle.id)
 
         (
@@ -371,7 +382,7 @@ class CarlaManager:
                     "dt": self.simulation_sync_timestep,
                 },
                 args_longitudinal={
-                    "K_P": 3.5,
+                    "K_P": 0.5,
                     "K_D": 0,
                     "K_I": 0.01,
                     "dt": self.simulation_sync_timestep,
