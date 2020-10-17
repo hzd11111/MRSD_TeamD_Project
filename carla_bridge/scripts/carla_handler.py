@@ -268,6 +268,54 @@ class CarlaHandler:
 
         return filtered_actors
 
+    def get_lane_waypoints(self, road_lane_collection, road_lane_to_orientation):
+
+        incoming_road = road_lane_collection[0][0]
+        incoming_lane = road_lane_collection[0][1]
+
+        connecting_road = road_lane_collection[1][0]
+        connecting_lane = road_lane_collection[1][1]
+
+        outgoing_road = road_lane_collection[2][0]
+        outgoing_lane = road_lane_collection[2][1]
+
+        incoming_waypoints = self.filter_waypoints(
+            self.all_waypoints, incoming_road, incoming_lane
+        )
+        connecting_waypoints = self.filter_waypoints(
+            self.all_waypoints, connecting_road, connecting_lane
+        )
+        outgoing_waypoints = self.filter_waypoints(
+            self.all_waypoints, outgoing_road, outgoing_lane
+        )
+
+        if (
+            road_lane_to_orientation[(incoming_road, incoming_lane)][-1] == 0
+        ):  # 0 : Starting from near junction
+            incoming_waypoints = incoming_waypoints[::-1]
+
+        if (
+            road_lane_to_orientation[(outgoing_road, outgoing_lane)][-1] == 1
+        ):  # 1 : Ending at junction
+            outgoing_waypoints = outgoing_waypoints[::-1]
+
+        first_connecting_waypoint = connecting_waypoints[0]
+        last_connecting_waypoint = connecting_waypoints[-1]
+
+        last_incoming_waypoint = incoming_waypoints[-1]
+
+        dist1 = first_connecting_waypoint.transform.location.distance(
+            last_incoming_waypoint.transform.location
+        )
+        dist2 = last_connecting_waypoint.transform.location.distance(
+            last_incoming_waypoint.transform.location
+        )
+
+        if dist1 > dist2:
+            connecting_waypoints = connecting_waypoints[::-1]
+
+        return incoming_waypoints + connecting_waypoints[1:-1] + outgoing_waypoints
+
     def get_lane_info(self, all_vehicles, lane_list, ego_road_lane_ID_pair=None):
 
         full_info = []
