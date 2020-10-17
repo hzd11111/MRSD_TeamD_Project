@@ -40,7 +40,7 @@ class CustomEnv(gym.Env):
         if event == Scenario.LANE_FOLLOWING:
             N_ACTIONS = 3
             self.action_space = spaces.Discrete(N_ACTIONS)
-            self.observation_space = spaces.Box(low=-1000, high=1000, shape=(1, 32))
+            self.observation_space = spaces.Box(low=-1000, high=1000, shape=(1, 41))
         elif event == Scenario.SWITCH_LANE_LEFT or event == Scenario.SWITCH_LANE_RIGHT:
             N_ACTIONS = 4
             self.action_space = spaces.Discrete(N_ACTIONS)

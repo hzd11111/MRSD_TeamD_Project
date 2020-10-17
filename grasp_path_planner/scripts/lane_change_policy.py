@@ -108,7 +108,7 @@ class CustomLaneChangePolicy(DQNPolicy):
             for j in range(3):
                 ped_veh_mask = out_ph[:, ped_veh_start + (j + 1) * (ped_state_len + mask) - 1][:, None]
                 start = ped_veh_start + j * (ped_state_len + mask)
-                ped = out_ph[:, start:start + veh_state_len]
+                ped = out_ph[:, start:start + ped_state_len]
                 ped_state = tf.concat([cur_veh, ped], axis=1)
                 embed_pedestrians.append(
                     self.embedding_net_pedestrian(ped_state) * ped_veh_mask)

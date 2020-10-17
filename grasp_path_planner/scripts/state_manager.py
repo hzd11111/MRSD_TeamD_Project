@@ -184,13 +184,15 @@ class StateManager:
         Creates a lane following state with front vehicle,
         back vehicle and pedestrians
         """
-        dummy_vehicle = [1000, 1000, 0, 0]
+        dummy_vehicle = [1000, 1000, np.cos(0), np.sin(0), 0, 0, 0]
         pedestrian_states = []
         ego_vehicle_state = [
             env_desc.cur_vehicle_state.location_frenet.x,
             env_desc.cur_vehicle_state.location_frenet.y,
-            env_desc.cur_vehicle_state.location_frenet.theta,
-            env_desc.cur_vehicle_state.speed]
+            np.cos(env_desc.cur_vehicle_state.location_frenet.theta),
+            np.sin(env_desc.cur_vehicle_state.location_frenet.theta),
+            env_desc.cur_vehicle_state.speed,
+            env_desc.cur_vehicle_state.acceleration]
 
         # extract front vehicle and back vehicle and pedestrian in current lane
         # TODO: Make sure vehicle in front or back are always present
@@ -204,24 +206,41 @@ class StateManager:
                 env_desc.current_lane)
             pedestrian_state = [pedestrian_in_ego.location_frenet.x,
                                 pedestrian_in_ego.location_frenet.y,
-                                pedestrian_in_ego.location_frenet.theta,
-                                pedestrian.speed]
+                                np.cos(pedestrian_in_ego.location_frenet.theta),
+                                np.sin(pedestrian_in_ego.location_frenet.theta),
+                                pedestrian.speed,
+                                pedestrian.acceleration,
+                                1]
             pedestrian_states.append(pedestrian_state)
 
-        if len(pedestrian_states) < 5:
+        if len(pedestrian_states) > 3:
+            pedestrian_states = sorted(pedestrian_states, lambda item: item[0])[:, 3]
+        elif len(pedestrian_states) < 3:
             dummy_vehicles = list(itertools.repeat(
-                dummy_vehicle, 5 - len(pedestrian_states)))
+                dummy_vehicle, 3 - len(pedestrian_states)))
             pedestrian_states += dummy_vehicles
 
-        front_vehicle_state = [front_vehicle.location_frenet.x,
-                               front_vehicle.location_frenet.y,
-                               front_vehicle.location_frenet.theta,
-                               front_vehicle.speed]
+        if front_vehicle is None:
+            front_vehicle_state = dummy_vehicle
+        else:
+            front_vehicle_state = [front_vehicle.location_frenet.x,
+                                   front_vehicle.location_frenet.y,
+                                   np.cos(front_vehicle.location_frenet.theta),
+                                   np.sin(front_vehicle.location_frenet.theta),
+                                   front_vehicle.speed,
+                                   front_vehicle.acceleration,
+                                   1]
 
-        back_vehicle_state = [back_vehicle.location_frenet.x,
-                              back_vehicle.location_frenet.y,
-                              back_vehicle.location_frenet.theta,
-                              back_vehicle.speed]
+        if back_vehicle is None:
+            back_vehicle = dummy_vehicle
+        else:
+            back_vehicle_state = [back_vehicle.location_frenet.x,
+                                  back_vehicle.location_frenet.y,
+                                  np.cos(back_vehicle.location_frenet.theta),
+                                  np.sin(back_vehicle.location_frenet.theta),
+                                  back_vehicle.speed,
+                                  back_vehicle.acceleration,
+                                  1]
 
         # concatenate all the states and lane distance
         entire_state = ego_vehicle_state + \
@@ -229,7 +248,7 @@ class StateManager:
             back_vehicle_state + \
             [coord for state in pedestrian_states for coord in state]
 
-        assert(len(entire_state) == 32)
+        assert(len(entire_state) == 41)
         return np.array(entire_state)
 
     def createIntersectionStraightState(self, env_desc):
