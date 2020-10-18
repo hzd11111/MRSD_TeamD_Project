@@ -388,64 +388,70 @@ class CustomIntersectionRightTurn(DQNPolicy):
                                                          n_batch, dueling=dueling, reuse=reuse,
                                                          scale=False, obs_phs=obs_phs)
         with tf.variable_scope("model", reuse=reuse):
+            veh_state_len = 9
+            ped_state_len = 8
+            current_lane_len = 8
+            mask = 1
+            out_ph = tf.layers.flatten(self.processed_obs)
+            cur_veh = out_ph[:, current_lane_len:current_lane_len + veh_state_len]
+
+            # Add front vehicle
+            front_veh_start = current_lane_len + veh_state_len
+            front_veh_mask = out_ph[:, front_veh_start + veh_state_len][:, None]
+            embed_front_vehicle = []
+            front_veh = out_ph[:, front_veh_start:front_veh_start + veh_state_len]
+            front_veh_state = tf.concat([cur_veh, front_veh], axis=1)
+            embed_front_vehicle.append(
+                self.embedding_net_front_back(front_veh_state) * front_veh_mask)
+
+            # Add back vehicle
+            back_veh_start = current_lane_len + veh_state_len + 1 * (veh_state_len + mask)
+            back_veh_mask = out_ph[:, back_veh_start + veh_state_len][:, None]
+            back_veh = out_ph[:, back_veh_start:back_veh_start + veh_state_len]
+            back_veh_state = tf.concat([cur_veh, back_veh], axis=1)
+            embed_back_vehicle = []
+            embed_back_vehicle.append(
+                self.embedding_net_front_back(back_veh_state) * back_veh_mask)
+
             veh_state_len = 7
             ped_state_len = 6
             current_lane_len = 8
             out_ph = tf.layers.flatten(self.processed_obs)
 
-            # Add front vehicle
-            front_veh_start = current_lane_len + veh_state_len
-            embed_front_vehicle = []
-            embed_front_vehicle.append(
-                self.embedding_net_front_back(
-                    tf.concat([out_ph[:, current_lane_len:current_lane_len + veh_state_len],
-                               out_ph[:, front_veh_start:front_veh_start + veh_state_len]],
-                              axis=1)))
-
-            # Add back vehicle
-            back_veh_start = current_lane_len + 2 * veh_state_len
-            embed_back_vehicle = []
-            embed_back_vehicle.append(
-                self.embedding_net_front_back(
-                    tf.concat([out_ph[:, current_lane_len:current_lane_len + veh_state_len],
-                               out_ph[:, back_veh_start:back_veh_start + veh_state_len]], axis=1)))
-
             # Add pedestrians from cur lane
-            cur_ped_start_index = current_lane_len + 3 * veh_state_len
+            cur_ped_start_index = current_lane_len + veh_state_len + 2 * (veh_state_len + mask)
             embed_pedestrians_cur = []
             for j in range(3):
+                cur_ped_mask = out_ph[:, cur_ped_start_index + (j + 1) * (ped_state_len + mask) - 1][:, None]
+                start = cur_ped_start_index + j * (ped_state_len + mask)
+                cur_ped = out_ph[:, start:start + ped_state_len]
+                cur_ped_state = tf.concat([cur_veh, cur_ped], axis=1)
                 embed_pedestrians_cur.append(
-                    self.embedding_net_ped_cur(
-                        tf.concat(
-                            [out_ph[:, current_lane_len:current_lane_len + veh_state_len],
-                             out_ph[:, cur_ped_start_index + j * ped_state_len:
-                                    cur_ped_start_index + (j + 1) * ped_state_len]],
-                            axis=1)))
+                    self.embedding_net_ped_cur(cur_ped_state) * cur_ped_mask)
 
             # Add perpendicular lane pedestrians
-            perp_ped_start_index = current_lane_len + 3 * veh_state_len + 3 * ped_state_len
+            perp_ped_start_index = current_lane_len + veh_state_len + 2 * (veh_state_len + mask) \
+                + 3 * (ped_state_len + mask)
             embedding_pedestrians_perp = []
             for j in range(3):
+                perp_ped_mask = out_ph[:, perp_ped_start_index + (j + 1) * (ped_state_len + mask) - 1][:, None]
+                start = perp_ped_start_index + j * (ped_state_len + mask)
+                perp_ped = out_ph[:, start:start + ped_state_len]
+                perp_ped_state = tf.concat([cur_veh, perp_ped], axis=1)
                 embedding_pedestrians_perp.append(
-                    self.embedding_net_ped_perp(
-                        tf.concat(
-                            [out_ph[:, current_lane_len:current_lane_len + veh_state_len],
-                             out_ph[:, perp_ped_start_index + j * veh_state_len:
-                                    perp_ped_start_index + (j + 1) * veh_state_len]],
-                            axis=1)))
+                    self.embedding_net_ped_perp(perp_ped_state) * perp_ped_mask)
 
             # Add perpendicular lane vehicles
-            perp_start_index = current_lane_len + 3 * veh_state_len + \
-                3 * ped_state_len + 3 * ped_state_len
+            perp_veh_start_index = current_lane_len + veh_state_len + 2 * (veh_state_len + mask) \
+                + 6 * (ped_state_len + mask)
             embed_perp_lane_vehs = []
             for j in range(5):
+                perp_veh_mask = out_ph[:, perp_veh_start_index + (j + 1) * (veh_state_len + mask) - 1][:, None]
+                start = perp_veh_start_index + j * (veh_state_len + mask)
+                perp_veh = out_ph[:, start:start + veh_state_len]
+                perp_veh_state = tf.concat([cur_veh, perp_veh], axis=1)
                 embed_perp_lane_vehs.append(
-                    self.embedding_net_perp_veh(
-                        tf.concat(
-                            [out_ph[:, current_lane_len:current_lane_len + veh_state_len],
-                             out_ph[:, perp_start_index + j * veh_state_len:
-                                    perp_start_index + (j + 1) * veh_state_len]],
-                            axis=1)))
+                    self.embedding_net_perp_veh(perp_veh_state) * perp_veh_mask)
 
             # stack them and take max
             embed_list = embed_front_vehicle + embed_back_vehicle + embed_pedestrians_cur + \
