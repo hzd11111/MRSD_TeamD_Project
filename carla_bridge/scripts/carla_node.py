@@ -348,11 +348,16 @@ class CarlaManager:
                 ].location_frenet = self.adjacent_lanes[i].GlobalToFrenet(
                     self.adjacent_lanes[i].lane_vehicles[j].location_global
                 )
-                self.adjacent_lanes[i].lane_vehicles[j].location_frenet = (
-                    self.adjacent_lanes[i]
-                    .lane_vehicles[j]
-                    .fromControllingVehicle(None, self.adjacent_lanes[i])
+
+        ### Update frenet for vehicles on next_intersection lanes
+        for i in range(len(self.next_intersection)):
+            for j in range(len(self.next_intersection[i].lane_vehicles)):
+                self.next_intersection[i].lane_vehicles[
+                    j
+                ].location_frenet = self.next_intersection[i].GlobalToFrenet(
+                    self.next_intersection[i].lane_vehicles[j].location_global
                 )
+
         # Update relative to the ego vehicle
 
         # ego_vehicle_frenet_pose = lane_cur.GlobalToFrenet(vehicle_ego.location_global)
@@ -407,9 +412,9 @@ class CarlaManager:
         env_desc.reward_info = reward_info
         env_desc.global_path = self.global_path_in_intersection
 
-        import ipdb
+        # import ipdb
 
-        ipdb.set_trace()
+        # ipdb.set_trace()
 
         return SimServiceResponse(env_desc.toRosMsg())
 

@@ -214,7 +214,6 @@ class LaneStatus(object):
         msg.ego_offset = self.ego_offset
         return msg
 
-    # TODO: add definition (Mayank)
     def frenetToGlobal(self, pose):
 
         global_pose = get_cartesian_from_frenet(
@@ -223,14 +222,15 @@ class LaneStatus(object):
 
         return Pose2D(x=global_pose[0], y=global_pose[1], theta=global_pose[2])
 
-    # TODO: add definition (Mayank)
     def GlobalToFrenet(self, pose):
 
         frenet_pose = get_frenet_from_cartesian(
             self.linestring, Point(pose.x, pose.y), pose.theta
         )
 
-        return Frenet(x=frenet_pose[0], y=frenet_pose[1], theta=frenet_pose[2])
+        return Frenet(
+            x=frenet_pose[0] - self.ego_offset, y=frenet_pose[1], theta=frenet_pose[2]
+        )
 
 
 class CurrentLane(LaneStatus):
