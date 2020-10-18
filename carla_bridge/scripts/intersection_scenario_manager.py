@@ -203,8 +203,8 @@ class IntersectionScenario:
             transform = t.transform
             transform.location.z += 2.0
             ego_batch.append(
-                # SpawnActor(blueprint, transform).then(SetAutopilot(FutureActor, True))
-                SpawnActor(blueprint, transform)
+                SpawnActor(blueprint, transform).then(SetAutopilot(FutureActor, True))
+                # SpawnActor(blueprint, transform)
             )
 
         for n, t in enumerate(road_waypoints):
@@ -225,8 +225,8 @@ class IntersectionScenario:
             transform = t.transform
             transform.location.z += 2.0
             batch.append(
-                # SpawnActor(blueprint, transform).then(SetAutopilot(FutureActor, True))
-                SpawnActor(blueprint, transform)
+                SpawnActor(blueprint, transform).then(SetAutopilot(FutureActor, True))
+                # SpawnActor(blueprint, transform)
             )
 
         ego_vehicle_id = None
@@ -249,7 +249,7 @@ class IntersectionScenario:
 
         ego_key = (ego_road_waypoints[0].road_id, ego_road_waypoints[0].lane_id)
 
-        intersection_topology = get_intersection_topology(
+        intersection_topology, road_lane_to_orientation = get_intersection_topology(
             waypoints,
             incoming_road_lane_id_set,
             outgoing_road_lane_id_set,
@@ -320,4 +320,5 @@ class IntersectionScenario:
             intersection_topology,
             ego_key,
             global_path_wps,
+            road_lane_to_orientation,
         )

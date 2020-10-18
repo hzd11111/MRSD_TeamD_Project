@@ -12,6 +12,8 @@ import random
 import time
 import math
 import sys
+from collections import defaultdict
+
 
 import numpy as np
 import carla
@@ -252,75 +254,126 @@ class CarlaHandler:
 
         return Pose2D(x=x, y=y, theta=theta)
 
-    def get_actors(self, all_vehicles, road_id, lane_id):
+    def get_lane_waypoints(self, road_lane_collection, road_lane_to_orientation):
 
-        filtered_actors = []
+        incoming_road = road_lane_collection[0][0]
+        incoming_lane = road_lane_collection[0][1]
 
-        for actor in all_vehicles:
-            actor_nearest_waypoint = self.world_map.get_waypoint(
-                actor.get_location(), project_to_road=True
-            )
-            if (
-                actor_nearest_waypoint.road_id == road_id
-                and actor_nearest_waypoint.lane_id == lane_id
-            ):
-                filtered_actors.append(actor)
+        connecting_road = road_lane_collection[1][0]
+        connecting_lane = road_lane_collection[1][1]
 
-        return filtered_actors
+        outgoing_road = road_lane_collection[2][0]
+        outgoing_lane = road_lane_collection[2][1]
 
-    def get_lane_info(self, all_vehicles, lane_list, ego_road_lane_ID_pair=None):
+        incoming_waypoints = self.filter_waypoints(
+            self.all_waypoints, incoming_road, incoming_lane
+        )
+        connecting_waypoints = self.filter_waypoints(
+            self.all_waypoints, connecting_road, connecting_lane
+        )
+        outgoing_waypoints = self.filter_waypoints(
+            self.all_waypoints, outgoing_road, outgoing_lane
+        )
+        if (
+            road_lane_to_orientation[(incoming_road, incoming_lane)][-1] == 0
+        ):  # 0 : Starting from near junction
+            incoming_waypoints = incoming_waypoints[::-1]
+
+        if (
+            road_lane_to_orientation[(outgoing_road, outgoing_lane)][-1] == 1
+        ):  # 1 : Ending at junction
+            outgoing_waypoints = outgoing_waypoints[::-1]
+
+        first_connecting_waypoint = connecting_waypoints[0]
+        last_connecting_waypoint = connecting_waypoints[-1]
+
+        last_incoming_waypoint = incoming_waypoints[-1]
+
+        dist1 = first_connecting_waypoint.transform.location.distance(
+            last_incoming_waypoint.transform.location
+        )
+        dist2 = last_connecting_waypoint.transform.location.distance(
+            last_incoming_waypoint.transform.location
+        )
+
+        if dist1 > dist2:
+            connecting_waypoints = connecting_waypoints[::-1]
+
+        return incoming_waypoints + connecting_waypoints[1:-1] + outgoing_waypoints
+
+    def get_lane_info(
+        self,
+        all_vehicles,
+        lane_list,
+        ego_road_lane_ID_pair=None,
+        road_lane_to_orientation=None,
+    ):
 
         full_info = []
         ego_lane_info = []
 
+        road_lane_to_vehicle_id = defaultdict(lambda: [])
+
+        for vehicle in all_vehicles:
+            vehicle_nearest_waypoint = self.world_map.get_waypoint(
+                vehicle.get_location(), project_to_road=True
+            )
+            key = (vehicle_nearest_waypoint.road_id, vehicle_nearest_waypoint.lane_id)
+            if key in road_lane_to_vehicle_id:
+                road_lane_to_vehicle_id[key].append(vehicle.id)
+            else:
+                road_lane_to_vehicle_id[key] = [vehicle.id]
+
         for elem in lane_list:
 
-            if len(elem) == 2:
+            if (
+                len(elem) == 2
+            ):  ## This is for 3 way intersections. TODO: Enable get_lane_waypoints for these.
                 this_connection_waypoints = self.filter_waypoints(
                     self.all_waypoints, elem[0], elem[1]
                 )
-                this_connection_actors = self.get_actors(all_vehicles, elem[0], elem[1])
+                this_connection_actors = road_lane_to_vehicle_id[(elem[0], elem[1])]
+
             else:
-                this_connection_waypoints = self.filter_waypoints(
-                    self.all_waypoints, elem[0][0], elem[0][1]
-                )
-                this_connection_actors = self.get_actors(
-                    all_vehicles, elem[0][0], elem[0][1]
-                )
 
-                this_connection_waypoints.extend(
-                    self.filter_waypoints(self.all_waypoints, elem[1][0], elem[1][1])
+                ### Get Waypoints
+                this_connection_waypoints = self.get_lane_waypoints(
+                    elem, road_lane_to_orientation
+                )
+                this_connection_actors = []
+                ### Get actors
+
+                this_connection_actors.extend(
+                    road_lane_to_vehicle_id[(elem[0][0], elem[0][1])]
                 )
                 this_connection_actors.extend(
-                    self.get_actors(all_vehicles, elem[1][0], elem[1][1])
-                )
-
-                this_connection_waypoints.extend(
-                    self.filter_waypoints(self.all_waypoints, elem[2][0], elem[2][1])
+                    road_lane_to_vehicle_id[(elem[1][0], elem[1][1])]
                 )
                 this_connection_actors.extend(
-                    self.get_actors(all_vehicles, elem[2][0], elem[2][1])
+                    road_lane_to_vehicle_id[(elem[2][0], elem[2][1])]
                 )
 
+                ### Convert actors to custom objects
                 this_connection_actors = [
-                    Vehicle(self.world, vehicle.id)
-                    for vehicle in this_connection_actors
+                    Vehicle(self.world, vehicle_id)
+                    for vehicle_id in this_connection_actors
                 ]
+                ### Convert waypoints to custom objects
                 this_connection_waypoints = [
                     LanePoint(global_pose=self.waypoint_to_pose2D(wp))
                     for wp in this_connection_waypoints
                 ]
                 # HACK
-                for i in range(len(this_connection_waypoints)):
-                    pose = this_connection_waypoints[i].global_pose
-                    this_connection_waypoints[i].frenet_pose = Frenet(
-                        x=pose.x, y=pose.y, theta=pose.theta
-                    )
-                for i in range(len(this_connection_actors)):
-                    pose = this_connection_actors[i].location_global
-                    this_connection_actors[i].frenet_pose = Frenet(
-                        x=pose.x, y=pose.y, theta=pose.theta
-                    )
+                # for i in range(len(this_connection_waypoints)):
+                #     pose = this_connection_waypoints[i].global_pose
+                #     this_connection_waypoints[i].frenet_pose = Frenet(
+                #         x=pose.x, y=pose.y, theta=pose.theta
+                #     )
+                # for i in range(len(this_connection_actors)):
+                #     pose = this_connection_actors[i].location_global
+                #     this_connection_actors[i].frenet_pose = Frenet(
+                #         x=pose.x, y=pose.y, theta=pose.theta
+                #     )
 
             if ego_road_lane_ID_pair is not None and ego_road_lane_ID_pair in elem:
                 ego_lane_info.append(
@@ -331,11 +384,72 @@ class CarlaHandler:
 
         return full_info, ego_lane_info
 
+    def get_lane_info_only_actors(self, all_vehicles, lane_list, ego_road_lane_ID_pair):
+
+        full_info = []
+        ego_lane_info = []
+
+        road_lane_to_vehicle_id = defaultdict(lambda: [])
+
+        for vehicle in all_vehicles:
+            vehicle_nearest_waypoint = self.world_map.get_waypoint(
+                vehicle.get_location(), project_to_road=True
+            )
+            key = (vehicle_nearest_waypoint.road_id, vehicle_nearest_waypoint.lane_id)
+            if key in road_lane_to_vehicle_id:
+                road_lane_to_vehicle_id[key].append(vehicle.id)
+            else:
+                road_lane_to_vehicle_id[key] = [vehicle.id]
+
+        for elem in lane_list:
+
+            if (
+                len(elem) == 2
+            ):  ## This is for 3 way intersections. TODO: Enable get_lane_waypoints for these.
+                this_connection_actors = road_lane_to_vehicle_id[(elem[0], elem[1])]
+
+            else:
+                this_connection_actors = []
+                ### Get actors
+
+                this_connection_actors.extend(
+                    road_lane_to_vehicle_id[(elem[0][0], elem[0][1])]
+                )
+                this_connection_actors.extend(
+                    road_lane_to_vehicle_id[(elem[1][0], elem[1][1])]
+                )
+                this_connection_actors.extend(
+                    road_lane_to_vehicle_id[(elem[2][0], elem[2][1])]
+                )
+
+                ### Convert actors to custom objects
+                this_connection_actors = [
+                    Vehicle(self.world, vehicle_id)
+                    for vehicle_id in this_connection_actors
+                ]
+
+                # HACK
+                # for i in range(len(this_connection_actors)):
+                #     pose = this_connection_actors[i].location_global
+                #     this_connection_actors[i].frenet_pose = Frenet(
+                #         x=pose.x, y=pose.y, theta=pose.theta
+                #     )
+
+            if ego_road_lane_ID_pair is not None and ego_road_lane_ID_pair in elem:
+                ego_lane_info.append([this_connection_actors, []])
+            else:
+                full_info.append([this_connection_actors, []])
+
+        return full_info, ego_lane_info
+
     def get_state_information_intersection(
         self,
         ego_vehicle=None,
+        all_vehicles=None,
         ego_road_lane_ID_pair=None,
         intersection_topology=None,
+        road_lane_to_orientation=None,
+        only_actors=False,
     ):
 
         (
@@ -345,26 +459,50 @@ class CarlaHandler:
             parallel_opposite_dir,
         ) = intersection_topology
 
-        all_vehicles = self.world.get_actors().filter("vehicle.*")
+        if only_actors == False:
+            intersecting_left_info, _ = self.get_lane_info(
+                all_vehicles, intersecting_left, None, road_lane_to_orientation
+            )
+            intersecting_right_info, _ = self.get_lane_info(
+                all_vehicles, intersecting_right, None, road_lane_to_orientation
+            )
+            parallel_same_dir_info, ego_lane_info = self.get_lane_info(
+                all_vehicles,
+                parallel_same_dir,
+                ego_road_lane_ID_pair,
+                road_lane_to_orientation,
+            )
+            parallel_opposite_dir_info, _ = self.get_lane_info(
+                all_vehicles, parallel_opposite_dir, None, road_lane_to_orientation
+            )
 
-        intersecting_left_info, _ = self.get_lane_info(all_vehicles, intersecting_left)
-        intersecting_right_info, _ = self.get_lane_info(
-            all_vehicles, intersecting_right
-        )
-        parallel_same_dir_info, ego_lane_info = self.get_lane_info(
-            all_vehicles, parallel_same_dir, ego_road_lane_ID_pair
-        )
-        parallel_opposite_dir_info, _ = self.get_lane_info(
-            all_vehicles, parallel_opposite_dir
-        )
-
-        return (
-            intersecting_left_info,
-            intersecting_right_info,
-            parallel_same_dir_info,
-            parallel_opposite_dir_info,
-            ego_lane_info,
-        )
+            return (
+                intersecting_left_info,
+                intersecting_right_info,
+                parallel_same_dir_info,
+                parallel_opposite_dir_info,
+                ego_lane_info,
+            )
+        else:
+            intersecting_left_info, _ = self.get_lane_info_only_actors(
+                all_vehicles, intersecting_left, None
+            )
+            intersecting_right_info, _ = self.get_lane_info_only_actors(
+                all_vehicles, intersecting_right, None
+            )
+            parallel_same_dir_info, ego_lane_info = self.get_lane_info_only_actors(
+                all_vehicles, parallel_same_dir, ego_road_lane_ID_pair
+            )
+            parallel_opposite_dir_info, _ = self.get_lane_info_only_actors(
+                all_vehicles, parallel_opposite_dir, None
+            )
+            return (
+                intersecting_left_info,
+                intersecting_right_info,
+                parallel_same_dir_info,
+                parallel_opposite_dir_info,
+                ego_lane_info,
+            )
 
     def get_state_information_new(
         self,

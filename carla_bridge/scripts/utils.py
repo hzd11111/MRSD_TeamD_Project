@@ -340,25 +340,25 @@ def get_intersection_topology(
         next_wp = first_wp.next(1)[0]
         if next_wp.is_junction:
             if next_wp.get_junction().id == junctionId:
-                road_lane_to_init_point[key] = (wps[:2], "incoming")
+                road_lane_to_init_point[key] = (wps[:2], "incoming", 0)
                 continue
 
         next_wp = last_wp.next(1)[0]
         if next_wp.is_junction:
             if next_wp.get_junction().id == junctionId:
-                road_lane_to_init_point[key] = (wps[-2:][::-1], "incoming")
+                road_lane_to_init_point[key] = (wps[-2:][::-1], "incoming", 1)
                 continue
 
         next_wp = first_wp.previous(1)[0]
         if next_wp.is_junction:
             if next_wp.get_junction().id == junctionId:
-                road_lane_to_init_point[key] = (wps[:2], "incoming")
+                road_lane_to_init_point[key] = (wps[:2], "incoming", 0)
                 continue
 
         next_wp = last_wp.previous(1)[0]
         if next_wp.is_junction:
             if next_wp.get_junction().id == junctionId:
-                road_lane_to_init_point[key] = (wps[-2:][::-1], "incoming")
+                road_lane_to_init_point[key] = (wps[-2:][::-1], "incoming", 1)
                 continue
 
     for key in outgoing_road_lane_id_set:
@@ -371,28 +371,31 @@ def get_intersection_topology(
         next_wp = first_wp.next(1)[0]
         if next_wp.is_junction:
             if next_wp.get_junction().id == junctionId:
-                road_lane_to_init_point[key] = (wps[:2][::-1], "outgoing")
+                road_lane_to_init_point[key] = (wps[:2][::-1], "outgoing", 0)
                 continue
 
         next_wp = last_wp.next(1)[0]
         if next_wp.is_junction:
             if next_wp.get_junction().id == junctionId:
-                road_lane_to_init_point[key] = (wps[-2:], "outgoing")
+                road_lane_to_init_point[key] = (wps[-2:], "outgoing", 1)
                 continue
 
         next_wp = first_wp.previous(1)[0]
         if next_wp.is_junction:
             if next_wp.get_junction().id == junctionId:
-                road_lane_to_init_point[key] = (wps[:2][::-1], "outgoing")
+                road_lane_to_init_point[key] = (wps[:2][::-1], "outgoing", 0)
                 continue
 
         next_wp = last_wp.previous(1)[0]
         if next_wp.is_junction:
             if next_wp.get_junction().id == junctionId:
-                road_lane_to_init_point[key] = (wps[-2:], "outgoing")
+                road_lane_to_init_point[key] = (wps[-2:], "outgoing", 1)
                 continue
 
-    return get_parallel_and_perpendicular_keys(ego_key, road_lane_to_init_point)
+    return (
+        get_parallel_and_perpendicular_keys(ego_key, road_lane_to_init_point),
+        road_lane_to_init_point,
+    )
 
 
 def get_full_lanes(
