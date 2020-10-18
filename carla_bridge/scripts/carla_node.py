@@ -559,6 +559,18 @@ class CarlaManager:
         # spin
         rospy.spin()
 
+    def create_intersection_waypoints(self, current_lane, perpendicular_lanes):
+        """
+        Calculate the frenet coordinates of the vehicles in perpendicular lane wrt the current lane
+        """
+        for i in range(len(perpendicular_lanes)):
+            intersecting_point = perpendicular_lanes[i].linestring.intersects(
+                current_lane.linestring)
+            perpendicular_lanes[i].intersecting_distance = current_lane.linestring.project(
+                intersecting_point)
+            perpendicular_lanes[i].ego_offset = perpendicular_lanes[i].linestring.project(
+                intersecting_point)
+
 
 if __name__ == "__main__":
     try:
