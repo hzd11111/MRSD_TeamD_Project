@@ -249,18 +249,47 @@ class CurrentLane(LaneStatus):
         return msg
 
     # TODO: add definition
-    def VehicleInFront(curret_vehicle):
-        vehicle_dummy = Vehicle(
-            actor_id=-1, speed=-1, location_frenet=Pose2D(1000, 1000, 0)
-        )
-        return vehicle_dummy
+    def VehicleInFront(self, current_vehicle: Vehicle):
+        # vehicle_dummy = Vehicle(
+        #     actor_id=-1, speed=-1, location_frenet=Pose2D(1000, 1000, 0)
+        # )
+        # return vehicle_dummy
+
+        closest_distance = 10000
+        front_vehicle = None
+
+        current_vehicle_s = current_vehicle.location_frenet.x
+        for vehicle in self.lane_vehicles:
+            vehicle_s = vehicle.location_frenet.x
+            if vehicle_s > current_vehicle_s:
+
+                distance = abs(vehicle_s - current_vehicle_s)
+                if distance < closest_distance:
+                    front_vehicle = vehicle
+                    closest_distance = distance
+
+        return front_vehicle
 
     # TODO: add definition
-    def VehicleBehind(curret_vehicle):
-        vehicle_dummy = Vehicle(
-            actor_id=-1, speed=-1, location_frenet=Pose2D(1000, 1000, 0)
-        )
-        return vehicle_dummy
+    def VehicleBehind(self, current_vehicle: Vehicle):
+        # vehicle_dummy = Vehicle(
+        #     actor_id=-1, speed=-1, location_frenet=Pose2D(1000, 1000, 0)
+        # )
+        # return vehicle_dummy
+        closest_distance = 10000
+        rear_vehicle = None
+
+        current_vehicle_s = current_vehicle.location_frenet.x
+        for vehicle in self.lane_vehicles:
+            vehicle_s = vehicle.location_frenet.x
+            if vehicle_s < current_vehicle_s:
+
+                distance = abs(vehicle_s - current_vehicle_s)
+                if distance < closest_distance:
+                    rear_vehicle = vehicle
+                    closest_distance = distance
+
+        return rear_vehicle
 
 
 class ParallelLane(LaneStatus):

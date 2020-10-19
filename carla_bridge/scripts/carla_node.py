@@ -500,7 +500,7 @@ class CarlaManager:
             print("failed....")
             pass
 
-    def initialize(self):
+    def initialize(self, synchronous_mode=True):
         # initialize node
         rospy.init_node(NODE_NAME, anonymous=True)
 
@@ -519,10 +519,11 @@ class CarlaManager:
         self.carla_handler = CarlaHandler(client)
         self.client = client
 
-        settings = self.carla_handler.world.get_settings()
-        settings.synchronous_mode = True
-        settings.fixed_delta_seconds = self.simulation_sync_timestep
-        self.carla_handler.world.apply_settings(settings)
+        if synchronous_mode:
+            settings = self.carla_handler.world.get_settings()
+            settings.synchronous_mode = True
+            settings.fixed_delta_seconds = self.simulation_sync_timestep
+            self.carla_handler.world.apply_settings(settings)
 
         # self.tm = CustomScenario(self.client, self.carla_handler)
 
@@ -590,7 +591,7 @@ class CarlaManager:
 if __name__ == "__main__":
     try:
         carla_manager = CarlaManager()
-        carla_manager.initialize()
+        carla_manager.initialize(synchronous_mode=False)
         print("Initialize Done.....")
         carla_manager.spin()
     except rospy.ROSInterruptException:
