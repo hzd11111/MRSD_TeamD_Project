@@ -26,6 +26,7 @@ sys.path.append("../../carla_utils/utils")
 from functional_utility import Pose2D, Frenet
 from utility import LanePoint
 from actors import Actor, Vehicle, Pedestrian
+from options import StopLineStatus
 
 
 class RoadOption(Enum):
@@ -400,7 +401,11 @@ class CarlaHandler:
         if dist1 > dist2:
             connecting_waypoints = connecting_waypoints[::-1]
 
-        return incoming_waypoints + connecting_waypoints[1:-1] + outgoing_waypoints
+        return (
+            incoming_waypoints + connecting_waypoints[1:-1] + outgoing_waypoints,
+            len(incoming_waypoints),
+            len(connecting_waypoints[1:-1]),
+        )
 
     def get_lane_info(
         self,
@@ -446,9 +451,11 @@ class CarlaHandler:
                 this_connection_road_lanes.append((elem[2][0], elem[2][1]))
 
                 ### Get Waypoints
-                this_connection_waypoints = self.get_lane_waypoints(
-                    elem, road_lane_to_orientation
-                )
+                (
+                    this_connection_waypoints,
+                    length_incoming_section,
+                    length_connecting_section,
+                ) = self.get_lane_waypoints(elem, road_lane_to_orientation)
                 this_connection_actors = []
                 ### Get actors
 
@@ -472,6 +479,17 @@ class CarlaHandler:
                     LanePoint(global_pose=self.waypoint_to_pose2D(wp))
                     for wp in this_connection_waypoints
                 ]
+                this_connection_waypoints[0].lane_start = True
+                this_connection_waypoints[
+                    length_incoming_section - 1
+                ].stop_line = StopLineStatus.STRAIGHT_STOP
+                this_connection_waypoints[length_incoming_section - 1].lane_start = True
+                this_connection_waypoints[
+                    length_incoming_section + length_connecting_section - 1
+                ].stop_line = StopLineStatus.STRAIGHT_STOP
+                this_connection_waypoints[
+                    length_incoming_section + length_connecting_section - 1
+                ].lane_start = True
 
             if ego_road_lane_ID_pair is not None and ego_road_lane_ID_pair in elem:
                 ego_lane_info.append(
