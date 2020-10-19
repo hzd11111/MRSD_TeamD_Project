@@ -388,7 +388,6 @@ class StateManager:
             env_desc.cur_vehicle_state.traffic_light_status)
         for point in env_desc.current_lane.lane_points:
             if point.lane_start is True:
-                current_lane_status += self.createStopLineToOneHotVec(point.stop_line)
                 current_lane_status += [point.frenet_pose.x]
                 break
 
@@ -545,17 +544,14 @@ class StateManager:
             env_desc.cur_vehicle_state.traffic_light_status)
         for point in env_desc.current_lane.lane_points:
             if point.lane_start is True:
-                current_lane_status += self.createStopLineToOneHotVec(point.stop_line)
+                current_lane_status += [point.location_frenet.x]
                 break
         # get the merging distance
-        min_merging_dist = 1e5
+        min_merging_dist = 100
         for lane in env_desc.next_intersection:
             if lane.directed_right is False:
-                for point in lane.lane_points:
-                    if point.lane_start is True:
-                        if min_merging_dist > point.location_frenet.x:
-                            min_merging_dist = point.location_frenet.x
-                        break
+                if min_merging_dist > lane.intersecting_distance:
+                    min_merging_dist = lane.intersecting_distance
         current_lane_status += [min_merging_dist]
 
         if len(current_lane_status) != 8:
@@ -703,18 +699,18 @@ class StateManager:
             env_desc.cur_vehicle_state.traffic_light_status)
         for point in env_desc.current_lane.lane_points:
             if point.lane_start is True:
-                current_lane_status += self.createStopLineToOneHotVec(point.stop_line)
+                current_lane_status += [point.location_frenet.x]
                 break
+
         # get the merging distance
-        min_merging_dist = 1e5
+        min_merging_dist = 100
         for lane in env_desc.next_intersection:
-            if lane.directed_right is False:
-                for point in lane.lane_points:
-                    if point.lane_start is True:
-                        if min_merging_dist > point.location_frenet.x:
-                            min_merging_dist = point.location_frenet.x
-                        break
+            if lane.directed_right is True:
+                if min_merging_dist > lane.intersecting_distance:
+                    min_merging_dist = lane.intersecting_distance
         current_lane_status += [min_merging_dist]
+        current_lane_status += [min_merging_dist]
+
         if len(current_lane_status) != 8:
             current_lane_status += list(itertools.repeat(
                 0, 8 - len(current_lane_status)))
