@@ -115,8 +115,8 @@ class StateManager:
         # extract front vehicle and back vehicle and pedestrian in current lane
         # TODO: Make sure vehicle in front or back are always present
         current_lane = env_desc.current_lane
-        front_vehicle = current_lane.VehicleInFront()
-        back_vehicle = current_lane.VehicleBehind()
+        front_vehicle = current_lane.VehicleInFront(env_desc.cur_vehicle_state)
+        back_vehicle = current_lane.VehicleBehind(env_desc.cur_vehicle_state)
 
         for pedestrian in current_lane.crossing_pedestrain:
             pedestrian_in_ego = pedestrian.fromControllingVehicle(
@@ -170,8 +170,8 @@ class StateManager:
         # extract front vehicle and back vehicle and pedestrian in current lane
         # TODO: Make sure vehicle in front or back are always present
         current_lane = env_desc.current_lane
-        front_vehicle = current_lane.VehicleInFront()
-        back_vehicle = current_lane.VehicleBehind()
+        front_vehicle = current_lane.VehicleInFront(env_desc.cur_vehicle_state)
+        back_vehicle = current_lane.VehicleBehind(env_desc.cur_vehicle_state)
 
         for pedestrian in current_lane.crossing_pedestrain:
             pedestrian_in_ego = pedestrian.fromControllingVehicle(
@@ -223,8 +223,8 @@ class StateManager:
         # extract front vehicle and back vehicle and pedestrian in current lane
         # TODO: Make sure vehicle in front or back are always present
         current_lane = env_desc.current_lane
-        front_vehicle = current_lane.VehicleInFront()
-        back_vehicle = current_lane.VehicleBehind()
+        front_vehicle = current_lane.VehicleInFront(env_desc.cur_vehicle_state)
+        back_vehicle = current_lane.VehicleBehind(env_desc.cur_vehicle_state)
 
         for pedestrian in current_lane.crossing_pedestrain:
             pedestrian_in_ego = pedestrian.fromControllingVehicle(
@@ -353,8 +353,8 @@ class StateManager:
         # extract front vehicle and back vehicle and pedestrian in current lane
         # TODO: Make sure vehicle in front or back are always present
         current_lane = env_desc.current_lane
-        front_vehicle = current_lane.VehicleInFront()
-        back_vehicle = current_lane.VehicleBehind()
+        front_vehicle = current_lane.VehicleInFront(env_desc.cur_vehicle_state)
+        back_vehicle = current_lane.VehicleBehind(env_desc.cur_vehicle_state)
 
         # select pedestrians from all perpendicular lanes with directed_right = false
         for lane in env_desc.next_intersection:
@@ -501,8 +501,8 @@ class StateManager:
         # extract front vehicle and back vehicle and pedestrian in current lane
         # TODO: Make sure vehicle in front or back are always present
         current_lane = env_desc.current_lane
-        front_vehicle = current_lane.VehicleInFront()
-        back_vehicle = current_lane.VehicleBehind()
+        front_vehicle = current_lane.VehicleInFront(env_desc.cur_vehicle_state)
+        back_vehicle = current_lane.VehicleBehind(env_desc.cur_vehicle_state)
 
         # select pedestrians from all perpendicular lanes which we turn into
         for lane in env_desc.next_intersection:

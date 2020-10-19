@@ -401,10 +401,6 @@ class CarlaManager:
         env_desc.reward_info = reward_info
         env_desc.global_path = self.global_path_in_intersection
 
-        # import ipdb
-
-        # ipdb.set_trace()
-
         return SimServiceResponse(env_desc.toRosMsg())
 
     def destroy_actors_and_sensors(self):
@@ -571,7 +567,7 @@ class CarlaManager:
                 -1 * middle_point_frenet_relative_to_current_lane.y
             )
 
-    def draw(self, vehicle):
+    def draw(self, vehicle, color=(0, 255, 0)):
 
         vehicle_location = carla.Location(
             x=vehicle.location_global.x, y=vehicle.location_global.y, z=2
@@ -581,7 +577,7 @@ class CarlaManager:
             vehicle_location,
             "O",
             draw_shadow=False,
-            color=carla.Color(r=0, g=255, b=0),
+            color=carla.Color(r=color[0], g=color[1], b=color[2]),
             life_time=5,
         )
 
@@ -591,7 +587,7 @@ class CarlaManager:
 if __name__ == "__main__":
     try:
         carla_manager = CarlaManager()
-        carla_manager.initialize(synchronous_mode=False)
+        carla_manager.initialize(synchronous_mode=True)
         print("Initialize Done.....")
         carla_manager.spin()
     except rospy.ROSInterruptException:
