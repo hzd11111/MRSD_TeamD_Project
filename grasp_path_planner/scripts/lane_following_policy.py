@@ -60,28 +60,38 @@ class CustomLaneFollowingPolicy(DQNPolicy):
         with tf.variable_scope("model", reuse=reuse):
             out_ph = tf.layers.flatten(self.processed_obs)
             embed_adjacent_vehicles = []
-            i = 0
+            veh_state_len = 6
+            ped_state_len = 6
+            mask = 1
+            cur_veh = out_ph[:, :veh_state_len]
             # Add front vehicle
             embed_front_vehicle = []
+            front_veh_start = veh_state_len
+            front_veh_mask = out_ph[:, front_veh_start + veh_state_len][:, None]
+            front_veh = out_ph[:, front_veh_start:front_veh_start + veh_state_len]
+            front_veh_state = tf.concat([cur_veh, front_veh], axis=1)
             embed_front_vehicle.append(
-                self.embedding_net_front(
-                    tf.concat([out_ph[:, :4], out_ph[:, (i + 1) * 4:(i + 2) * 4]], axis=1)))
-            i += 1
+                self.embedding_net_front(front_veh_state) * front_veh_mask)
 
             # Add back vehicle
             embed_back_vehicle = []
+            back_veh_start = veh_state_len + 1 * (veh_state_len + mask)
+            back_veh_mask = out_ph[:, back_veh_start + veh_state_len][:, None]
+            back_veh = out_ph[:, back_veh_start:back_veh_start + veh_state_len]
+            back_veh_state = tf.concat([cur_veh, back_veh], axis=1)
             embed_back_vehicle.append(
-                self.embedding_net_back(
-                    tf.concat([out_ph[:, :4], out_ph[:, (i + 1) * 4:(i + 2) * 4]], axis=1)))
-            i += 1
+                self.embedding_net_back(back_veh_state) * back_veh_mask)
 
             # Add pedestrians
             embed_pedestrians = []
-            for j in range(5):
+            ped_veh_start = veh_state_len + 2 * (veh_state_len + mask)
+            for j in range(3):
+                ped_veh_mask = out_ph[:, ped_veh_start + (j + 1) * (ped_state_len + mask) - 1][:, None]
+                start = ped_veh_start + j * (ped_state_len + mask)
+                ped = out_ph[:, start:start + ped_state_len]
+                ped_state = tf.concat([cur_veh, ped], axis=1)
                 embed_pedestrians.append(
-                    self.embedding_net_pedestrian(
-                        tf.concat([out_ph[:, :4], out_ph[:, (i + 1) * 4:(i + 2) * 4]], axis=1)))
-                i += 1
+                    self.embedding_net_pedestrian(ped_state) * ped_veh_mask)
 
             embed_list = embed_adjacent_vehicles + \
                 embed_front_vehicle + embed_back_vehicle + embed_pedestrians

@@ -39,3 +39,5 @@ TO RUN:
 * Fix convertdecision based on the new enum in rl_manager.py
 * Remove Pedestrian from scenario manager and settings
 * Add init after new
+* Add right_most_lane into env_desc
+* Add left_turning_lane needs to be added into the paralllel lane message
