@@ -254,6 +254,107 @@ class CarlaHandler:
 
         return Pose2D(x=x, y=y, theta=theta)
 
+    def get_direction_information(
+        self,
+        road_id,
+        lane_id,
+        ego_info,
+        in_out_dict,
+        same_dir,
+        intersecting_left,
+        intersecting_right,
+        parallel_same_dir,
+        parallel_opposite_dir,
+    ):
+        right_turning_lane = False
+        left_turning_lane = False
+        right_most_turning_lane = False
+        left_to_the_current = False
+        right_next_to_the_current = False
+        lanes_to_right = intersecting_right if same_dir else intersecting_left
+        lanes_to_left = intersecting_left if same_dir else intersecting_right
+
+        for connection in in_out_dict[(road_id, lane_id)]:
+            # print((connection[0], connection[1]))
+            for right_lanes in lanes_to_right:
+                if (connection[0], connection[1]) in right_lanes:
+                    right_turning_lane = True
+
+            for left_lanes in lanes_to_left:
+                if (connection[0], connection[1]) in left_lanes:
+                    left_turning_lane = True
+
+        # determine if the lane is right_most
+        lane_group = parallel_same_dir if same_dir else parallel_opposite_dir
+        maximum_id_magnitude = 0
+        for lane in lane_group:
+            maximum_id_magnitude = max(abs(lane[0][1]), maximum_id_magnitude)
+        right_most_turning_lane = maximum_id_magnitude == abs(lane_id)
+
+        ego_lane = ego_info[1]
+        ego_road = [
+            parallel_same_dir[0][0][0],
+            parallel_same_dir[0][1][0],
+            parallel_same_dir[0][2][0],
+        ]
+        if road_id in ego_road:
+            if not same_dir:
+                left_to_the_current = (
+                    True  # which could means right_to_the_current = False
+                )
+                # since this function should only be applied on (road_id, lane_id) in in_out_dict.keys()
+                # update all the fields in connecting lanes if needed
+                # update_field_in_group(road_id, lane_id, parallel_opposite_dir, left_to_the_current, True)
+                if abs(ego_lane) == 1 and lane_id * ego_lane == -1:
+                    right_next_to_the_current = True
+                    # update_field_in_group(road_id, lane_id, parallel_opposite_dir, right_next_to_the_current, True)
+
+            else:
+                if abs(lane_id) < abs(ego_lane):
+                    left_to_the_current = (
+                        True  # on the same road but with opposite direction
+                    )
+                    # update_field_in_group(road_id, lane_id, parallel_opposite_dir, left_to_the_current, True)
+                if abs(ego_lane - lane_id) == 1:
+                    right_next_to_the_current = True
+                    # update_field_in_group(road_id, lane_id, parallel_opposite_dir, right_next_to_the_current, True)
+
+        return (
+            left_turning_lane,
+            right_turning_lane,
+            left_to_the_current,
+            right_next_to_the_current,
+        )
+
+    def get_positional_booleans(
+        self, road_lane_list, ego_info, in_out_dict, intersection_topology, same_dir
+    ):
+
+        road_lane = None
+
+        for key in in_out_dict:
+            if key in road_lane_list:
+                road_lane = key
+                break
+
+        (
+            intersecting_left,
+            intersecting_right,
+            parallel_same_dir,
+            parallel_opposite_dir,
+        ) = intersection_topology
+        return self.get_direction_information(
+            road_lane[0],
+            road_lane[1],
+            ego_info,
+            in_out_dict,
+            same_dir,
+            intersecting_left,
+            intersecting_right,
+            parallel_same_dir,
+            parallel_opposite_dir,
+        )
+
     def get_lane_waypoints(self, road_lane_collection, road_lane_to_orientation):
 
         incoming_road = road_lane_collection[0][0]
@@ -326,6 +427,8 @@ class CarlaHandler:
 
         for elem in lane_list:
 
+            this_connection_road_lanes = []
+
             if (
                 len(elem) == 2
             ):  ## This is for 3 way intersections. TODO: Enable get_lane_waypoints for these.
@@ -333,8 +436,14 @@ class CarlaHandler:
                     self.all_waypoints, elem[0], elem[1]
                 )
                 this_connection_actors = road_lane_to_vehicle_id[(elem[0], elem[1])]
+                this_connection_road_lanes.append(tuple(elem))
 
             else:
+
+                ### Add road and lane_ids
+                this_connection_road_lanes.append((elem[0][0], elem[0][1]))
+                this_connection_road_lanes.append((elem[1][0], elem[1][1]))
+                this_connection_road_lanes.append((elem[2][0], elem[2][1]))
 
                 ### Get Waypoints
                 this_connection_waypoints = self.get_lane_waypoints(
@@ -363,24 +472,23 @@ class CarlaHandler:
                     LanePoint(global_pose=self.waypoint_to_pose2D(wp))
                     for wp in this_connection_waypoints
                 ]
-                # HACK
-                # for i in range(len(this_connection_waypoints)):
-                #     pose = this_connection_waypoints[i].global_pose
-                #     this_connection_waypoints[i].frenet_pose = Frenet(
-                #         x=pose.x, y=pose.y, theta=pose.theta
-                #     )
-                # for i in range(len(this_connection_actors)):
-                #     pose = this_connection_actors[i].location_global
-                #     this_connection_actors[i].frenet_pose = Frenet(
-                #         x=pose.x, y=pose.y, theta=pose.theta
-                #     )
 
             if ego_road_lane_ID_pair is not None and ego_road_lane_ID_pair in elem:
                 ego_lane_info.append(
-                    [this_connection_actors, this_connection_waypoints]
+                    [
+                        this_connection_actors,
+                        this_connection_waypoints,
+                        this_connection_road_lanes,
+                    ]
                 )
             else:
-                full_info.append([this_connection_actors, this_connection_waypoints])
+                full_info.append(
+                    [
+                        this_connection_actors,
+                        this_connection_waypoints,
+                        this_connection_road_lanes,
+                    ]
+                )
 
         return full_info, ego_lane_info
 
@@ -402,13 +510,20 @@ class CarlaHandler:
                 road_lane_to_vehicle_id[key] = [vehicle.id]
 
         for elem in lane_list:
+            this_connection_road_lanes = []
 
             if (
                 len(elem) == 2
             ):  ## This is for 3 way intersections. TODO: Enable get_lane_waypoints for these.
                 this_connection_actors = road_lane_to_vehicle_id[(elem[0], elem[1])]
+                this_connection_road_lanes.append(tuple(elem))
 
             else:
+                ### Add road and lane_ids
+                this_connection_road_lanes.append((elem[0][0], elem[0][1]))
+                this_connection_road_lanes.append((elem[1][0], elem[1][1]))
+                this_connection_road_lanes.append((elem[2][0], elem[2][1]))
+
                 this_connection_actors = []
                 ### Get actors
 
@@ -428,17 +543,14 @@ class CarlaHandler:
                     for vehicle_id in this_connection_actors
                 ]
 
-                # HACK
-                # for i in range(len(this_connection_actors)):
-                #     pose = this_connection_actors[i].location_global
-                #     this_connection_actors[i].frenet_pose = Frenet(
-                #         x=pose.x, y=pose.y, theta=pose.theta
-                #     )
-
             if ego_road_lane_ID_pair is not None and ego_road_lane_ID_pair in elem:
-                ego_lane_info.append([this_connection_actors, []])
+                ego_lane_info.append(
+                    [this_connection_actors, [], this_connection_road_lanes]
+                )
             else:
-                full_info.append([this_connection_actors, []])
+                full_info.append(
+                    [this_connection_actors, [], this_connection_road_lanes]
+                )
 
         return full_info, ego_lane_info
 

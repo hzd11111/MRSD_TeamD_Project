@@ -155,6 +155,9 @@ class IntersectionScenario:
         blueprints = [x for x in blueprints if not x.id.endswith("carlacola")]
         blueprints = [x for x in blueprints if not x.id.endswith("cybertruck")]
         blueprints = [x for x in blueprints if not x.id.endswith("t2")]
+        blueprints = [x for x in blueprints if not x.id.endswith("police")]
+
+        ego_blueprints = [x for x in blueprints if x.id.endswith("model3")]
 
         waypoints = self.world.get_map().generate_waypoints(distance=4)
         road_waypoints = []
@@ -188,7 +191,7 @@ class IntersectionScenario:
         for n, t in enumerate(ego_road_waypoints):
             if n >= 1:
                 break
-            blueprint = random.choice(blueprints)
+            blueprint = random.choice(ego_blueprints)
             if blueprint.has_attribute("color"):
                 color = random.choice(
                     blueprint.get_attribute("color").recommended_values
@@ -203,8 +206,8 @@ class IntersectionScenario:
             transform = t.transform
             transform.location.z += 2.0
             ego_batch.append(
-                SpawnActor(blueprint, transform).then(SetAutopilot(FutureActor, True))
-                # SpawnActor(blueprint, transform)
+                # SpawnActor(blueprint, transform).then(SetAutopilot(FutureActor, True))
+                SpawnActor(blueprint, transform)
             )
 
         for n, t in enumerate(road_waypoints):
@@ -225,8 +228,8 @@ class IntersectionScenario:
             transform = t.transform
             transform.location.z += 2.0
             batch.append(
-                SpawnActor(blueprint, transform).then(SetAutopilot(FutureActor, True))
-                # SpawnActor(blueprint, transform)
+                # SpawnActor(blueprint, transform).then(SetAutopilot(FutureActor, True))
+                SpawnActor(blueprint, transform)
             )
 
         ego_vehicle_id = None
@@ -313,6 +316,8 @@ class IntersectionScenario:
 
         global_path_wps = ego_wps + connection_wps + next_wps
 
+        #### Get parallel lane boolean values
+
         return (
             ego_vehicle,
             my_vehicles,
@@ -322,3 +327,4 @@ class IntersectionScenario:
             global_path_wps,
             road_lane_to_orientation,
         )
+
