@@ -147,3 +147,5 @@ dmypy.json
 .history
 .vscode/
 .vimspector.json
+
+*/Logs/*
