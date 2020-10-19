@@ -14,8 +14,8 @@ class StateManager:
     A class to encompass all the logic needed to create state embeddings
     """
 
-    def __init__(self, event):
-        self.event = event
+    def __init__(self):
+        pass
 
     def appendVehicleState(self, env_state, vehicle_state):
         env_state.append(vehicle_state.vehicle_location.x)
@@ -738,17 +738,17 @@ class StateManager:
         :param env_desc: (EnvironmentState) a ROS message describing the environment
         """
         # based on scenario create the embedding accordingly
-        if self.event == Scenario.SWITCH_LANE_LEFT:
+        if scenario == Scenario.SWITCH_LANE_LEFT:
             return self.createLaneChangeState(env_desc, left=True)
-        elif self.event == Scenario.SWITCH_LANE_RIGHT:
+        elif scenario == Scenario.SWITCH_LANE_RIGHT:
             return self.createLaneChangeState(env_desc, left=False)
-        elif self.event == Scenario.LANE_FOLLOWING:
+        elif scenario == Scenario.LANE_FOLLOWING:
             return self.createLaneFollowingState(env_desc)
-        elif self.event == Scenario.GO_STRAIGHT:
+        elif scenario == Scenario.GO_STRAIGHT:
             return self.createIntersectionStraightState(env_desc)
-        elif self.event == Scenario.LEFT_TURN:
+        elif scenario == Scenario.LEFT_TURN:
             return self.createIntersectionLeftTurnState(env_desc)
-        elif self.event == Scenario.RIGHT_TURN:
+        elif scenario == Scenario.RIGHT_TURN:
             return self.createIntersectionRightTurnState(env_desc)
         else:
             return {}

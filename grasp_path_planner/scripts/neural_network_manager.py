@@ -3,36 +3,42 @@ import numpy as np
 from stable_baselines import DQN
 
 # other packages
-from settings import Scenario, RLDecision
+from state_manager import StateManager
+from RLManager import GeneralRLManager
+from options import Scenario, RLDecision
 
 
 class NNManager:
     """
     A neural network manager class to perform inference
     """
-    def __init__(self, event: Scenario):
+    def __init__(self):
         """
         Class constructor.
         Handles the neural_network inference based on the scenario
         """
-        self.event = event
+        self.state_manager = StateManager()
+        self.decision_maker = GeneralRLManager()
+        self.neural_nets = {}
 
-    def initialize(self, model_path: str):
+    def initialize(self, model_paths):
         """
         loads the model
         Args:
-        :param model_path: (str) the path to the model
+        :param model_paths: dict (Scenario Enu,path) the path to the model
         """
-        self.neural_network = DQN.load(model_path)
+        for key in model_paths:
+            self.neural_nets[key] = DQN.load(model_paths[key])
 
-    def makeDecision(self, env_embedding: np.ndarray) -> RLDecision:
+    def makeDecision(self, env_desc, scenario) -> RLDecision:
         """
         Makes a decision using the neural network
         Args:
         :param env_embedding: Embedding of environment information
         """
+        state = self.state_manager.embedState(env_desc, scenario)
         action, _ = self.neural_network.predict(env_embedding)
-        return RLDecision(action)
+        return self.decision_maker.convertDecision(action, scenario)
 
 
 class NeuralNetworkSelector:
