@@ -465,6 +465,8 @@ class CarlaManager:
                 path_points=self.global_path_in_intersection
             )
 
+            self.draw_global_path(self.global_path_in_intersection)
+
             ## Handing over control
             del self.collision_sensor
             self.collision_sensor = self.carla_handler.world.spawn_actor(
@@ -563,8 +565,8 @@ class CarlaManager:
             middle_point_frenet_relative_to_current_lane = current_lane.GlobalToFrenet(
                 middle_lane_point_global_pose
             )
-            adjacent_lanes[i].lane_distance = (
-                -1 * middle_point_frenet_relative_to_current_lane.y
+            adjacent_lanes[i].lane_distance = abs(
+                middle_point_frenet_relative_to_current_lane.y
             )
 
     def draw(self, vehicle, color=(0, 255, 0)):
@@ -583,11 +585,23 @@ class CarlaManager:
 
         print(vehicle.toRosMsg())
 
+    def draw_global_path(self, global_path, color=(0, 255, 0)):
+        for point in global_path.path_points:
+            location = carla.Location(x=point.global_pose.x, y=point.global_pose.y, z=2)
+
+            self.carla_handler.client.get_world().debug.draw_string(
+                location,
+                "O",
+                draw_shadow=False,
+                color=carla.Color(r=color[0], g=color[1], b=color[2]),
+                life_time=6,
+            )
+
 
 if __name__ == "__main__":
     try:
         carla_manager = CarlaManager()
-        carla_manager.initialize(synchronous_mode=True)
+        carla_manager.initialize(synchronous_mode=False)
         print("Initialize Done.....")
         carla_manager.spin()
     except rospy.ROSInterruptException:

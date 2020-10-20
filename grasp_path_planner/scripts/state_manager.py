@@ -544,7 +544,7 @@ class StateManager:
             env_desc.cur_vehicle_state.traffic_light_status)
         for point in env_desc.current_lane.lane_points:
             if point.lane_start is True:
-                current_lane_status += [point.location_frenet.x]
+                current_lane_status += [point.frenet_pose.x]
                 break
         # get the merging distance
         min_merging_dist = 100
@@ -699,7 +699,7 @@ class StateManager:
             env_desc.cur_vehicle_state.traffic_light_status)
         for point in env_desc.current_lane.lane_points:
             if point.lane_start is True:
-                current_lane_status += [point.location_frenet.x]
+                current_lane_status += [point.frenet_pose.x]
                 break
 
         # get the merging distance

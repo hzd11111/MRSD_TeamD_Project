@@ -11,6 +11,14 @@ from topology_extraction import (
     get_junction_roads_topology,
 )
 from utils import get_intersection_topology, get_full_lanes
+from options import Scenario
+
+sys.path.append("../../global_route_planner")
+
+from global_planner import get_global_planner
+
+sys.path.append("../../grasp_path_planner/scripts/settings.py")
+from settings import CURRENT_SCENARIO
 
 
 class IntersectionScenario:
@@ -28,6 +36,28 @@ class IntersectionScenario:
         tree = get_opendrive_tree(self.world)
         self.junction_topology = get_junction_topology(tree)
         self.road_topology = get_junction_roads_topology(tree)
+        self.global_planner = get_global_planner(self.world, planner_resolution=1)
+
+        ### Get map waypoints
+        self.waypoints = self.world.get_map().generate_waypoints(distance=4)
+        self.waypoints_finer = self.world.get_map().generate_waypoints(distance=1)
+
+        ### Precompute Stuff
+        self.junctions = [53, 905, 965, 599]
+        self.junction_to_road_sets = {}
+        for junction in self.junctions:
+            self.junction_to_road_sets[junction] = self.get_road_sets(junction)
+
+        self.junction_to_scenario_dict = {}
+
+        for junction in self.junctions:
+            self.junction_to_scenario_dict[junction] = self.get_scenario_setups(
+                self.waypoints_finer,
+                junction,
+                self.junction_to_road_sets[junction][1],
+                self.junction_to_road_sets[junction][2],
+                self.junction_to_road_sets[junction][3],
+            )
 
     def reset(
         self,
@@ -43,108 +73,19 @@ class IntersectionScenario:
         if junction_id is None:
             junction_id, _ = random.choice(
                 [53]  # , 905, 599, 965]
-            )  # random.choice(list(self.junction_topology.items()))
+            )  # random.choice(self.junctions)
         print("generating scenario at junction id: ", junction_id)
 
-        incoming_road_lane_id_set = set([])
-        outgoing_road_lane_id_set = set([])
-
-        incoming_road_lane_id_to_outgoing_lane_id_dict = {}
-        road_id_set = set([])
-
-        for idx in range(len(self.junction_topology[junction_id])):
-            intersection_road_id, _ = self.junction_topology[junction_id][idx][1]
-            road_1_id, road_2_id, lane_connections = self.road_topology[
-                intersection_road_id
-            ]
-            road_id_set.add(road_1_id)
-            road_id_set.add(road_2_id)
-
-            for intersection_connection_lanes in lane_connections:
-
-                direction = intersection_connection_lanes[0]
-                lane_1_id = intersection_connection_lanes[1]
-                lane_2_id = intersection_connection_lanes[-1]
-
-                used_intersection_lane_IDs = []
-                for i in range(2, len(intersection_connection_lanes) - 1):
-                    if intersection_connection_lanes[i] in used_intersection_lane_IDs:
-                        continue
-                    used_intersection_lane_IDs.append(intersection_connection_lanes[i])
-
-                if direction == "forward":
-                    incoming_road_lane_id_set.add((road_1_id, lane_1_id))
-                    outgoing_road_lane_id_set.add((road_2_id, lane_2_id))
-                    if (
-                        road_1_id,
-                        lane_1_id,
-                    ) not in incoming_road_lane_id_to_outgoing_lane_id_dict:
-                        incoming_road_lane_id_to_outgoing_lane_id_dict[
-                            (road_1_id, lane_1_id)
-                        ] = [
-                            (
-                                road_2_id,
-                                lane_2_id,
-                                intersection_road_id,
-                                tuple(used_intersection_lane_IDs),
-                            )
-                        ]
-                    else:
-                        incoming_road_lane_id_to_outgoing_lane_id_dict[
-                            (road_1_id, lane_1_id)
-                        ].append(
-                            (
-                                road_2_id,
-                                lane_2_id,
-                                intersection_road_id,
-                                tuple(used_intersection_lane_IDs),
-                            )
-                        )
-                else:
-                    incoming_road_lane_id_set.add((road_2_id, lane_2_id))
-                    outgoing_road_lane_id_set.add((road_1_id, lane_1_id))
-                    if (
-                        road_2_id,
-                        lane_2_id,
-                    ) not in incoming_road_lane_id_to_outgoing_lane_id_dict:
-                        incoming_road_lane_id_to_outgoing_lane_id_dict[
-                            (road_2_id, lane_2_id)
-                        ] = [
-                            (
-                                road_1_id,
-                                lane_1_id,
-                                intersection_road_id,
-                                tuple(used_intersection_lane_IDs),
-                            )
-                        ]
-                    else:
-                        incoming_road_lane_id_to_outgoing_lane_id_dict[
-                            (road_2_id, lane_2_id)
-                        ].append(
-                            (
-                                road_1_id,
-                                lane_1_id,
-                                intersection_road_id,
-                                tuple(used_intersection_lane_IDs),
-                            )
-                        )
-
-        for key in incoming_road_lane_id_to_outgoing_lane_id_dict.keys():
-            incoming_road_lane_id_to_outgoing_lane_id_dict[key] = list(
-                set(incoming_road_lane_id_to_outgoing_lane_id_dict[key])
-            )
+        (
+            road_id_set,
+            incoming_road_lane_id_set,
+            outgoing_road_lane_id_set,
+            incoming_road_lane_id_to_outgoing_lane_id_dict,
+        ) = self.junction_to_road_sets[junction_id]
 
         synchronous_master = True
 
-        # settings = self.world.get_settings()
         self.traffic_manager.set_synchronous_mode(True)
-        # if not settings.synchronous_mode:
-        #     synchronous_master = True
-        #     settings.synchronous_mode = True
-        #     settings.fixed_delta_seconds = 0.05
-        #     self.world.apply_settings(settings)
-        # else:
-        #     synchronous_master = False
 
         blueprints = self.world.get_blueprint_library().filter("vehicle.*")
 
@@ -159,16 +100,22 @@ class IntersectionScenario:
 
         ego_blueprints = [x for x in blueprints if x.id.endswith("model3")]
 
-        waypoints = self.world.get_map().generate_waypoints(distance=4)
+        waypoints = self.waypoints_finer
         road_waypoints = []
         for waypoint in waypoints:
             if waypoint.road_id in road_id_set:
                 road_waypoints.append(waypoint)
         number_of_spawn_points = len(road_waypoints)
 
+        current_scenario_setups = self.junction_to_scenario_dict[junction_id][
+            CURRENT_SCENARIO
+        ]
+
+        current_setup = random.choice(current_scenario_setups)
+
         ego_road_waypoints = []
         for waypoint in waypoints:
-            if (waypoint.road_id, waypoint.lane_id) in incoming_road_lane_id_set:
+            if (waypoint.road_id, waypoint.lane_id) == current_setup[0]:
                 ego_road_waypoints.append(waypoint)
         random.shuffle(ego_road_waypoints)
 
@@ -293,30 +240,41 @@ class IntersectionScenario:
 
         print("Control handed to system....")
 
-        connecting_elem = incoming_road_lane_id_to_outgoing_lane_id_dict[ego_key][1]
+        incoming_road_lane = current_setup[0]
+        outgoing_road_lane = current_setup[1]
 
-        connection_key = (connecting_elem[2], connecting_elem[3][0])
-        next_road_key = (connecting_elem[0], connecting_elem[1])
-
-        ego_wps = [
+        incoming_lane_waypoints = [
             wp
-            for wp in waypoints
-            if wp.road_id == ego_key[0] and wp.lane_id == ego_key[1]
+            for wp in self.waypoints_finer
+            if wp.road_id == incoming_road_lane[0]
+            and wp.lane_id == incoming_road_lane[1]
         ]
-        connection_wps = [
-            wp
-            for wp in waypoints
-            if wp.road_id == connection_key[0] and wp.lane_id == connection_key[1]
-        ]
-        next_wps = [
-            wp
-            for wp in waypoints
-            if wp.road_id == next_road_key[0] and wp.lane_id == next_road_key[1]
-        ]
+        incoming_lane_orientation = current_setup[2]
+        if incoming_lane_orientation == 1:
+            incoming_lane_waypoints = incoming_lane_waypoints[::-1]
 
-        global_path_wps = ego_wps + connection_wps + next_wps
+        outgoing_lane_waypoints = [
+            wp
+            for wp in self.waypoints_finer
+            if wp.road_id == outgoing_road_lane[0]
+            and wp.lane_id == outgoing_road_lane[1]
+        ]
+        outgoing_lane_orientation = current_setup[3]
+        if outgoing_lane_orientation == 1:
+            outgoing_lane_waypoints = outgoing_lane_waypoints[::-1]
 
-        #### Get parallel lane boolean values
+        # start_location = (
+        #     self.world.get_map()
+        #     .get_waypoint(ego_vehicle.get_location(), project_to_road=True)
+        #     .transform.location
+        # )
+        start_location = incoming_lane_waypoints[-1].transform.location  # Start of lane
+        end_location = outgoing_lane_waypoints[
+            10
+        ].transform.location  # 10 m after end of intersection
+
+        route = self.global_planner.trace_route(start_location, end_location)
+        global_path_wps = [route[i][0] for i in range(len(route))]
 
         return (
             ego_vehicle,
@@ -328,3 +286,179 @@ class IntersectionScenario:
             road_lane_to_orientation,
         )
 
+    def get_road_sets(self, junction_id):
+
+        incoming_road_lane_id_set = set([])
+        outgoing_road_lane_id_set = set([])
+
+        incoming_road_lane_id_to_outgoing_lane_id_dict = {}
+        road_id_set = set([])
+
+        for idx in range(len(self.junction_topology[junction_id])):
+            intersection_road_id, _ = self.junction_topology[junction_id][idx][1]
+            road_1_id, road_2_id, lane_connections = self.road_topology[
+                intersection_road_id
+            ]
+            road_id_set.add(road_1_id)
+            road_id_set.add(road_2_id)
+
+            for intersection_connection_lanes in lane_connections:
+
+                direction = intersection_connection_lanes[0]
+                lane_1_id = intersection_connection_lanes[1]
+                lane_2_id = intersection_connection_lanes[-1]
+
+                used_intersection_lane_IDs = []
+                for i in range(2, len(intersection_connection_lanes) - 1):
+                    if intersection_connection_lanes[i] in used_intersection_lane_IDs:
+                        continue
+                    used_intersection_lane_IDs.append(intersection_connection_lanes[i])
+
+                if direction == "forward":
+                    incoming_road_lane_id_set.add((road_1_id, lane_1_id))
+                    outgoing_road_lane_id_set.add((road_2_id, lane_2_id))
+                    if (
+                        road_1_id,
+                        lane_1_id,
+                    ) not in incoming_road_lane_id_to_outgoing_lane_id_dict:
+                        incoming_road_lane_id_to_outgoing_lane_id_dict[
+                            (road_1_id, lane_1_id)
+                        ] = [
+                            (
+                                road_2_id,
+                                lane_2_id,
+                                intersection_road_id,
+                                tuple(used_intersection_lane_IDs),
+                            )
+                        ]
+                    else:
+                        incoming_road_lane_id_to_outgoing_lane_id_dict[
+                            (road_1_id, lane_1_id)
+                        ].append(
+                            (
+                                road_2_id,
+                                lane_2_id,
+                                intersection_road_id,
+                                tuple(used_intersection_lane_IDs),
+                            )
+                        )
+                else:
+                    incoming_road_lane_id_set.add((road_2_id, lane_2_id))
+                    outgoing_road_lane_id_set.add((road_1_id, lane_1_id))
+                    if (
+                        road_2_id,
+                        lane_2_id,
+                    ) not in incoming_road_lane_id_to_outgoing_lane_id_dict:
+                        incoming_road_lane_id_to_outgoing_lane_id_dict[
+                            (road_2_id, lane_2_id)
+                        ] = [
+                            (
+                                road_1_id,
+                                lane_1_id,
+                                intersection_road_id,
+                                tuple(used_intersection_lane_IDs),
+                            )
+                        ]
+                    else:
+                        incoming_road_lane_id_to_outgoing_lane_id_dict[
+                            (road_2_id, lane_2_id)
+                        ].append(
+                            (
+                                road_1_id,
+                                lane_1_id,
+                                intersection_road_id,
+                                tuple(used_intersection_lane_IDs),
+                            )
+                        )
+
+        for key in incoming_road_lane_id_to_outgoing_lane_id_dict.keys():
+            incoming_road_lane_id_to_outgoing_lane_id_dict[key] = list(
+                set(incoming_road_lane_id_to_outgoing_lane_id_dict[key])
+            )
+
+        return (
+            road_id_set,
+            incoming_road_lane_id_set,
+            outgoing_road_lane_id_set,
+            incoming_road_lane_id_to_outgoing_lane_id_dict,
+        )
+
+    def get_scenario_setups(
+        self,
+        waypoints,
+        junction_id,
+        incoming_road_lane_id_set,
+        outgoing_road_lane_id_set,
+        incoming_road_lane_id_to_outgoing_lane_id_dict,
+    ):
+        scenario_to_setup = {}
+        scenario_to_setup[Scenario.LEFT_TURN] = []
+        scenario_to_setup[Scenario.RIGHT_TURN] = []
+        scenario_to_setup[Scenario.GO_STRAIGHT] = []
+
+        for incoming_road_lane_id in incoming_road_lane_id_set:
+            intersection_topology, road_lane_to_orientation = get_intersection_topology(
+                waypoints,
+                incoming_road_lane_id_set,
+                outgoing_road_lane_id_set,
+                junction_id,
+                incoming_road_lane_id,
+            )
+
+            intersection_topology[2].append(incoming_road_lane_id)
+            intersection_topology = get_full_lanes(
+                intersection_topology[0],
+                intersection_topology[1],
+                intersection_topology[2],
+                intersection_topology[3],
+                incoming_road_lane_id_to_outgoing_lane_id_dict,
+            )
+
+            (
+                full_intersecting_left,
+                full_intersecting_right,
+                full_parallel_same_dir,
+                full_parallel_opposite_dir,
+            ) = intersection_topology
+
+            current_road_lane_connections = (
+                incoming_road_lane_id_to_outgoing_lane_id_dict[incoming_road_lane_id]
+            )
+
+            for connection in current_road_lane_connections:
+                outgoing_road_id = connection[0]
+                outgoing_lane_id = connection[1]
+
+                # Turn Left Scenario
+                for full_lane in full_intersecting_left:
+                    if full_lane[-1] == (outgoing_road_id, outgoing_lane_id):
+                        scenario_to_setup[Scenario.LEFT_TURN].append(
+                            [
+                                incoming_road_lane_id,
+                                full_lane[-1],
+                                road_lane_to_orientation[incoming_road_lane_id][-1],
+                                road_lane_to_orientation[full_lane[-1]][-1],
+                            ]
+                        )
+                for full_lane in full_intersecting_right:
+                    if full_lane[-1] == (outgoing_road_id, outgoing_lane_id):
+                        scenario_to_setup[Scenario.RIGHT_TURN].append(
+                            [
+                                incoming_road_lane_id,
+                                full_lane[-1],
+                                road_lane_to_orientation[incoming_road_lane_id][-1],
+                                road_lane_to_orientation[full_lane[-1]][-1],
+                            ]
+                        )
+                for full_lane in full_parallel_same_dir:
+                    if full_lane[-1] == (outgoing_road_id, outgoing_lane_id):
+                        scenario_to_setup[Scenario.GO_STRAIGHT].append(
+                            [
+                                incoming_road_lane_id,
+                                full_lane[-1],
+                                road_lane_to_orientation[incoming_road_lane_id][-1],
+                                road_lane_to_orientation[full_lane[-1]][-1],
+                            ]
+                        )
+
+        return scenario_to_setup
