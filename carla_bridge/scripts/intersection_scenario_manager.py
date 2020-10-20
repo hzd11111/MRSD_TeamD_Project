@@ -217,14 +217,14 @@ class IntersectionScenario:
             incoming_road_lane_id_to_outgoing_lane_id_dict,
         )
 
-        # for n, v in enumerate(my_vehicles):
+        for n, v in enumerate(my_vehicles):
 
-        #     self.traffic_manager.auto_lane_change(v, False)
-        #     if follow_traffic_rules is not True:
-        #         print("breaking traffic rules")
-        #         self.traffic_manager.auto_lane_change(v, True)
-        #         self.traffic_manager.ignore_lights_percentage(v, 100)
-        #         self.traffic_manager.distance_to_leading_vehicle(v, 1)
+            self.traffic_manager.auto_lane_change(v, False)
+            if follow_traffic_rules is not True:
+                # print("breaking traffic rules")
+                # self.traffic_manager.auto_lane_change(v, False)
+                self.traffic_manager.ignore_lights_percentage(v, 10)
+                # self.traffic_manager.distance_to_leading_vehicle(v, 1)
 
         warm_start_curr = 0
         while warm_start_curr < warm_start_duration:

@@ -131,6 +131,8 @@ class CarlaManager:
                 self.ego_vehicle.apply_control(
                     self.vehicle_controller.run_step(tracking_speed, tracking_pose)
                 )
+                speed = self.ego_vehicle.get_velocity()
+                print("Speed:", np.linalg.norm([speed.x, speed.y, speed.z]) * 3.6)
 
                 #### Check Sync ###
                 flag = 0
@@ -445,7 +447,7 @@ class CarlaManager:
                 self.ego_start_road_lane_pair,
                 self.global_path_in_intersection,
                 self.road_lane_to_orientation,
-            ) = self.tm.reset(num_vehicles=10, junction_id=53, warm_start_duration=3)
+            ) = self.tm.reset(num_vehicles=10, junction_id=53, warm_start_duration=2)
 
             self.all_vehicles = self.carla_handler.world.get_actors().filter(
                 "vehicle.*"
@@ -489,11 +491,16 @@ class CarlaManager:
                 args_longitudinal={
                     "K_P": 0.5,
                     "K_D": 0,
-                    "K_I": 0.01,
+                    "K_I": 0.1,
                     "dt": self.simulation_sync_timestep,
                 },
             )
-
+            self.ego_vehicle.apply_control(
+                carla.VehicleControl(manual_gear_shift=True, gear=1)
+            )
+            self.ego_vehicle.apply_control(
+                carla.VehicleControl(manual_gear_shift=False)
+            )
         except rospy.ROSInterruptException:
             print("failed....")
             pass

@@ -73,8 +73,8 @@ class TrajGenerator:
 
     def globalConstSpeedTraj(self, sim_data):
         # check if this is a new action
-        if not self.current_action == RLDecision.CONSTANT_SPEED:
-            self.reset(RLDecision.CONSTANT_SPEED,
+        if not self.current_action == RLDecision.GLOBAL_PATH_CONSTANT_SPEED:
+            self.reset(RLDecision.GLOBAL_PATH_CONSTANT_SPEED,
                        sim_data.cur_vehicle_state.speed,
                        sim_data.reward_info.time_elapsed)
 

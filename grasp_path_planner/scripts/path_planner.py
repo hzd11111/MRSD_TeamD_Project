@@ -14,30 +14,30 @@ from trajectory_generator import TrajGenerator
 from settings import *
 
 TRAJ_PARAM = None
-if CURRENT_SCENARIO == Scenario.SWITCH_LANE_LEFT:
-    TRAJ_PARAM = {
-        "look_up_distance": 0,
-        "lane_change_length": 30,
-        "lane_change_time_constant": 1.05,
-        "lane_change_time_disc": 0.4,
-        "action_time_disc": 0.2,
-        "action_duration": 0.5,
-        "accelerate_amt": 5,
-        "decelerate_amt": 5,
-        "min_speed": 0,
-    }
-else:
-    TRAJ_PARAM = {
-        "look_up_distance": 0,
-        "lane_change_length": 20,
-        "lane_change_time_constant": 1.05,
-        "lane_change_time_disc": 0.4,
-        "action_time_disc": 0.2,
-        "action_duration": 0.5,
-        "accelerate_amt": 5,
-        "decelerate_amt": 30,
-        "min_speed": 0,
-    }
+# if CURRENT_SCENARIO == Scenario.SWITCH_LANE_LEFT:
+TRAJ_PARAM = {
+    "look_up_distance": 0,
+    "lane_change_length": 30,
+    "lane_change_time_constant": 1.05,
+    "lane_change_time_disc": 0.4,
+    "action_time_disc": 0.2,
+    "action_duration": 0.8,
+    "accelerate_amt": 10,
+    "decelerate_amt": 5,
+    "min_speed": 0,
+}
+# else:
+#     TRAJ_PARAM = {
+#         "look_up_distance": 0,
+#         "lane_change_length": 20,
+#         "lane_change_time_constant": 1.05,
+#         "lane_change_time_disc": 0.4,
+#         "action_time_disc": 0.2,
+#         "action_duration": 0.5,
+#         "accelerate_amt": 5,
+#         "decelerate_amt": 30,
+#         "min_speed": 0,
+#     }
 
 
 class PathPlannerManager:
@@ -53,7 +53,7 @@ class PathPlannerManager:
 
     def performAction(self, action):
         # action = RLDecision.GLOBAL_PATH_ACCELERATE
-        print(action)
+        # print(action)
         path_plan = self.traj_generator.trajPlan(action, self.prev_env_desc)
 
         req = SimServiceRequest()
