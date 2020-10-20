@@ -153,8 +153,8 @@ class IntersectionScenario:
             transform = t.transform
             transform.location.z += 2.0
             ego_batch.append(
-                # SpawnActor(blueprint, transform).then(SetAutopilot(FutureActor, True))
-                SpawnActor(blueprint, transform)
+                SpawnActor(blueprint, transform).then(SetAutopilot(FutureActor, True))
+                # SpawnActor(blueprint, transform)
             )
 
         for n, t in enumerate(road_waypoints):
@@ -175,8 +175,8 @@ class IntersectionScenario:
             transform = t.transform
             transform.location.z += 2.0
             batch.append(
-                # SpawnActor(blueprint, transform).then(SetAutopilot(FutureActor, True))
-                SpawnActor(blueprint, transform)
+                SpawnActor(blueprint, transform).then(SetAutopilot(FutureActor, True))
+                # SpawnActor(blueprint, transform)
             )
 
         ego_vehicle_id = None

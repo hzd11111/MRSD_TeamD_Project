@@ -601,7 +601,7 @@ class CarlaManager:
 if __name__ == "__main__":
     try:
         carla_manager = CarlaManager()
-        carla_manager.initialize(synchronous_mode=False)
+        carla_manager.initialize(synchronous_mode=True)
         print("Initialize Done.....")
         carla_manager.spin()
     except rospy.ROSInterruptException:
