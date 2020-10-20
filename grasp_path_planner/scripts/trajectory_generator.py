@@ -98,8 +98,8 @@ class TrajGenerator:
                 tracking_pose_ind = point_ind
                 break
 
-        if not tracking_pose:
-            print("--------------- Global Path Error --------------")
+        # if not tracking_pose:
+        #     print("--------------- Global Path Error --------------")
 
         # determine the action progress
         action_progress = (new_sim_time - self.action_start_time) / self.traj_parameters['action_duration']
@@ -109,14 +109,22 @@ class TrajGenerator:
         if action_progress >= 1.:
             end_of_action = True
             action_progress = 1.
+            
+        path_planner_terminate = False
+        if not tracking_pose:
+            tracking_pose = global_path_points[-1].global_pose
+            action_progress = 1.
+            end_of_action = True
+            path_planner_terminate = True
+            print("Lane Navigation Terminated")
 
         new_path_plan = PathPlan()
         new_path_plan.tracking_pose = tracking_pose
-        new_path_plan.reset_sim = False
+        new_path_plan.reset_sim = path_planner_terminate
         new_path_plan.tracking_speed = max(self.traj_parameters['min_speed'],self.start_speed)
         new_path_plan.end_of_action = end_of_action
         new_path_plan.action_progress = action_progress
-        new_path_plan.path_planner_terminate = False
+        new_path_plan.path_planner_terminate = path_planner_terminate
 
         # add future poses ToDo
         new_path_plan.future_poses = []
@@ -150,14 +158,13 @@ class TrajGenerator:
         tracking_pose_ind = False
         for point_ind, path_point in enumerate(global_path_points):
             single_pose = path_point.global_pose
-            tracking_pose = single_pose
-            tracking_pose_ind = point_ind
+            # tracking_pose = single_pose
+            # tracking_pose_ind = point_ind
             if single_pose.isInfrontOf(curr_vehicle_global_pose) and \
                    single_pose.distance(curr_vehicle_global_pose) > TrajGenerator.SAME_POSE_LOWER_THRESHOLD:
+                tracking_pose = single_pose
+                tracking_pose_ind = point_ind
                 break
-
-        if not tracking_pose:
-            print("--------------- Global Path Error --------------")
 
         # determine the action progress
         action_progress = (new_sim_time - self.action_start_time) / self.traj_parameters['action_duration']
@@ -167,14 +174,22 @@ class TrajGenerator:
         if action_progress >= 1.:
             end_of_action = True
             action_progress = 1.
+            
+        path_planner_terminate = False
+        if not tracking_pose:
+            tracking_pose = global_path_points[-1].global_pose
+            action_progress = 1.
+            end_of_action = True
+            path_planner_terminate = True
+            print("Lane Navigation Terminated")
 
         new_path_plan = PathPlan()
         new_path_plan.tracking_pose = tracking_pose
-        new_path_plan.reset_sim = False
+        new_path_plan.reset_sim = path_planner_terminate
         new_path_plan.tracking_speed = max(self.traj_parameters['min_speed'],self.start_speed + action_progress * self.traj_parameters['accelerate_amt'])
         new_path_plan.end_of_action = end_of_action
         new_path_plan.action_progress = action_progress
-        new_path_plan.path_planner_terminate = False
+        new_path_plan.path_planner_terminate = path_planner_terminate
 
         # add future poses ToDo
         new_path_plan.future_poses = []
@@ -214,8 +229,8 @@ class TrajGenerator:
                 tracking_pose_ind = point_ind
                 break
 
-        if not tracking_pose:
-            print("--------------- Global Path Error --------------")
+        # if not tracking_pose:
+        #     print("--------------- Global Path Error --------------")
 
         # determine the action progress
         action_progress = (new_sim_time - self.action_start_time) / self.traj_parameters['action_duration']
@@ -225,15 +240,24 @@ class TrajGenerator:
         if action_progress >= 1.:
             end_of_action = True
             action_progress = 1.
+            
+        path_planner_terminate = False
+        if not tracking_pose:
+            tracking_pose = global_path_points[-1].global_pose
+            action_progress = 1.
+            end_of_action = True
+            path_planner_terminate = True
+            print("Lane Navigation Terminated")
+
 
         new_path_plan = PathPlan()
         new_path_plan.tracking_pose = tracking_pose
-        new_path_plan.reset_sim = False
+        new_path_plan.reset_sim = path_planner_terminate
         new_path_plan.tracking_speed = max(self.traj_parameters['min_speed'],
                                            self.start_speed - action_progress * self.traj_parameters['decelerate_amt'])
         new_path_plan.end_of_action = end_of_action
         new_path_plan.action_progress = action_progress
-        new_path_plan.path_planner_terminate = False
+        new_path_plan.path_planner_terminate = path_planner_terminate
 
         # add future poses ToDo
         new_path_plan.future_poses = []
