@@ -582,7 +582,6 @@ class StateManager:
         """
         Create a state for intersection when taking a right turn
         """
-        
         dummy_vehicle = [1000, 1000, np.cos(0), np.sin(0), 0, 0] + [0, 0, 1] + [0]
         dummy_ped = [1000, 1000, np.cos(0), np.sin(0), 0, 0] + [0, 1] + [0]
         pedestrian_states_perp = []
@@ -704,22 +703,22 @@ class StateManager:
         # get the stopline distance, light status and merging lane distance
         current_lane_status = []
 
-        current_lane_status += self.createTrafficLightOneHotVec(
-            env_desc.cur_vehicle_state.traffic_light_status)
+        # current_lane_status += self.createTrafficLightOneHotVec(
+        #     env_desc.cur_vehicle_state.traffic_light_status)
 
-        # stop line distance
-        for point in env_desc.current_lane.lane_points:
-            if point.stop_line is not StopLineStatus.NO_STOP:
-                current_lane_status += [abs(point.frenet_pose.x)]
+        # # stop line distance
+        # for point in env_desc.current_lane.lane_points:
+        #     if point.stop_line is not StopLineStatus.NO_STOP:
+        #         current_lane_status += [abs(point.frenet_pose.x)]
 
-        # get the merging distance
-        min_merging_dist = 100
-        for lane in env_desc.next_intersection:
-            if lane.directed_right is True:
-                if min_merging_dist > lane.intersecting_distance:
-                    min_merging_dist = lane.intersecting_distance
-        current_lane_status += [min_merging_dist]
-        current_lane_status += [min_merging_dist]
+        # # get the merging distance
+        # min_merging_dist = 100
+        # for lane in env_desc.next_intersection:
+        #     if lane.directed_right is True:
+        #         if min_merging_dist > lane.intersecting_distance:
+        #             min_merging_dist = lane.intersecting_distance
+        # current_lane_status += [min_merging_dist]
+        # current_lane_status += [min_merging_dist]
 
         if len(current_lane_status) != 8:
             current_lane_status += list(itertools.repeat(

@@ -8,12 +8,13 @@ distro = os.getenv("ROS_DISTRO")
 sys.path.remove("/opt/ros/" + distro + "/lib/python2.7/dist-packages")
 sys.path.append("/opt/ros/" + distro + "/lib/python2.7/dist-packages")
 import rospy
+import numpy as np
 # RL packages
 from stable_baselines import DQN
 from stable_baselines.common.cmd_util import make_vec_env
 # Other Packages
 from path_planner import PathPlannerManager
-from rl_manager import RLManager
+from rl_manager import RLManager, GeneralRLManager
 from lane_change_policy import CustomLaneChangePolicy
 from intersection_policy import CustomIntersectionStraight, CustomIntersectionLeftTurn, CustomIntersectionRightTurn
 from lane_following_policy import CustomLaneFollowingPolicy
@@ -74,8 +75,9 @@ class FullPlannerManager:
         model.save(MODEL_SAVE_PATH)
 
     def run_test(self):
-        env = CustomEnv(self.path_planner, self.behavior_planner, event)
+        env = CustomEnv(self.path_planner, self.behavior_planner, self.event)
         env = make_vec_env(lambda: env, n_envs=1)
+        decision_maker = GeneralRLManager()
         model = DQN.load(MODEL_LOAD_PATH)
         obs = env.reset()
         count = 0
@@ -83,9 +85,11 @@ class FullPlannerManager:
         while count < 500:
             done = False
             while not done:
-                action, _ = model.predict(obs)
-
-                print("Action taken:", RLDecision(action))
+                # action, _ = model.predict(obs)
+                # import ipdb; ipdb.set_trace()
+                action = np.array([env.action_space.sample()])
+                action_enum = decision_maker.convertDecision(action[0], self.event)
+                print("Action taken:", action_enum)
                 obs, reward, done, info = env.step(action)
                 # print("Reward",reward)
             count += 1
