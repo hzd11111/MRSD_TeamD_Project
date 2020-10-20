@@ -456,7 +456,7 @@ class PlainReward(Reward):
             reward = reward - 1
             print("Collision")
         elif desc.reward_info.path_planner_terminate:
-            if reward_info.action_progress == 0:
+            if desc.reward_info.action_progress == 0:
                 reward = -0.5
             else:
                 reward += desc.reward_info.action_progress

@@ -12,26 +12,32 @@ class Mode(Enum):
 
 ############ Mode and Model Selection ##############################
 CURRENT_SCENARIO = Scenario.RIGHT_TURN
-CURRENT_MODE = Mode.TEST
+CURRENT_MODE = Mode.TRAIN
 
 if CURRENT_SCENARIO == Scenario.LANE_FOLLOWING:
     MODEL_SAVE_PATH = dir_path + "/Models/DQN_Lane_Following"
     MODEL_LOAD_PATH = dir_path + "/Models/DQN_Model_Lane_Following"
+    MODEL_CP_PATH = dir_path + "/Models/Lane_Following_CP"
 elif CURRENT_SCENARIO == Scenario.SWITCH_LANE_LEFT:
     MODEL_SAVE_PATH = dir_path + "/Models/DQN_Lane_Switch_Left"
     MODEL_LOAD_PATH = dir_path + "/Models/DQN_Lane_Switch_Left"
+    MODEL_CP_PATH = dir_path + "/Models/DQN_Lane_Switch_Left_CP"
 elif CURRENT_SCENARIO == Scenario.SWITCH_LANE_RIGHT:
     MODEL_SAVE_PATH = dir_path + "/Models/DQN_Lane_Switch_Right"
     MODEL_LOAD_PATH = dir_path + "/Models/DQN_Lane_Switch_Right"
+    MODEL_CP_PATH = dir_path + "/Models/Lane_Switch_Right_CP"
 elif CURRENT_SCENARIO == Scenario.GO_STRAIGHT:
     MODEL_SAVE_PATH = dir_path + "/Models/DQN_Straight"
     MODEL_LOAD_PATH = dir_path + "/Models/DQN_Straight"
+    MODEL_CP_PATH = dir_path + "/Models/Straight_CP"
 elif CURRENT_SCENARIO == Scenario.RIGHT_TURN:
     MODEL_SAVE_PATH = dir_path + "/Models/DQN_Right_Turn"
     MODEL_LOAD_PATH = dir_path + "/Models/DQN_Right_Turn"
+    MODEL_CP_PATH = dir_path + "/Models/Right_Turn_CP"
 elif CURRENT_SCENARIO == Scenario.LEFT_TURN:
     MODEL_SAVE_PATH = dir_path + "/Models/DQN_Left_Turn"
     MODEL_LOAD_PATH = dir_path + "/Models/DQN_Left_Turn"
+    MODEL_CP_PATH = dir_path + "/Models/Left_Turn_CP"
 
 ################## Test Mode Arguments ######################
 if CURRENT_SCENARIO == Scenario.LANE_FOLLOWING:

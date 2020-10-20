@@ -12,6 +12,7 @@ import numpy as np
 # RL packages
 from stable_baselines import DQN
 from stable_baselines.common.cmd_util import make_vec_env
+from stable_baselines.common.callbacks import CheckpointCallback
 # Other Packages
 from path_planner import PathPlannerManager
 from rl_manager import RLManager, GeneralRLManager
@@ -21,11 +22,12 @@ from lane_following_policy import CustomLaneFollowingPolicy
 from custom_env import CustomEnv
 from options import Scenario, RLDecision
 from settings import Mode
-from settings import MODEL_LOAD_PATH, MODEL_SAVE_PATH, CURRENT_MODE, CURRENT_SCENARIO
+from settings import MODEL_LOAD_PATH, MODEL_SAVE_PATH, CURRENT_MODE, CURRENT_SCENARIO, MODEL_CP_PATH
 # -----------------------------------Global------------------------------------------------------#
 dir_path = os.path.dirname(os.path.realpath(__file__))
 # -----------------------------------Code------------------------------------------------------#
 
+checkpoint_callback = CheckpointCallback(save_freq=1000, save_path=MODEL_CP_PATH, name_prefix='rl_model')
 
 class FullPlannerManager:
     def __init__(self, event):
@@ -71,7 +73,7 @@ class FullPlannerManager:
                         target_network_update_freq=100,
                         tensorboard_log=dir_path + '/Logs/RightTurn', gamma=0.93, learning_rate=0.0001)
 
-        model.learn(total_timesteps=20000)
+        model.learn(total_timesteps=20000, callback = checkpoint_callback)
         model.save(MODEL_SAVE_PATH)
 
     def run_test(self):

@@ -89,7 +89,7 @@ class StateManager:
                 for vehicle in lane.lane_vehicles:
                     vehicle_in_ego = vehicle.fromControllingVehicle(
                         env_desc.cur_vehicle_state.location_frenet,
-                        env_desc.current_lane)
+                        lane)
                     vehicle_state = [vehicle_in_ego.x,
                                      vehicle_in_ego.y,
                                      np.cos(vehicle_in_ego.theta),
@@ -102,7 +102,7 @@ class StateManager:
                 for pedestrian in lane.crossing_pedestrain:
                     pedestrian_in_ego = pedestrian.fromControllingVehicle(
                         env_desc.cur_vehicle_state.location_frenet,
-                        env_desc.current_lane)
+                        lane)
                     pedestrian_state = [pedestrian_in_ego.location_frenet.x,
                                         pedestrian_in_ego.location_frenet.y,
                                         np.cos(pedestrian_in_ego.location_frenet.theta),
@@ -320,27 +320,26 @@ class StateManager:
         # identify the vehicles from left turning opposite lane
         opposite_left_turning_lane_vehs = []
         perpendicular_lane_vehs = []
+        perpendicular_lane_vehs_in_ego = []
         for lane in env_desc.next_intersection:
             for vehicle in lane.lane_vehicles:
-                perpendicular_lane_vehs.append(vehicle)
+                perpendicular_lane_vehs.append([vehicle, lane])
 
         # TODO: lane.left_turning_lane needs to be added into the paralllel lane message
         for lane in env_desc.adjacent_lanes:
             if lane.same_direction is False and True is True:
                 for vehicle in lane.lane_vehicles:
-                    opposite_left_turning_lane_vehs.append(vehicle)
+                    opposite_left_turning_lane_vehs.append([vehicle, lane])
 
         # take 10 vehicles with the smalled abs frenet x from perpendicular_lane_vehs
-        perpendicular_lane_vehs_in_ego = []
-        for vehicle in perpendicular_lane_vehs:
-            veh_in_ego = vehicle.fromControllingVehicle(env_desc.cur_vehicle_state.location_frenet,
-                                                 env_desc.current_lane)
+        for vehicle, lane in perpendicular_lane_vehs:
+            veh_in_ego = vehicle.fromControllingVehicle(env_desc.cur_vehicle_state.location_frenet, lane)
             perpendicular_lane_vehs_in_ego.append([veh_in_ego.x,
                                                    veh_in_ego.y,
                                                    np.cos(veh_in_ego.theta),
                                                    np.sin(veh_in_ego.theta),
                                                    vehicle.speed,
-                                                   vehicle.acceleration] + \
+                                                   vehicle.acceleration] +
                                                   self.createTrafficLightOneHotVec(
                                                       vehicle.traffic_light_status) + [1])
 
@@ -359,14 +358,13 @@ class StateManager:
         if len(opposite_left_turning_lane_vehs) > 5:
             opposite_left_turning_lane_vehs = sorted(
                 opposite_left_turning_lane_vehs,
-                key=lambda item: item.location_global.distance(
+                key=lambda item: item[0].location_global.distance(
                     env_desc.cur_vehicle_state.location_global))
             opposite_left_turning_lane_vehs = opposite_left_turning_lane_vehs[:5]
-        
+
         # collect the frenet coordinates
-        for vehicle in opposite_left_turning_lane_vehs:
-            veh_in_ego = vehicle.fromControllingVehicle(env_desc.cur_vehicle_state.location_frenet,
-                                                 env_desc.current_lane)
+        for vehicle, lane in opposite_left_turning_lane_vehs:
+            veh_in_ego = vehicle.fromControllingVehicle(env_desc.cur_vehicle_state.location_frenet, lane)
             opposite_left_turning_lane_vehs_in_ego.append([veh_in_ego.x,
                                                            veh_in_ego.y,
                                                            np.cos(veh_in_ego.theta),
@@ -440,7 +438,7 @@ class StateManager:
                 for pedestrian in lane.crossing_pedestrain:
                     pedestrian_in_ego = pedestrian.fromControllingVehicle(
                         env_desc.cur_vehicle_state.location_frenet,
-                        env_desc.current_lane)
+                        lane)
                     pedestrian_state = [pedestrian_in_ego.x,
                                         pedestrian_in_ego.y,
                                         np.cos(pedestrian_in_ego.theta),
@@ -487,19 +485,18 @@ class StateManager:
         perpendicular_lane_vehs = []
         for lane in env_desc.next_intersection:
             for vehicle in lane.lane_vehicles:
-                perpendicular_lane_vehs.append(vehicle)
+                perpendicular_lane_vehs.append([vehicle, lane])
 
         # identify the vehicles from parallel lane
         for lane in env_desc.adjacent_lanes:
             if lane.same_direction is False:
                 for vehicle in lane.lane_vehicles:
-                    parallel_lane_vehs.append(vehicle)
+                    parallel_lane_vehs.append([vehicle, lane])
 
         # take 10 vehicles with the smalled abs frenet x from perpendicular_lane_vehs
         perpendicular_lane_vehs_in_ego = []
-        for vehicle in perpendicular_lane_vehs:
-            veh_in_ego = vehicle.fromControllingVehicle(env_desc.cur_vehicle_state.location_frenet,
-                                                        env_desc.current_lane)
+        for vehicle, lane in perpendicular_lane_vehs:
+            veh_in_ego = vehicle.fromControllingVehicle(env_desc.cur_vehicle_state.location_frenet, lane)
             perpendicular_lane_vehs_in_ego.append([veh_in_ego.x,
                                                    veh_in_ego.y,
                                                    np.cos(veh_in_ego.theta),
@@ -522,9 +519,8 @@ class StateManager:
         parallel_lane_vehs_in_ego = []
         # if there are more than 10 vehicles than sort them globally and select 10 closest
         # collect the frenet coordinates
-        for vehicle in parallel_lane_vehs:
-            veh_in_ego = vehicle.fromControllingVehicle(env_desc.cur_vehicle_state.location_frenet,
-                                                        env_desc.current_lane)
+        for vehicle, lane in parallel_lane_vehs:
+            veh_in_ego = vehicle.fromControllingVehicle(env_desc.cur_vehicle_state.location_frenet, lane)
             parallel_lane_vehs_in_ego.append([veh_in_ego.x,
                                               veh_in_ego.y,
                                               np.cos(veh_in_ego.theta),
@@ -609,7 +605,7 @@ class StateManager:
                 for pedestrian in lane.crossing_pedestrain:
                     pedestrian_in_ego = pedestrian.fromControllingVehicle(
                         env_desc.cur_vehicle_state.location_frenet,
-                        env_desc.current_lane)
+                        lane)
                     pedestrian_state = [pedestrian_in_ego.x,
                                         pedestrian_in_ego.y,
                                         np.cos(pedestrian_in_ego.theta),
@@ -621,7 +617,7 @@ class StateManager:
                 # identify vehicles from perpendicular lanes within 20m
                 # TODO: How to select within 20m. Is it frenet x, or global distance
                 for vehicle in lane.lane_vehicles:
-                    perpendicular_lane_vehs.append(vehicle)
+                    perpendicular_lane_vehs.append([vehicle, lane])
 
         # select smallest 3 y frenet pedestrians or add dummy pedestrians
         # TODO: Do i have to filter for positive x like in left turn?
@@ -679,9 +675,9 @@ class StateManager:
 
         # take 5 vehicles with the smalled abs frenet x from perpendicular_lane_vehs
         perpendicular_lane_vehs_in_ego = []
-        for vehicle in perpendicular_lane_vehs:
+        for vehicle, lane in perpendicular_lane_vehs:
             veh_in_ego = vehicle.fromControllingVehicle(env_desc.cur_vehicle_state.location_frenet,
-                                                        env_desc.current_lane)
+                                                        lane)
             perpendicular_lane_vehs_in_ego.append([veh_in_ego.x,
                                                    veh_in_ego.y,
                                                    np.cos(veh_in_ego.theta),
