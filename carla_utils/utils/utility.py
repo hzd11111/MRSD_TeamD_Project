@@ -301,6 +301,9 @@ class ParallelLane(LaneStatus):
         left_to_the_current=False,
         adjacent_lane=False,
         lane_distance=0.0,
+        left_turning_lane=False,
+        right_turning_lane=False,
+        right_most_lane=False
     ):
         super(ParallelLane, self).__init__(
             lane_vehicles, lane_points, lane_id, crossing_pedestrain, origin_global_pose
@@ -309,6 +312,9 @@ class ParallelLane(LaneStatus):
         self.left_to_the_current = left_to_the_current
         self.adjacent_lane = adjacent_lane
         self.lane_distance = lane_distance
+        self.left_turning_lane = left_turning_lane
+        self.right_turning_lane = right_turning_lane
+        self.right_most_lane = right_most_lane
 
     @classmethod
     def fromRosMsg(cls, msg):
@@ -318,6 +324,9 @@ class ParallelLane(LaneStatus):
         obj.left_to_the_current = msg.left_to_the_current
         obj.adjacent_lane = msg.adjacent_lane
         obj.lane_distance = msg.lane_distance
+        obj.left_turning_lane = msg.left_turning_lane
+        obj.right_turning_lane = msg.right_turning_lane
+        obj.right_most_lane = msg.right_most_lane        
         return obj
 
     def toRosMsg(self):
@@ -327,6 +336,9 @@ class ParallelLane(LaneStatus):
         msg.left_to_the_current = self.left_to_the_current
         msg.adjacent_lane = self.adjacent_lane
         msg.lane_distance = self.lane_distance
+        msg.left_turning_lane = self.left_turning_lane
+        msg.right_turning_lane = self.right_turning_lane
+        msg.right_most_lane = self.right_most_lane    
         return msg
 
 
