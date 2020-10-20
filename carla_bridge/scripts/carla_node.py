@@ -228,6 +228,8 @@ class CarlaManager:
                     origin_global_pose=elem[1][0].global_pose
                     if len(elem[1]) != 0
                     else Pose2D(),
+                    left_turning_lane=left_turning_lane,
+                    right_turning_lane=right_turning_lane,
                 )
 
                 self.adjacent_lanes.append(parallel_lane)
@@ -255,6 +257,8 @@ class CarlaManager:
                     origin_global_pose=elem[1][0].global_pose
                     if len(elem[1]) != 0
                     else Pose2D(),
+                    left_turning_lane=left_turning_lane,
+                    right_turning_lane=right_turning_lane,
                 )
                 self.adjacent_lanes.append(parallel_lane)
 

@@ -479,14 +479,12 @@ class CarlaHandler:
                     LanePoint(global_pose=self.waypoint_to_pose2D(wp))
                     for wp in this_connection_waypoints
                 ]
-                this_connection_waypoints[0].lane_start = True
+
+                ### Adding lane start and stop line information
                 this_connection_waypoints[
-                    length_incoming_section - 1
+                    length_incoming_section - 3
                 ].stop_line = StopLineStatus.STRAIGHT_STOP
-                this_connection_waypoints[length_incoming_section - 1].lane_start = True
-                this_connection_waypoints[
-                    length_incoming_section + length_connecting_section - 1
-                ].stop_line = StopLineStatus.STRAIGHT_STOP
+
                 this_connection_waypoints[
                     length_incoming_section + length_connecting_section - 1
                 ].lane_start = True
