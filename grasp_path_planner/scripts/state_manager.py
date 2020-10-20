@@ -372,7 +372,7 @@ class StateManager:
                                                            np.cos(veh_in_ego.theta),
                                                            np.sin(veh_in_ego.theta),
                                                            vehicle.speed,
-                                                           vehicle.acceleration] + \
+                                                           vehicle.acceleration] +
                                                           self.createTrafficLightOneHotVec(
                                                               vehicle.traffic_light_status) + [1])
 
@@ -386,10 +386,16 @@ class StateManager:
         current_lane_status = []
         current_lane_status += self.createTrafficLightOneHotVec(
             env_desc.cur_vehicle_state.traffic_light_status)
+
+        # new segment distance
         for point in env_desc.current_lane.lane_points:
             if point.lane_start is True:
-                current_lane_status += [point.frenet_pose.x]
+                current_lane_status += [abs(point.frenet_pose.x)]
                 break
+
+        for point in env_desc.current_lane.lane_points:
+            if point.stop_line is not StopLineStatus.NO_STOP:
+                current_lane_status += [abs(point.frenet_pose.x)]
 
         if len(current_lane_status) != 8:
             current_lane_status += list(itertools.repeat(
@@ -542,10 +548,12 @@ class StateManager:
         current_lane_status = []
         current_lane_status += self.createTrafficLightOneHotVec(
             env_desc.cur_vehicle_state.traffic_light_status)
+
+        # stop line distance
         for point in env_desc.current_lane.lane_points:
-            if point.lane_start is True:
-                current_lane_status += [point.frenet_pose.x]
-                break
+            if point.stop_line is not StopLineStatus.NO_STOP:
+                current_lane_status += [abs(point.frenet_pose.x)]
+
         # get the merging distance
         min_merging_dist = 100
         for lane in env_desc.next_intersection:
@@ -695,21 +703,23 @@ class StateManager:
 
         # get the stopline distance, light status and merging lane distance
         current_lane_status = []
-        # current_lane_status += self.createTrafficLightOneHotVec(
-        #     env_desc.cur_vehicle_state.traffic_light_status)
-        # for point in env_desc.current_lane.lane_points:
-        #     if point.lane_start is True:
-        #         current_lane_status += [point.frenet_pose.x]
-        #         break
 
-        # # get the merging distance
-        # min_merging_dist = 100
-        # for lane in env_desc.next_intersection:
-        #     if lane.directed_right is True:
-        #         if min_merging_dist > lane.intersecting_distance:
-        #             min_merging_dist = lane.intersecting_distance
-        # current_lane_status += [min_merging_dist]
-        # current_lane_status += [min_merging_dist]
+        current_lane_status += self.createTrafficLightOneHotVec(
+            env_desc.cur_vehicle_state.traffic_light_status)
+
+        # stop line distance
+        for point in env_desc.current_lane.lane_points:
+            if point.stop_line is not StopLineStatus.NO_STOP:
+                current_lane_status += [abs(point.frenet_pose.x)]
+
+        # get the merging distance
+        min_merging_dist = 100
+        for lane in env_desc.next_intersection:
+            if lane.directed_right is True:
+                if min_merging_dist > lane.intersecting_distance:
+                    min_merging_dist = lane.intersecting_distance
+        current_lane_status += [min_merging_dist]
+        current_lane_status += [min_merging_dist]
 
         if len(current_lane_status) != 8:
             current_lane_status += list(itertools.repeat(
