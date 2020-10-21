@@ -24,7 +24,7 @@ TRAJ_PARAM = {
     "action_duration": 0.8,
     "accelerate_amt": 10,
     "decelerate_amt": 5,
-    "min_speed": 0,
+    "min_speed": 0.5,
 }
 # else:
 #     TRAJ_PARAM = {

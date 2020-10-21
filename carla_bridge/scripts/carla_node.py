@@ -131,6 +131,7 @@ class CarlaManager:
                 self.ego_vehicle.apply_control(
                     self.vehicle_controller.run_step(tracking_speed, tracking_pose)
                 )
+                # self.draw_location(tracking_pose)
                 speed = self.ego_vehicle.get_velocity()
                 print("Speed:", np.linalg.norm([speed.x, speed.y, speed.z]) * 3.6)
 
@@ -595,6 +596,18 @@ class CarlaManager:
         )
 
         print(vehicle.toRosMsg())
+
+    def draw_location(self, location, color=(255, 0, 0)):
+
+        location_ = carla.Location(location.x, location.y, z=2)
+
+        self.carla_handler.client.get_world().debug.draw_string(
+            location_,
+            "O",
+            draw_shadow=False,
+            color=carla.Color(r=color[0], g=color[1], b=color[2]),
+            life_time=1,
+        )
 
     def draw_global_path(self, global_path, color=(0, 255, 0)):
         for point in global_path.path_points:
