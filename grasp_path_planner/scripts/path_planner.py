@@ -63,7 +63,7 @@ class PathPlannerManager:
         return self.prev_env_desc, path_plan.end_of_action
 
     def resetSim(self):
-        self.traj_generator.reset()
+        self.traj_generator.reset(complete_reset=True)
         reset_msg = PathPlan()
         reset_msg.reset_sim = True
         reset_msg.end_of_action = True
