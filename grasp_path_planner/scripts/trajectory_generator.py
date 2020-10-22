@@ -55,8 +55,61 @@ class TrajGenerator:
             return self.globalAccelerateTraj(env_desc).toRosMsg()
         elif action_to_perform == RLDecision.GLOBAL_PATH_DECELERATE:
             return self.globalDecelerateTraj(env_desc).toRosMsg()
+        elif action_to_perform == RLDecision.STOP:
+            return self.stop(env_desc).toRosMsg()
         else:
             print("RLDecision ERROR:", action_to_perform)
+
+    def stop(self, sim_data):
+        if not self.current_action == RLDecision.STOP:
+            self.reset(RLDecision.STOP, sim_data.cur_vehicle_state.speed,
+                       sim_data.reward_info.time_elapsed)
+        # current vehicle state
+        curr_vehicle = sim_data.cur_vehicle_state
+        curr_vehicle_global_pose = curr_vehicle.location_global
+
+        # determine the closest next pose in the global path
+        global_path = sim_data.global_path
+        global_path_points = global_path.path_points
+        tracking_pose = False
+        tracking_pose_ind = False
+        for point_ind, path_point in enumerate(global_path_points):
+            single_pose = path_point.global_pose
+            if single_pose.isInfrontOf(curr_vehicle_global_pose) and \
+                   single_pose.distance(curr_vehicle_global_pose) > TrajGenerator.SAME_POSE_LOWER_THRESHOLD and \
+                single_pose.distance(curr_vehicle_global_pose) < 1.5:
+                tracking_pose = single_pose
+                tracking_pose_ind = point_ind
+                break
+
+        # determine the speed needed
+        if tracking_pose:
+            # determine the distance till the end of path
+            distance = tracking_pose.distance(global_path_points[-1].global_pose)
+            target_speed = curr_vehicle.speed - curr_vehicle.speed / distance
+            target_pose = tracking_pose
+        else:
+            target_speed = 0
+            next_point_frenet = Frenet()
+            next_point_frenet.x = 1.
+            target_pose = sim_data.current_lane.frenetToGlobal(next_point_frenet)
+
+        new_path_plan = PathPlan()
+        new_path_plan.tracking_pose = target_pose
+        new_path_plan.reset_sim = False
+        new_path_plan.tracking_speed = target_speed
+        new_path_plan.end_of_action = (tracking_pose == False)
+        new_path_plan.action_progress = 1 - target_speed/self.start_speed
+        new_path_plan.path_planner_terminate = (tracking_pose == False)
+
+        # add future poses ToDo
+        new_path_plan.future_poses = []
+
+        if new_path_plan.end_of_action:
+            self.reset()
+        return new_path_plan
+
+
 
     # find the next lane point of the current vehicle
     def findNextLanePose(self, curr_vehicle, lane_point_array):
