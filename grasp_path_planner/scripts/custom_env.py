@@ -12,7 +12,6 @@ from gym import spaces
 
 # ROS Packages
 from utility import EnvDesc
-
 # other packages
 from options import Scenario
 from path_planner import PathPlannerManager

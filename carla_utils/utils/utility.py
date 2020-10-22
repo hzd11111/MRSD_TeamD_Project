@@ -252,9 +252,7 @@ class CurrentLane(LaneStatus):
     def VehicleInFront(self, current_vehicle: Vehicle):
 
         closest_distance = 10000
-        front_vehicle = Vehicle(
-            actor_id=-1, speed=-1, location_frenet=Frenet(1000, 1000, 0)
-        )
+        front_vehicle = None
 
         current_vehicle_s = current_vehicle.location_frenet.x
         for vehicle in self.lane_vehicles:
@@ -272,9 +270,7 @@ class CurrentLane(LaneStatus):
     def VehicleBehind(self, current_vehicle: Vehicle):
 
         closest_distance = 10000
-        rear_vehicle = Vehicle(
-            actor_id=-1, speed=-1, location_frenet=Frenet(1000, 1000, 0)
-        )
+        rear_vehicle = None
 
         current_vehicle_s = current_vehicle.location_frenet.x
         for vehicle in self.lane_vehicles:

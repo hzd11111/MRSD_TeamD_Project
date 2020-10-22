@@ -452,7 +452,7 @@ class CarlaManager:
                 self.ego_start_road_lane_pair,
                 self.global_path_in_intersection,
                 self.road_lane_to_orientation,
-            ) = self.tm.reset(num_vehicles=10, junction_id=53, warm_start_duration=2)
+            ) = self.tm.reset(num_vehicles=25, junction_id=53, warm_start_duration=2)
 
             self.all_vehicles = self.carla_handler.world.get_actors().filter(
                 "vehicle.*"

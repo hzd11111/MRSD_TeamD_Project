@@ -1,4 +1,5 @@
 import numpy as np
+import sys
 # import gym
 # from gym import spaces
 import tensorflow as tf
@@ -360,6 +361,7 @@ class CustomIntersectionRightTurn(DQNPolicy):
     def embedding_net_front_back(self, input_vec):
         out = input_vec
         with tf.variable_scope("embedding_network_front_back", reuse=tf.compat.v1.AUTO_REUSE):
+            # out = tf.Print(out, [out], summarize=200, message="FRONT_BACK:")
             out = tf_layers.fully_connected(
                 out, num_outputs=16, activation_fn=tf.nn.relu)
             out = tf_layers.fully_connected(
@@ -369,6 +371,7 @@ class CustomIntersectionRightTurn(DQNPolicy):
     def embedding_net_perp_veh(self, input_vec):
         out = input_vec
         with tf.variable_scope("embedding_network_perpendicular_vehicles", reuse=tf.compat.v1.AUTO_REUSE):
+            # out = tf.Print(out, [out], summarize=200, message="PERP_VEH:")
             out = tf_layers.fully_connected(
                 out, num_outputs=16, activation_fn=tf.nn.relu)
             out = tf_layers.fully_connected(
@@ -397,6 +400,7 @@ class CustomIntersectionRightTurn(DQNPolicy):
             current_lane_len = 8
             mask = 1
             out_ph = tf.layers.flatten(self.processed_obs)
+            # out_ph = tf.Print(out_ph, [out_ph], summarize=200, message="OUT_PH:")
             cur_veh = out_ph[:, current_lane_len:current_lane_len + veh_state_len]
 
             # Add front vehicle
@@ -416,11 +420,6 @@ class CustomIntersectionRightTurn(DQNPolicy):
             embed_back_vehicle = []
             embed_back_vehicle.append(
                 self.embedding_net_front_back(back_veh_state) * back_veh_mask)
-
-            veh_state_len = 7
-            ped_state_len = 6
-            current_lane_len = 8
-            out_ph = tf.layers.flatten(self.processed_obs)
 
             # Add pedestrians from cur lane
             cur_ped_start_index = current_lane_len + veh_state_len + 2 * (veh_state_len + mask)
@@ -452,6 +451,7 @@ class CustomIntersectionRightTurn(DQNPolicy):
             for j in range(5):
                 perp_veh_mask = out_ph[:, perp_veh_start_index + (j + 1) * (veh_state_len + mask) - 1][:, None]
                 start = perp_veh_start_index + j * (veh_state_len + mask)
+                print(start, start + veh_state_len, veh_state_len)
                 perp_veh = out_ph[:, start:start + veh_state_len]
                 perp_veh_state = tf.concat([cur_veh, perp_veh], axis=1)
                 embed_perp_lane_vehs.append(
@@ -464,7 +464,7 @@ class CustomIntersectionRightTurn(DQNPolicy):
             max_out = tf.reduce_max(stacked_out, axis=1)
 
             # concatenate the current_lane_status
-            # max_out = tf.concat([max_out, out_ph[:, :8]], axis=1)
+            max_out = tf.concat([max_out, out_ph[:, :8]], axis=1)
             q_out = self.q_net(max_out, ac_space.n)
 
         self.q_values = q_out
