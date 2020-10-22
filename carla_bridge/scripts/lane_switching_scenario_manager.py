@@ -48,7 +48,7 @@ def get_lane_ids(waypoints, road_id, ego_lane_id):
     lane_ids.discard(ego_lane_id)
     return lane_ids 
 
-class LaneFollowingScenario:
+class LaneSwitchingScenario:
 
     def __init__(self, client, carla_handler):
         self.client = client
@@ -294,7 +294,7 @@ if __name__== "__main__":
     carla_handler = None
     print("Connection to CARLA server established!")
 
-    scenario = LaneFollowingScenario(client, carla_handler)
+    scenario = LaneSwitchingScenario(client, carla_handler)
     
     while True:
         st = time.time()
