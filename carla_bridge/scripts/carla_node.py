@@ -105,6 +105,9 @@ class CarlaManager:
 
     def pathRequest(self, data):
 
+        ##########################################
+        # APPLY CONTROL BLOCK
+        ##########################################
         plan = PathPlan.fromRosMsg(data.path_plan)
 
         reset_sim = False
@@ -123,7 +126,6 @@ class CarlaManager:
 
             if reset_sim:
                 self.resetEnv()
-
             else:
                 self.first_run = 0
 
@@ -141,32 +143,28 @@ class CarlaManager:
                         self.carla_handler.world.tick()
                         flag = 1
                     except:
-                        print(
-                            "Missed Tick...................................................................................."
-                        )
+                        print("Missed Tick" + '.' * 50)
                         continue
                 self.timestamp += self.simulation_sync_timestep
         else:
             self.first_frame_generated = True
             self.resetEnv()
 
-        if self.lane_cur == None:
-            state_information = self.carla_handler.get_state_information_intersection(
-                self.ego_vehicle,
-                self.all_vehicles,
-                self.ego_start_road_lane_pair,
-                self.intersection_topology,
-                self.road_lane_to_orientation,
-            )
+        ##########################################
+        # STATE EXTRACTION BLOCK
+        ##########################################
 
-        else:
-            state_information = self.carla_handler.get_state_information_intersection(
+        # if lane_cur is None, get the vehicles only
+        if self.lane_cur == None: only_actors = True
+        else: only_actors = False
+
+        state_information = self.carla_handler.get_state_information_intersection(
                 self.ego_vehicle,
                 self.all_vehicles,
                 self.ego_start_road_lane_pair,
                 self.intersection_topology,
                 self.road_lane_to_orientation,
-                only_actors=True,
+                only_actors=only_actors,
             )
 
         ego_nearest_waypoint = self.carla_handler.world_map.get_waypoint(
@@ -409,6 +407,157 @@ class CarlaManager:
 
         return SimServiceResponse(env_desc.toRosMsg())
 
+    def lane_following_pathRequest(self, data):
+        '''
+            Path request method gets called by the path planner at each timestep. 
+            It accepts the path plan ROS msg from the path planner with the info
+            about the desired pose (current and future), desired speed, and flags
+            on when to end the episode and reset the environment.
+
+            The point of this function is to update the environment based on the 
+            flags received and 
+
+            Inputs: 
+                data (PathPlanMsg): contains info about the desired pose, desired
+                    speed and env termination/reset flags
+            Returns:
+                env_desc (EnvDescMsg): contains info about the state of the env
+                    relevant to the RL agent to make decisions
+        '''
+    
+        # Some useful methods######################################
+
+        def apply_control(plan):
+            
+            # Get requested pose and speed values from agent
+            tracking_pose = plan.tracking_pose
+            tracking_speed = plan.tracking_speed  # / 3.6
+
+            # apply vehicle control using custom controller
+            control = self.vehicle_controller.run_step(tracking_speed, 
+                                                        tracking_pose)
+            self.ego_vehicle.apply_control(control)
+
+            # print the speed of the vehicle
+            speed = self.ego_vehicle.get_velocity()
+            print("Speed:", np.linalg.norm([speed.x, speed.y, speed.z]) * 3.6)
+
+            # tick the world once for the changes to take effect
+            tick()
+
+        def tick(num_of_ticks=1):
+            '''Ticks the carla world forward by num_of_ticks'''
+            tick_ctr = 0
+            while tick_ctr < num_of_ticks:
+                tick_ctr += 1
+                try:
+                    self.carla_handler.world.tick()
+                    flag = 1
+                except:
+                    print("Missed Tick" + '.' * 50)
+
+            self.timestamp += self.simulation_sync_timestep * num_of_ticks
+
+        # def 
+
+        ############################################################
+
+        '''
+        Part 1: Apply vehicle control and step/reset the environment
+        '''
+    
+        plan = PathPlan.fromRosMsg(data.path_plan)
+        
+        # if env needs reset, or its first run of sim -> reset environment 
+        if (plan.reset_sim == True) or not self.first_frame_generated:
+            self.resetEnv()
+            self.first_frame_generated = True
+        else: # else apply control and step
+            self.first_run = 0
+            apply_control(plan)
+
+        '''
+        Part 2: State extraction of the relevant info for return to agent        
+        '''
+        '''
+        Rohan's state extraction checklist
+        1. Current vehicle state
+        2. current lane
+        3. global path
+        
+        '''
+
+
+
+        
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+        '''
+        Part 3: Create ROS msg objects and ship it!
+        '''
+
+        self.end_of_action = plan.end_of_action
+        self.action_progress = plan.action_progress
+        self.path_planner_terminate = plan.path_planner_terminate
+
+        # Reward info object
+        reward_info = RewardInfo()
+        reward_info.time_elapsed = self.timestamp
+        reward_info.new_run = self.first_run
+        reward_info.collision = self.collision_marker
+        reward_info.action_progress = self.action_progress
+        reward_info.end_of_action = self.end_of_action
+        reward_info.path_planner_terminate = self.path_planner_terminate
+
+        # EnvDesc Object
+        env_desc = EnvDesc()
+        env_desc.cur_vehicle_state = vehicle_ego
+        env_desc.current_lane = lane_cur
+        env_desc.adjacent_lanes = adjacent_lanes
+        env_desc.next_intersection = next_intersection
+        env_desc.speed_limit = self.speed_limit
+        env_desc.reward_info = reward_info
+        env_desc.global_path = self.global_path_in_intersection
+
+
+
+
+
+
     def destroy_actors_and_sensors(self):
 
         if self.collision_sensor is not None:
@@ -548,7 +697,7 @@ class CarlaManager:
 
     def update_intersecting_distance_and_intersecting_lane_origins(
         self, current_lane, perpendicular_lanes
-    ):
+        ):
         """
         Calculate the frenet coordinates of the vehicles in perpendicular lane wrt the current lane
         """

@@ -8,6 +8,7 @@ __email__ = "mayanksi@andrew.cmu.edu"
 __version__ = "0.1"
 
 
+from os import get_inheritable
 import random
 import time
 import math
@@ -93,7 +94,7 @@ class CarlaHandler:
 
     def draw_waypoints(
         self, waypoints, road_id=None, section_id=None, life_time=50.0, color=False
-    ):
+        ):
         if color:
             b = 255
         else:
@@ -266,7 +267,7 @@ class CarlaHandler:
         intersecting_right,
         parallel_same_dir,
         parallel_opposite_dir,
-    ):
+        ):
         right_turning_lane = False
         left_turning_lane = False
         right_most_turning_lane = False
@@ -329,7 +330,7 @@ class CarlaHandler:
 
     def get_positional_booleans(
         self, road_lane_list, ego_info, in_out_dict, intersection_topology, same_dir
-    ):
+        ):
 
         road_lane = None
 
@@ -413,7 +414,7 @@ class CarlaHandler:
         lane_list,
         ego_road_lane_ID_pair=None,
         road_lane_to_orientation=None,
-    ):
+        ):
 
         full_info = []
         ego_lane_info = []
@@ -578,7 +579,7 @@ class CarlaHandler:
         intersection_topology=None,
         road_lane_to_orientation=None,
         only_actors=False,
-    ):
+        ):
 
         (
             intersecting_left,
@@ -632,147 +633,222 @@ class CarlaHandler:
                 ego_lane_info,
             )
 
-    def get_state_information_new(
-        self,
-        ego_vehicle=None,
-        original_lane_ID=None,
-    ):
-
+    def get_state_information_lane_follow(self, ego_vehicle=None):
+        '''
+        Given an ego_vehicle, returns state information:
+        '''
         if ego_vehicle == None:
             print("No ego vehicle specified..")
             return None
-        else:
-            # Get ego vehicle location and nearest waypoint for reference.
-            ego_vehicle_location = ego_vehicle.get_location()
-            nearest_waypoint = self.world_map.get_waypoint(
-                ego_vehicle_location, project_to_road=True
-            )
 
-            current_lane_waypoints = self.filter_waypoints(
-                self.all_waypoints, nearest_waypoint.road_id, nearest_waypoint.lane_id
-            )
-            left_lane_waypoints = self.filter_waypoints(
-                self.all_waypoints,
-                nearest_waypoint.get_left_lane().road_id,
-                nearest_waypoint.get_left_lane().lane_id,
-            )
-            right_lane_waypoints = self.filter_waypoints(
-                self.all_waypoints,
-                nearest_waypoint.get_right_lane().road_id,
-                nearest_waypoint.get_right_lane().lane_id,
-            )
+        # get actors in current, right, and left lane.
+        (
+            actors_in_current_lane,
+            actors_in_left_lane,
+            actors_in_right_lane,
+        ) = self.sort_parallel_actors_by_lane(ego_vehicle, as_Vehicle=True)
 
-            left_lane_ids = list(set([wp.lane_id for wp in left_lane_waypoints]))
-            # current_lane_ids = list(set([wp.lane_id for wp in current_lane_waypoints]))
-            right_lane_ids = list(set([wp.lane_id for wp in right_lane_waypoints]))
+        # also get actors directly in front and rear. 
+        (
+            front_vehicle,
+            rear_vehicle
+        ) = self.get_closest_front_and_back_actors(ego_vehicle,
+                actors_in_current_lane=actors_in_current_lane, as_Vehicle=True)
+        
+        # find the lane width
+        lane_distance = self.get_nearest_waypoint(ego_vehicle).lane_width
 
-            # Containers for actors in current, left and right lanes
-            actors_in_current_lane = []
-            actors_in_left_lane = []
-            actors_in_right_lane = []
-
-            # Containers for leading and rear vehicle in current lane
-            front_vehicle = None
-            rear_vehicle = None
-
-            closest_distance_front = (
-                10000000000  # TODO Change this to more formal value
-            )
-            closest_distance_rear = (
-                -10000000000
-            )  # TODO Change this to more formal value
-
-            for actor in self.world.get_actors().filter("vehicle.*"):
-
-                # For all actors that are not ego vehicle
-                if actor.id != ego_vehicle.id:
-                    actor_nearest_waypoint = self.world_map.get_waypoint(
-                        actor.get_location(), project_to_road=True
-                    )
-                    if actor_nearest_waypoint.lane_id in left_lane_ids:
-                        actors_in_left_lane.append(actor)
-                    elif actor_nearest_waypoint.lane_id in right_lane_ids:
-                        actors_in_right_lane.append(actor)
-                    else:
-
-                        actors_in_current_lane.append(actor)
-
-                        curr_actor_location_in_ego_vehicle_frame = (
-                            self.convert_global_transform_to_actor_frame(
-                                actor=ego_vehicle, transform=actor.get_transform()
-                            )
-                        )
-
-                        if (
-                            curr_actor_location_in_ego_vehicle_frame[0][0] > 0.0
-                            and curr_actor_location_in_ego_vehicle_frame[0][0]
-                            < closest_distance_front
-                        ):
-                            front_vehicle = actor
-                            closest_distance_front = (
-                                curr_actor_location_in_ego_vehicle_frame[0][0]
-                            )
-                        elif (
-                            curr_actor_location_in_ego_vehicle_frame[0][0] < 0.0
-                            and curr_actor_location_in_ego_vehicle_frame[0][0]
-                            > closest_distance_rear
-                        ):
-                            rear_vehicle = actor
-                            closest_distance_rear = (
-                                curr_actor_location_in_ego_vehicle_frame[0][0]
-                            )
-
-        # Lane Distance
-        lane_distance = current_lane_waypoints[0].lane_width
-
-        current_lane_waypoints = [
-            LanePoint(global_pose=self.waypoint_to_pose2D(wp))
-            for wp in current_lane_waypoints
-        ]
-        left_lane_waypoints = [
-            LanePoint(global_pose=self.waypoint_to_pose2D(wp))
-            for wp in left_lane_waypoints
-        ]
-        right_lane_waypoints = [
-            LanePoint(global_pose=self.waypoint_to_pose2D(wp))
-            for wp in right_lane_waypoints
-        ]
-
-        vehicle_dummy = Vehicle(
-            actor_id=-1, speed=-1, location_global=Pose2D(1000, 1000, 0)
-        )
-        # Front vehicle
-        if front_vehicle == None:
-            vehicle_front = vehicle_dummy
-        else:
-            vehicle_front = Vehicle(self.world, front_vehicle.id)
-
-        # Rear vehicle
-        if rear_vehicle == None:
-            vehicle_rear = vehicle_dummy
-        else:
-            vehicle_rear = Vehicle(self.world, rear_vehicle.id)
-
-        actors_in_current_lane = [
-            Vehicle(self.world, vehicle.id) for vehicle in actors_in_current_lane
-        ]
-
-        actors_in_left_lane = [
-            Vehicle(self.world, vehicle.id) for vehicle in actors_in_left_lane
-        ]
-
-        actors_in_right_lane = [
-            Vehicle(self.world, vehicle.id) for vehicle in actors_in_right_lane
-        ]
+        # current lane waypoints
+        (
+            current_lane_waypoints,
+            left_lane_waypoints,
+            right_lane_waypoints
+        ) = self.get_current_adjacent_lane_waypoints(ego_vehicle, as_LanePoint=True)
 
         return (
             current_lane_waypoints,
             left_lane_waypoints,
             right_lane_waypoints,
-            vehicle_front,
-            vehicle_rear,
+            front_vehicle,
+            rear_vehicle,
             actors_in_current_lane,
             actors_in_left_lane,
             actors_in_right_lane,
             lane_distance,
         )
+
+    '''
+    Utility functions
+    '''
+
+    def get_current_adjacent_lane_waypoints(self, vehicle, as_LanePoint=False):
+
+        '''Given a vehicle, returns the lane waypoints on current lane, right 
+        lane, and left lane.
+        If as_LanePoint, returns LanePoint objects rather than waypoints. 
+        '''
+
+        # Get ego vehicle location and nearest waypoint for reference.
+        vehicle_location = vehicle.get_location()
+        nearest_waypoint = self.world_map.get_waypoint(
+            vehicle_location, project_to_road=True
+        )
+
+        # filter current_lane, right_lane, left lane waypoints
+        current_lane_waypoints = self.filter_waypoints(
+            self.all_waypoints, 
+            nearest_waypoint.road_id, 
+            nearest_waypoint.lane_id
+        )
+        left_lane_waypoints = self.filter_waypoints(
+            self.all_waypoints,
+            nearest_waypoint.get_left_lane().road_id,
+            nearest_waypoint.get_left_lane().lane_id,
+        )
+        right_lane_waypoints = self.filter_waypoints(
+            self.all_waypoints,
+            nearest_waypoint.get_right_lane().road_id,
+            nearest_waypoint.get_right_lane().lane_id,
+        )
+
+        if as_LanePoint == True:
+            current_lane_waypoints = [
+                LanePoint(global_pose=self.waypoint_to_pose2D(wp))
+                for wp in current_lane_waypoints
+            ]
+            left_lane_waypoints = [
+                LanePoint(global_pose=self.waypoint_to_pose2D(wp))
+                for wp in left_lane_waypoints
+            ]
+            right_lane_waypoints = [
+                LanePoint(global_pose=self.waypoint_to_pose2D(wp))
+                for wp in right_lane_waypoints
+            ]
+
+        return current_lane_waypoints, left_lane_waypoints, right_lane_waypoints
+
+    def get_nearest_waypoint(self, actor):
+        return self.world_map.get_waypoint(
+                actor.get_location(), project_to_road=True
+            )
+    
+    def get_lane_ids(self, waypoints):
+        '''Given a list of waypoints, returns unique lane ids'''
+        
+        if isinstance(waypoints) != list:
+            waypoints = [waypoints]
+        
+        return list(set([wp.lane_id for wp in waypoints]))
+
+    def sort_parallel_actors_by_lane(self, ego_vehicle, as_Vehicle=False):
+        '''Given an ego_vehicle, returns three lists of vehicles in the current,
+        right and left lane actors.
+        If as_Vehicle, returns Vehicle objects, else returns carla.Actor'''
+
+        # Get waypoints in current, right and left lane
+        (
+        current_lane_waypoints, 
+        left_lane_waypoints, 
+        right_lane_waypoints 
+        ) = self.get_current_adjacent_lane_waypoints(ego_vehicle)
+
+        # get lane ids for current, left and right lanes
+        left_lane_ids = self.get_lane_ids(left_lane_waypoints)
+        current_lane_ids = self.get_lane_ids(current_lane_waypoints)
+        right_lane_ids = self.get_lane_ids(right_lane_waypoints)
+
+        # containers for actors in current, left and right lanes
+        actors_in_current_lane = []
+        actors_in_left_lane = []
+        actors_in_right_lane = []
+
+        # get all the vehicles in the world
+        all_vehicles = self.world.get_actors().filter("vehicle.*")
+
+        # loop over all actors to get vehicles in the same, right of left lane
+        # as ego vehicles
+        for actor in all_vehicles:
+
+            # skip the ego vehicle for the following calculations
+            if actor.id == ego_vehicle.id:
+                continue
+            
+            # get waypoint closest to the actor
+            actor_nearest_waypoint = self.get_nearest_waypoint(actor)
+
+            # append the actor to the correct lane list based on their lane id
+            if actor_nearest_waypoint.lane_id in left_lane_ids:
+                actors_in_left_lane.append(actor)
+            elif actor_nearest_waypoint.lane_id in right_lane_ids:
+                actors_in_right_lane.append(actor)
+            else:
+                actors_in_current_lane.append(actor)
+
+        # return as Vehicle object list, instead of carla.Vehicle object list
+        if as_Vehicle:
+            actors_in_current_lane = [Vehicle(self.world, vehicle.id) for \
+                                        vehicle in actors_in_current_lane]
+            actors_in_left_lane = [Vehicle(self.world, vehicle.id) for \
+                                    vehicle in actors_in_left_lane]
+            actors_in_right_lane = [Vehicle(self.world, vehicle.id) for \
+                                    vehicle in actors_in_right_lane]
+
+        return actors_in_current_lane, actors_in_left_lane, \
+                actors_in_right_lane
+
+    def get_closest_front_and_back_actors(self, ego_vehicle, 
+                    actors_in_current_lane=None, as_Vehicle=False):
+
+        if actors_in_current_lane is None:
+            actors_in_current_lane= sort_parallel_actors_by_lane(ego_vehicle)
+        
+        # weird mayank logic
+        closest_distance_front = (10000000000)  # TODO Formalize this
+        closest_distance_rear = (-10000000000)  # TODO Formalize this
+
+        # container for actors right in front and back
+        front_vehicle = None
+        rear_vehicle = None
+
+        # loop over all actors to find the closest in front and back
+        for actor in actors_in_current_lane:
+
+            # skip the ego vehicle for the following calculations
+            if actor.id == ego_vehicle.id:
+                continue
+            
+            # get waypoint closest to the actor
+            actor_nearest_waypoint = self.get_nearest_waypoint(actor)
+                
+            # get the current actors location in ego vehicle frame
+            actor_loc_in_ego = (
+                self.convert_global_transform_to_actor_frame(
+                    actor=ego_vehicle, transform=actor.get_transform()))
+
+            actor_x_in_ego = actor_loc_in_ego[0][0]
+            
+            # check if actor is directly in front or back of ego
+            if (actor_x_in_ego > 0.0) and \
+                (actor_x_in_ego < closest_distance_front):
+                front_vehicle = actor
+                closest_distance_front = actor_x_in_ego
+            elif (actor_x_in_ego < 0.0) and \
+                (actor_x_in_ego > closest_distance_rear):
+                rear_vehicle = actor
+                closest_distance_rear = actor_x_in_ego
+        
+        if as_Vehicle:
+            vehicle_dummy = Vehicle(
+                actor_id=-1, speed=-1, location_global=Pose2D(1000, 1000, 0))
+
+            # Front vehicle
+            if front_vehicle == None:
+                front_vehicle = vehicle_dummy
+            else:
+                front_vehicle = Vehicle(self.world, front_vehicle.id)
+
+            # Rear vehicle
+            if rear_vehicle == None:
+                rear_vehicle = vehicle_dummy
+            else:
+                rear_vehicle = Vehicle(self.world, rear_vehicle.id)
