@@ -459,7 +459,24 @@ class CarlaManager:
 
             self.timestamp += self.simulation_sync_timestep * num_of_ticks
 
-        # def 
+        def draw_string(vehicle=None, location=None, text='o', life_time=1):
+            '''Draws an 'o' or other specified text on a given vehicle or 
+            location'''
+
+            if vehicle is not None:
+                location = vehicle.get_location()
+
+            waypoint = self.carla_handler.world_map.get_waypoint(location,
+                                                        project_to_road=True)
+            wp_loc = waypoint.transform.location
+
+            self.carla_handler.world.debug.draw_string(
+                wp_loc,
+                text, 
+                draw_shadow=False,
+                color=carla.Color(r=0, g=255, b=0),
+                life_time=life_time
+            )
 
         ############################################################
 
@@ -487,46 +504,34 @@ class CarlaManager:
         3. global path
         
         '''
+        state_information = self.carla_handler. \
+                            get_state_information_lane_follow(self.ego_vehicle)
 
-
-
+        (
+            current_lane_waypoints,
+            left_lane_waypoints,
+            right_lane_waypoints,
+            front_vehicle,
+            rear_vehicle,
+            actors_in_current_lane,
+            actors_in_left_lane,
+            actors_in_right_lane,
+            lane_distance,
+        ) = lane_follow_state_information
         
+        ego_vehicle = Vehicle(self.carla_handler.world, self.ego_vehicle.id)
 
+        draw_string(ego_vehicle)
+        
+        global_pose = ego_vehicle.get_location_global()
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
+        self.lane_cur = CurrentLane(
+            lane_vehicles=actors_in_current_lane, 
+            lane_points=current_lane_waypoints,
+            crossing_pedestrain=[],
+            origin_global_pose=global_pose #TODO: Ask Mayank
+            )
+        lane_cur = copy.copy(self.lane_cur)
         '''
         Part 3: Create ROS msg objects and ship it!
         '''
@@ -535,7 +540,7 @@ class CarlaManager:
         self.action_progress = plan.action_progress
         self.path_planner_terminate = plan.path_planner_terminate
 
-        # Reward info object
+        # Reward info object DONE
         reward_info = RewardInfo()
         reward_info.time_elapsed = self.timestamp
         reward_info.new_run = self.first_run
@@ -544,20 +549,15 @@ class CarlaManager:
         reward_info.end_of_action = self.end_of_action
         reward_info.path_planner_terminate = self.path_planner_terminate
 
-        # EnvDesc Object
+        # EnvDesc Object 
         env_desc = EnvDesc()
-        env_desc.cur_vehicle_state = vehicle_ego
+        env_desc.cur_vehicle_state = ego_vehicle
         env_desc.current_lane = lane_cur
-        env_desc.adjacent_lanes = adjacent_lanes
-        env_desc.next_intersection = next_intersection
+        env_desc.next_intersection = []
+        env_desc.adjacent_lanes = []
         env_desc.speed_limit = self.speed_limit
         env_desc.reward_info = reward_info
-        env_desc.global_path = self.global_path_in_intersection
-
-
-
-
-
+        env_desc.global_path = GlobalPath()
 
     def destroy_actors_and_sensors(self):
 
@@ -592,7 +592,7 @@ class CarlaManager:
         self.first_run = 1
 
         try:
-
+            
             (
                 self.ego_vehicle,
                 self.vehicles_list,
