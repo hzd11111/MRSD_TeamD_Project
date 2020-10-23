@@ -7,6 +7,7 @@ import carla
 import numpy as np
 
 from carla_handler import CarlaHandler
+from global_planner import get_global_planner
 
 #CONFIGURATIONS:
 town04_highway = {'X':-356, 'Y':30, 'Z':0.2, 
@@ -18,8 +19,31 @@ town04_highway = {'X':-356, 'Y':30, 'Z':0.2,
                   "min_dist_bwn_veh":3,
                   "average_car_length":5,
                  }
+
+town05_city = {'X':15, 'Y':-94, 'Z':0.2,
+                "distance_bwn_waypoints":1,
+                "total_non_ego_vehicles":1,
+                "max_vehicles_in_front":2,
+                "target_speed":1,
+                "max_dist_bwn_veh":8,
+                "min_dist_bwn_veh":2,
+                "average_car_length":5,                
+}
 spectator_trans = carla.Transform(carla.Location(x=-360.875458, y=-18.428667, z=46.781178), \
                                 carla.Rotation(pitch=-39.588058, yaw=41.867565, roll=0.000029))
+
+
+def filter_waypoints(waypoints, road_id, lane_id = None):
+
+    filtered_waypoints = []
+    for wp in waypoints:
+
+        if lane_id == None and wp.road_id == road_id:
+            filtered_waypoints.append(wp) 
+        elif wp.road_id == road_id and wp.lane_id==lane_id:
+            filtered_waypoints.append(wp) 
+
+    return filtered_waypoints 
 
 
 class LaneFollowingScenario:
@@ -32,12 +56,20 @@ class LaneFollowingScenario:
         self.spectator = self.world.get_spectator()
 
         self.traffic_manager = self.client.get_trafficmanager(8000)
+        self.global_planner = get_global_planner(self.world, planner_resolution=1)
         self.vehicles_list = []
         self.ego_vehicle = []
         print("Scenario Manager Initialized...")
 
-        self.config = town04_highway #change to change scenario parameters
-        
+        # self.config = town04_highway #change to change scenario parameters
+        self.config = town05_city
+
+        # current lane information
+        self.dist_between_waypoints = 1
+        self.all_waypoints = self.Map.generate_waypoints(self.dist_between_waypoints)
+        self.current_road_and_lane = None
+        self.current_lane_wps = []
+
         # world and tm config settings
         self.synchronous_mode = True
         self.no_rendering_mode = False
@@ -92,6 +124,11 @@ class LaneFollowingScenario:
         first_waypoint = self.Map.get_waypoint(loc, project_to_road=True, \
                                                 lane_type=carla.LaneType.Driving)
         waypoint_list = first_waypoint.next_until_lane_end(distance_bwn_waypoints)
+        
+        self.current_road_and_lane = (first_waypoint.road_id, first_waypoint.lane_id) 
+        self.current_lane_wps = waypoint_list
+        # TODO: Fix the way we spawn things
+        # waypoint_list = filter_waypoints(self.all_waypoints, 6, -1)
 
         # select waypoints from the list with some randomness
         selected_waypoints = []
@@ -106,7 +143,7 @@ class LaneFollowingScenario:
         for point in spawn_points_list: point.location.z += 0.2 # prevent collision
 
         # select the position of the ego vehicle
-        ego_veh_int = np.random.randint(1, config["total_non_ego_vehicles"])
+        ego_veh_int = np.random.randint(0, config["total_non_ego_vehicles"])
         temp = spawn_points_list.pop(ego_veh_int)
         ego_spawn_point = (temp, temp.get_forward_vector())
         
@@ -163,7 +200,7 @@ class LaneFollowingScenario:
             self.traffic_manager.auto_lane_change(actor, self.auto_lane_change)
             self.traffic_manager.ignore_lights_percentage(actor, 100)
             self.traffic_manager.ignore_signs_percentage(actor, 100)
-            actor.set_simulate_physics(False)
+            actor.set_simulate_physics(True)
 
         self.ego_vehicle = ego_vehicle
         self.non_ego_vehicle_list = non_ego_vehicle_list
@@ -181,9 +218,21 @@ class LaneFollowingScenario:
         self.client.apply_batch_sync(
             [SetAutopilot(self.ego_vehicle, False)], self.synchronous_mode)
 
-    def reset(self, warm_start=True, warm_start_duration=2):
-        # reset camera view
+    def get_global_path(self):
+        '''For the lane following scenario, returns a global path, which is from
+        the current ego_vehicle location to the end of the lane. TODO:Check'''
+        start_location = self.ego_vehicle.location
+        end_location = self.current_lane_wps[-1]
+
+        route = self.global_planner.trace_route(start_location, end_location)
+        global_path_wps = [route[i][0] for i in range(len(route))]
+
+        return global_path_wps
+    
+    def set_spectator_view(spectator_trans):
         self.spectator.set_transform(spectator_trans)
+
+    def reset(self, warm_start=True, warm_start_duration=2):
 
         # configure asynchronous mode
         self.configure_world(self.no_rendering_mode,self.synchronous_mode,self.fixed_delta_seconds)
@@ -199,13 +248,20 @@ class LaneFollowingScenario:
         self.spawn(ego_spawn_point, non_ego_spawn_points)
         self.tick()
 
+        # get global planner for lane follow
+        global_path = self.get_global_path()
+
         # warm start
         if warm_start: self.warm_start(warm_start_duration)
 
         # disable autopilot for ego vehicle
         self.disable_autopilot()
 
-        return self.ego_vehicle, self.non_ego_vehicle_list, self.target_speed
+        return (
+            self.ego_vehicle,
+            self.non_ego_vehicle_list,
+            global_path
+        )
 
 
 

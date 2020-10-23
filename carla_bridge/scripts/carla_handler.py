@@ -852,3 +852,19 @@ class CarlaHandler:
                 rear_vehicle = vehicle_dummy
             else:
                 rear_vehicle = Vehicle(self.world, rear_vehicle.id)
+    
+    def carlavehicle_to_Vehicle_class(self, carla_vehicle_list):
+        '''Returns a Vehicle class for carla.Vehicle list'''
+        
+        vehicle_list = []
+
+        for vehicle in carla_vehicle_list:
+            vehicle_list.append(Vehicle(self.world, self.vehicle.id))
+        
+        return vehicle_list
+    
+    def location_to_Pose2D(self, location):
+        '''For a given location, projects a waypoint on the road and returns a
+        Pose2D object for it'''
+
+        waypoint = self.world_map.get_waypoint()
