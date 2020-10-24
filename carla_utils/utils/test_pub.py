@@ -26,7 +26,7 @@ def talker():
                 width=99,
                 traffic_light_status=None)
     
-    lane = PerpendicularLane(crossing_pedestrain=[p])
+    lane = PerpendicularLane(crossing_pedestrain=[p], right_turning_lane=True)
     msg = EnvDesc(next_intersection=[lane], reward_info=RewardInfo(current_action=RLDecision(1))).toRosMsg()
     # msg = p.toRosMsg()
     # msg = v.toRosMsg()
@@ -35,7 +35,7 @@ def talker():
         rospy.loginfo(msg)
         pub.publish(msg)
         r.sleep()
-        input()
+        # input()
 
 if __name__ == '__main__':
     try:

@@ -5,3 +5,4 @@ bool reset_sim
 bool path_planner_terminate
 bool end_of_action
 float64 action_progress
+bool auto_pilot

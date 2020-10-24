@@ -3,6 +3,4 @@ bool same_direction
 bool left_to_the_current
 bool adjacent_lane
 float64 lane_distance
-bool left_turning_lane
-bool right_turning_lane
-bool right_most_lane
+
