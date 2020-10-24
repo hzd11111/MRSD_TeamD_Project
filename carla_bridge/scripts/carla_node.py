@@ -1,3 +1,4 @@
+from enum import Flag
 from builtins import isinstance
 import time
 import subprocess
@@ -105,7 +106,7 @@ class CarlaManager:
         self.road_lane_to_orientation = None
         self.all_vehicles = None
 
-    def pathRequest(self, data):
+    def ol_pathRequest(self, data):
 
         ##########################################
         # APPLY CONTROL BLOCK
@@ -158,8 +159,8 @@ class CarlaManager:
         ##########################################
 
         # if lane_cur is None, get the vehicles only
-        if self.lane_cur == None: only_actors = True
-        else: only_actors = False
+        if self.lane_cur == None: only_actors = False
+        else: only_actors = True
 
         state_information = self.carla_handler.get_state_information_intersection(
                 self.ego_vehicle,
@@ -411,7 +412,7 @@ class CarlaManager:
 
         return SimServiceResponse(env_desc.toRosMsg())
 
-    def lane_following_pathRequest(self, data):
+    def pathRequest(self, data):
         '''
             Path request method gets called by the path planner at each timestep. 
             It accepts the path plan ROS msg from the path planner with the info
@@ -558,12 +559,13 @@ class CarlaManager:
         env_desc = EnvDesc()
         env_desc.cur_vehicle_state = ego_vehicle
         env_desc.current_lane = lane_cur
-        env_desc.next_intersection = []
-        env_desc.adjacent_lanes = []
+        # env_desc.next_intersection = []
+        # env_desc.adjacent_lanes = []
         env_desc.speed_limit = self.speed_limit
         env_desc.reward_info = reward_info
-        env_desc.global_path = GlobalPath()
-
+        env_desc.global_path = self.global_path_in_intersection
+        print("sending this message")
+        # import ipdb; ipdb.set_trace()
         return SimServiceResponse(env_desc.toRosMsg())
 
     def destroy_actors_and_sensors(self):
@@ -599,7 +601,7 @@ class CarlaManager:
         self.first_run = 1
 
         try:
-            if True:
+            if False:
                 (
                     self.ego_vehicle,
                     self.vehicles_list,
@@ -630,12 +632,24 @@ class CarlaManager:
 
                 self.draw_global_path(self.global_path_in_intersection)
             else: # for Lane Follow
-                # (
-                #     self.ego_vehicle,
-                #     self.vehicles_list,
-                #     global_path
-                # ) = self.tm.reset()
-                pass
+                (
+                    self.ego_vehicle,
+                    self.vehicles_list,
+                    self.global_path_in_intersection #TODO: change
+                ) = self.tm.reset()
+
+
+                self.global_path_in_intersection = [
+                    self.waypoint_to_pose2D(wp) for wp in self.global_path_in_intersection
+                ]
+                self.global_path_in_intersection = [
+                    GlobalPathPoint(global_pose=pose)
+                    for pose in self.global_path_in_intersection
+                ]
+                self.global_path_in_intersection = GlobalPath(
+                    path_points=self.global_path_in_intersection
+                )
+                # pass
 
             ## Handing over control
             del self.collision_sensor
@@ -700,8 +714,8 @@ class CarlaManager:
 
         # self.tm = CustomScenario(self.client, self.carla_handler)
 
-        self.tm = IntersectionScenario(self.client)
-        # self.tm = LaneFollowingScenario(self.client, self.carla_handler)
+        # self.tm = IntersectionScenario(self.client)
+        self.tm = LaneFollowingScenario(self.client, self.carla_handler)
 
         # Reset Environment
         self.resetEnv()
