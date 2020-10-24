@@ -45,7 +45,7 @@ class FullPlannerManager:
         if self.event == Scenario.SWITCH_LANE_LEFT or\
                 self.event == Scenario.SWITCH_LANE_RIGHT:
             model = DQN(CustomLaneChangePolicy, env, verbose=1,
-                        learning_starts=256, batch_size=16,
+                        learning_starts=256, batch_size=256,
                         exploration_fraction=0.9, target_network_update_freq=100,
                         tensorboard_log=dir_path + '/Logs/LaneChange')
 
@@ -80,16 +80,18 @@ class FullPlannerManager:
         env = CustomEnv(self.path_planner, self.behavior_planner, self.event)
         env = make_vec_env(lambda: env, n_envs=1)
         decision_maker = GeneralRLManager()
-        model = DQN.load(MODEL_LOAD_PATH)
+        model = DQN.load("/home/arcot/GRASP/src/grasp_path_planner/scripts/Models/Right_Turn_CP/rl_model_20000_steps.zip")
+        print(MODEL_LOAD_PATH)
         obs = env.reset()
         count = 0
         success = 0
         while count < 500:
             done = False
             while not done:
-                # action, _ = model.predict(obs)
+                action, _ = model.predict(obs)
+                print(action)
                 # import ipdb; ipdb.set_trace()
-                action = np.array([env.action_space.sample()])
+                # action = np.array([env.action_space.sample()])
                 action_enum = decision_maker.convertDecision(action[0], self.event)
                 print("Action taken:", action_enum)
                 obs, reward, done, info = env.step(action)

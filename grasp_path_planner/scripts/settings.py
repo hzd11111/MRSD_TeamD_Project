@@ -12,7 +12,7 @@ class Mode(Enum):
 
 ############ Mode and Model Selection ##############################
 CURRENT_SCENARIO = Scenario.RIGHT_TURN
-CURRENT_MODE = Mode.TRAIN
+CURRENT_MODE = Mode.TEST
 
 if CURRENT_SCENARIO == Scenario.LANE_FOLLOWING:
     MODEL_SAVE_PATH = dir_path + "/Models/DQN_Lane_Following"

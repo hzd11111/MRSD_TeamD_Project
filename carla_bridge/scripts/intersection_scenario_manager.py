@@ -113,10 +113,22 @@ class IntersectionScenario:
 
         current_setup = random.choice(current_scenario_setups)
 
-        ego_road_waypoints = []
-        for waypoint in waypoints:
-            if (waypoint.road_id, waypoint.lane_id) == current_setup[0]:
-                ego_road_waypoints.append(waypoint)
+        ego_road_lane = current_setup[0]
+
+        ego_road_waypoints = [
+            wp
+            for wp in self.waypoints_finer
+            if wp.road_id == ego_road_lane[0] and wp.lane_id == ego_road_lane[1]
+        ]
+        ego_road_orientation = current_setup[2]
+        if ego_road_orientation == 1:
+            ego_road_waypoints = ego_road_waypoints[::-1]
+
+        ego_road_waypoints = ego_road_waypoints[20:25]
+        # ego_road_waypoints = []
+        # for waypoint in waypoints:
+        #     if (waypoint.road_id, waypoint.lane_id) == current_setup[0]:
+        #         ego_road_waypoints.append(waypoint)
         random.shuffle(ego_road_waypoints)
 
         if num_vehicles < number_of_spawn_points:
