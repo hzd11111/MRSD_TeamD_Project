@@ -13,6 +13,7 @@ import numpy as np
 from stable_baselines import DQN
 from stable_baselines.common.cmd_util import make_vec_env
 from stable_baselines.common.callbacks import CheckpointCallback
+import wandb
 # Other Packages
 from path_planner import PathPlannerManager
 from rl_manager import RLManager, GeneralRLManager
