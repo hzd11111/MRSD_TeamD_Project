@@ -39,6 +39,7 @@ class PathPlan(object):
         "path_planner_terminate",
         "end_of_action",
         "action_progress",
+        "auto_pilot",
     ]
 
     def __init__(
@@ -50,7 +51,7 @@ class PathPlan(object):
         path_planner_terminate=False,
         end_of_action=False,
         action_progress=0.0,
-        auto_pilot=False
+        auto_pilot=False,
     ):
         self.tracking_pose = tracking_pose
         self.future_poses = future_poses
@@ -96,7 +97,6 @@ class GlobalPathPoint(object):
         self.action = action
         if self.action is None:
             self.action = GlobalPathAction.NO_ACTION
-
 
     @classmethod
     def fromRosMsg(cls, msg):
@@ -192,7 +192,7 @@ class LaneStatus(object):
         ego_offset=0,
         left_turning_lane=False,
         right_turning_lane=False,
-        right_most_lane=False
+        right_most_lane=False,
     ):
         self.lane_vehicles = lane_vehicles
         self.lane_points = lane_points
@@ -325,8 +325,15 @@ class ParallelLane(LaneStatus):
         lane_distance=0.0,
     ):
         super(ParallelLane, self).__init__(
-            lane_vehicles, lane_points, lane_id, crossing_pedestrain, origin_global_pose, ego_offset, 
-            left_turning_lane, right_turning_lane, right_most_lane
+            lane_vehicles,
+            lane_points,
+            lane_id,
+            crossing_pedestrain,
+            origin_global_pose,
+            ego_offset,
+            left_turning_lane,
+            right_turning_lane,
+            right_most_lane,
         )
         self.same_direction = same_direction
         self.left_to_the_current = left_to_the_current
@@ -340,7 +347,7 @@ class ParallelLane(LaneStatus):
         obj.same_direction = msg.same_direction
         obj.left_to_the_current = msg.left_to_the_current
         obj.adjacent_lane = msg.adjacent_lane
-        obj.lane_distance = msg.lane_distance    
+        obj.lane_distance = msg.lane_distance
         return obj
 
     def toRosMsg(self):
@@ -349,7 +356,7 @@ class ParallelLane(LaneStatus):
         msg.same_direction = self.same_direction
         msg.left_to_the_current = self.left_to_the_current
         msg.adjacent_lane = self.adjacent_lane
-        msg.lane_distance = self.lane_distance   
+        msg.lane_distance = self.lane_distance
         return msg
 
 
@@ -369,8 +376,15 @@ class PerpendicularLane(LaneStatus):
         directed_right=False,
     ):
         super(PerpendicularLane, self).__init__(
-            lane_vehicles, lane_points, lane_id, crossing_pedestrain, origin_global_pose, ego_offset,
-            left_turning_lane, right_turning_lane, right_most_lane
+            lane_vehicles,
+            lane_points,
+            lane_id,
+            crossing_pedestrain,
+            origin_global_pose,
+            ego_offset,
+            left_turning_lane,
+            right_turning_lane,
+            right_most_lane,
         )
         self.intersecting_distance = intersecting_distance
         self.directed_right = directed_right
