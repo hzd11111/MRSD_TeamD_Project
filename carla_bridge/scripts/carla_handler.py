@@ -8,6 +8,8 @@ __email__ = "mayanksi@andrew.cmu.edu"
 __version__ = "0.1"
 
 
+from builtins import isinstance
+from builtins import list
 from os import get_inheritable
 import random
 import time
@@ -735,7 +737,7 @@ class CarlaHandler:
     def get_lane_ids(self, waypoints):
         '''Given a list of waypoints, returns unique lane ids'''
         
-        if isinstance(waypoints) != list:
+        if not isinstance(waypoints, list):
             waypoints = [waypoints]
         
         return list(set([wp.lane_id for wp in waypoints]))
@@ -813,6 +815,9 @@ class CarlaHandler:
         # loop over all actors to find the closest in front and back
         for actor in actors_in_current_lane:
 
+            # convert actors in Vehicle class 
+            if isinstance(actor, Vehicle):
+                actor = self.world.get_actor(actor.actor_id)
             # skip the ego vehicle for the following calculations
             if actor.id == ego_vehicle.id:
                 continue
@@ -852,6 +857,8 @@ class CarlaHandler:
                 rear_vehicle = vehicle_dummy
             else:
                 rear_vehicle = Vehicle(self.world, rear_vehicle.id)
+        
+        return front_vehicle, rear_vehicle
     
     def carlavehicle_to_Vehicle_class(self, carla_vehicle_list):
         '''Returns a Vehicle class for carla.Vehicle list'''

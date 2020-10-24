@@ -221,8 +221,8 @@ class LaneFollowingScenario:
     def get_global_path(self):
         '''For the lane following scenario, returns a global path, which is from
         the current ego_vehicle location to the end of the lane. TODO:Check'''
-        start_location = self.ego_vehicle.location
-        end_location = self.current_lane_wps[-1]
+        start_location = self.current_lane_wps[0].transform.location
+        end_location = self.current_lane_wps[-1].transform.location
 
         route = self.global_planner.trace_route(start_location, end_location)
         global_path_wps = [route[i][0] for i in range(len(route))]
