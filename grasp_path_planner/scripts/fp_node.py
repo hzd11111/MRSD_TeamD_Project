@@ -80,7 +80,7 @@ class FullPlannerManager:
         env = CustomEnv(self.path_planner, self.behavior_planner, self.event)
         env = make_vec_env(lambda: env, n_envs=1)
         decision_maker = GeneralRLManager()
-        model = DQN.load("/home/arcot/GRASP/src/grasp_path_planner/scripts/Models/Right_Turn_CP/rl_model_20000_steps.zip")
+        model = DQN.load("./Models/Right_Turn_CP/rl_model_20000_steps.zip")
         print(MODEL_LOAD_PATH)
         obs = env.reset()
         count = 0

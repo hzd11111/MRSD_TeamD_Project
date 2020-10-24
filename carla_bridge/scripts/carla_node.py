@@ -437,10 +437,13 @@ class CarlaManager:
             # Get requested pose and speed values from agent
             tracking_pose = plan.tracking_pose
             tracking_speed = plan.tracking_speed  # / 3.6
+            
+            draw_string(location=carla.Location(x=tracking_pose.x, y=tracking_pose.y, z=2), color=(255,0,0))
 
             # apply vehicle control using custom controller
             control = self.vehicle_controller.run_step(tracking_speed, 
                                                         tracking_pose)
+            print("ID in control fn", self.ego_vehicle.id)
             self.ego_vehicle.apply_control(control)
 
             # print the speed of the vehicle
@@ -461,9 +464,9 @@ class CarlaManager:
                 except:
                     print("Missed Tick" + '.' * 50)
 
-            self.timestamp += self.simulation_sync_timestep * num_of_ticks
+            self.timestamp += float(self.simulation_sync_timestep * num_of_ticks)
 
-        def draw_string(vehicle=None, location=None, text='o', life_time=1):
+        def draw_string(vehicle=None, location=None, text='o', life_time=1, color=(0,255,0)):
             '''Draws an 'o' or other specified text on a given vehicle or 
             location'''
 
@@ -480,7 +483,7 @@ class CarlaManager:
                 wp_loc,
                 text, 
                 draw_shadow=False,
-                color=carla.Color(r=0, g=255, b=0),
+                color=carla.Color(r=color[0], g=color[1], b=color[2]),
                 life_time=life_time
             )
 
@@ -498,6 +501,7 @@ class CarlaManager:
             self.first_frame_generated = True
         else: # else apply control and step
             self.first_run = 0
+            print("Control applied")
             apply_control(plan)
 
         '''
@@ -539,12 +543,47 @@ class CarlaManager:
             origin_global_pose=global_pose #TODO: Ask Mayank
             )
         lane_cur = copy.copy(self.lane_cur)
+        
+        '''
+        Update Frenet Values
+        '''
+        # import ipdb; ipdb.set_trace()
+
+        ### Get the frenet coordinate of the ego vehicle in the current lane.
+        ego_vehicle_frenet_pose = lane_cur.GlobalToFrenet(ego_vehicle.location_global)
+
+        ### Update the ego_offset for current lane
+        lane_cur.ego_offset = ego_vehicle_frenet_pose.x
+        
+        ### Update frenet for ego vehicle (will be (0,x,x))
+        ego_vehicle.location_frenet = lane_cur.GlobalToFrenet(
+            ego_vehicle.location_global
+        )
+        
+        ### Update local frenet for vehicles on current lane
+        for i in range(len(lane_cur.lane_vehicles)):
+            lane_cur.lane_vehicles[i].location_frenet = lane_cur.GlobalToFrenet(
+                lane_cur.lane_vehicles[i].location_global
+            )
+            
+        ### Update all waypoint frenet coordinates.
+        # Update current lane points
+        for i in range(len(lane_cur.lane_points)):
+            lane_cur.lane_points[i].frenet_pose = lane_cur.GlobalToFrenet(
+                lane_cur.lane_points[i].global_pose
+            )
+        
+        
+        
+        
         '''
         Part 3: Create ROS msg objects and ship it!
         '''
         self.end_of_action = plan.end_of_action
         self.action_progress = plan.action_progress
         self.path_planner_terminate = plan.path_planner_terminate
+        self.speed_limit = 25
+
 
         # Reward info object DONE
         reward_info = RewardInfo()
@@ -554,6 +593,7 @@ class CarlaManager:
         reward_info.action_progress = self.action_progress
         reward_info.end_of_action = self.end_of_action
         reward_info.path_planner_terminate = self.path_planner_terminate
+        # import ipdb; ipdb.set_trace()
 
         # EnvDesc Object 
         env_desc = EnvDesc()
@@ -566,6 +606,8 @@ class CarlaManager:
         env_desc.global_path = self.global_path_in_intersection
         print("sending this message")
         # import ipdb; ipdb.set_trace()
+        
+        
         return SimServiceResponse(env_desc.toRosMsg())
 
     def destroy_actors_and_sensors(self):
@@ -649,6 +691,7 @@ class CarlaManager:
                 self.global_path_in_intersection = GlobalPath(
                     path_points=self.global_path_in_intersection
                 )
+                # self.global_path_in_intersection. = self.global_path_in_intersection[::-1]
                 # pass
 
             ## Handing over control
