@@ -39,6 +39,7 @@ class PathPlan(object):
         "path_planner_terminate",
         "end_of_action",
         "action_progress",
+        "auto_pilot",
     ]
 
     def __init__(

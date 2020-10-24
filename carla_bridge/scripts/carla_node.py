@@ -1,3 +1,4 @@
+from builtins import isinstance
 import time
 import subprocess
 import sys
@@ -21,6 +22,7 @@ from grasp_controller import GRASPPIDController
 
 from scenario_manager import CustomScenario
 from intersection_scenario_manager import IntersectionScenario
+from lane_following_scenario_manager import LaneFollowingScenario
 from grasp_path_planner.srv import SimService, SimServiceResponse
 from agents.tools.misc import get_speed
 
@@ -161,6 +163,7 @@ class CarlaManager:
 
         state_information = self.carla_handler.get_state_information_intersection(
                 self.ego_vehicle,
+
                 self.all_vehicles,
                 self.ego_start_road_lane_pair,
                 self.intersection_topology,
@@ -463,6 +466,8 @@ class CarlaManager:
             '''Draws an 'o' or other specified text on a given vehicle or 
             location'''
 
+            if isinstance(vehicle, Vehicle):
+                vehicle = self.carla_handler.world.get_actor(vehicle.actor_id)
             if vehicle is not None:
                 location = vehicle.get_location()
 
@@ -517,7 +522,7 @@ class CarlaManager:
             actors_in_left_lane,
             actors_in_right_lane,
             lane_distance,
-        ) = lane_follow_state_information
+        ) = state_information
         
         ego_vehicle = Vehicle(self.carla_handler.world, self.ego_vehicle.id)
 
@@ -536,7 +541,6 @@ class CarlaManager:
         '''
         Part 3: Create ROS msg objects and ship it!
         '''
-
         self.end_of_action = plan.end_of_action
         self.action_progress = plan.action_progress
         self.path_planner_terminate = plan.path_planner_terminate
@@ -559,6 +563,8 @@ class CarlaManager:
         env_desc.speed_limit = self.speed_limit
         env_desc.reward_info = reward_info
         env_desc.global_path = GlobalPath()
+
+        return SimServiceResponse(env_desc.toRosMsg())
 
     def destroy_actors_and_sensors(self):
 
@@ -593,36 +599,43 @@ class CarlaManager:
         self.first_run = 1
 
         try:
-            
-            (
-                self.ego_vehicle,
-                self.vehicles_list,
-                self.intersection_connections,
-                self.intersection_topology,
-                self.ego_start_road_lane_pair,
-                self.global_path_in_intersection,
-                self.road_lane_to_orientation,
-            ) = self.tm.reset(num_vehicles=25, junction_id=53, warm_start_duration=2)
+            if True:
+                (
+                    self.ego_vehicle,
+                    self.vehicles_list,
+                    self.intersection_connections,
+                    self.intersection_topology,
+                    self.ego_start_road_lane_pair,
+                    self.global_path_in_intersection,
+                    self.road_lane_to_orientation,
+                ) = self.tm.reset(num_vehicles=25, junction_id=53, warm_start_duration=2)
 
-            self.all_vehicles = self.carla_handler.world.get_actors().filter(
-                "vehicle.*"
-            )
-            self.lane_cur = None
-            self.adjacent_lanes = None
-            self.next_intersection = None
+                self.all_vehicles = self.carla_handler.world.get_actors().filter(
+                    "vehicle.*"
+                )
+                self.lane_cur = None
+                self.adjacent_lanes = None
+                self.next_intersection = None
 
-            self.global_path_in_intersection = [
-                self.waypoint_to_pose2D(wp) for wp in self.global_path_in_intersection
-            ]
-            self.global_path_in_intersection = [
-                GlobalPathPoint(global_pose=pose)
-                for pose in self.global_path_in_intersection
-            ]
-            self.global_path_in_intersection = GlobalPath(
-                path_points=self.global_path_in_intersection
-            )
+                self.global_path_in_intersection = [
+                    self.waypoint_to_pose2D(wp) for wp in self.global_path_in_intersection
+                ]
+                self.global_path_in_intersection = [
+                    GlobalPathPoint(global_pose=pose)
+                    for pose in self.global_path_in_intersection
+                ]
+                self.global_path_in_intersection = GlobalPath(
+                    path_points=self.global_path_in_intersection
+                )
 
-            self.draw_global_path(self.global_path_in_intersection)
+                self.draw_global_path(self.global_path_in_intersection)
+            else: # for Lane Follow
+                # (
+                #     self.ego_vehicle,
+                #     self.vehicles_list,
+                #     global_path
+                # ) = self.tm.reset()
+                pass
 
             ## Handing over control
             del self.collision_sensor
@@ -675,7 +688,7 @@ class CarlaManager:
         client.set_timeout(2.0)
         print("Connection to CARLA server established!")
 
-        # Create a CarlaHandler object. CarlaHandler provides some cutom built APIs for the Carla Server.
+        # Create a CarlaHandler object. CarlaHandler provides some cutom bus\ilt APIs for the Carla Server.
         self.carla_handler = CarlaHandler(client)
         self.client = client
 
@@ -688,6 +701,7 @@ class CarlaManager:
         # self.tm = CustomScenario(self.client, self.carla_handler)
 
         self.tm = IntersectionScenario(self.client)
+        # self.tm = LaneFollowingScenario(self.client, self.carla_handler)
 
         # Reset Environment
         self.resetEnv()
