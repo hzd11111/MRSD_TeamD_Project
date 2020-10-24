@@ -194,7 +194,7 @@ class CustomIntersectionLeftTurn(DQNPolicy):
     def embedding_net_front_back(self, input_vec):
         out = input_vec
         with tf.variable_scope("embedding_network_front_back", reuse=tf.compat.v1.AUTO_REUSE):
-            out = tf.Print(out, [out], summarize=200, message="FRONT_BACK:")
+            # out = tf.Print(out, [out], summarize=200, message="FRONT_BACK:")
             out = tf_layers.fully_connected(
                 out, num_outputs=32, activation_fn=tf.nn.relu)
         return out
@@ -203,7 +203,7 @@ class CustomIntersectionLeftTurn(DQNPolicy):
         out = input_vec
         with tf.variable_scope("embedding_network_perpendicular",
                                reuse=tf.compat.v1.AUTO_REUSE):
-            out = tf.Print(out, [out], summarize=200, message="PERP_VEH:")
+            # out = tf.Print(out, [out], summarize=200, message="PERP_VEH:")
             out = tf_layers.fully_connected(
                 out, num_outputs=32, activation_fn=tf.nn.relu)
         return out
@@ -211,7 +211,7 @@ class CustomIntersectionLeftTurn(DQNPolicy):
     def embedding_net_opposite(self, input_vec):
         out = input_vec
         with tf.variable_scope("embedding_network_opposite", reuse=tf.compat.v1.AUTO_REUSE):
-            out = tf.Print(out, [out], summarize=200, message="OPPOSITE:")
+            # out = tf.Print(out, [out], summarize=200, message="OPPOSITE:")
             out = tf_layers.fully_connected(
                 out, num_outputs=32, activation_fn=tf.nn.relu)
         return out
@@ -238,7 +238,7 @@ class CustomIntersectionLeftTurn(DQNPolicy):
             current_lane_len = 8
             mask = 1
             out_ph = tf.layers.flatten(self.processed_obs)
-            out_ph = tf.Print(out_ph, [out_ph], summarize=300, message="OUT_PH:")
+            # out_ph = tf.Print(out_ph, [out_ph], summarize=300, message="OUT_PH:")
             cur_veh = out_ph[:, current_lane_len:current_lane_len + veh_state_len]
 
             # Add front vehicle

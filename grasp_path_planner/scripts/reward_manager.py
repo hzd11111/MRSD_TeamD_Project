@@ -453,7 +453,7 @@ class PlainReward(Reward):
         reward = 0
         # print("Action progress is ", desc.reward_info.action_progress)
         if desc.reward_info.collision or \
-                (desc.reward_info.time_elapsed > 40):
+                (desc.reward_info.time_elapsed > 80):
             reward = reward - 1
         elif desc.reward_info.path_planner_terminate:
             reward += desc.reward_info.action_progress

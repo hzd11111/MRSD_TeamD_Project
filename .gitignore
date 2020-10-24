@@ -148,7 +148,9 @@ dmypy.json
 .vscode/
 .vimspector.json
 
-*/Logs/*/*
-*/Models/*/*
-wandb/*/*
-description.md
+**/Logs/*/*
+**/Models/*/*
+**/Models/*
+**/wandb/*/*
+**/wandb/*
+**/description.md
