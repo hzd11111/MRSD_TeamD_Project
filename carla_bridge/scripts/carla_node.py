@@ -523,7 +523,8 @@ class CarlaManager:
 
         draw_string(ego_vehicle)
         
-        global_pose = ego_vehicle.get_location_global()
+        global_pose = ego_vehicle.get_location_global() #TODO: Fix the global pose
+        #TODO: ensure the right waypoint is selcected 
 
         self.lane_cur = CurrentLane(
             lane_vehicles=actors_in_current_lane, 
