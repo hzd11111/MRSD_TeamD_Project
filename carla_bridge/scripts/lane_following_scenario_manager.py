@@ -22,8 +22,8 @@ town04_highway = {'X':-356, 'Y':30, 'Z':0.2,
 
 town05_city = {'X':15, 'Y':-94, 'Z':0.2,
                 "distance_bwn_waypoints":1,
-                "total_non_ego_vehicles":1,
-                "max_vehicles_in_front":2,
+                "total_non_ego_vehicles":3,
+                "max_vehicles_in_front":0,
                 "target_speed":1,
                 "max_dist_bwn_veh":8,
                 "min_dist_bwn_veh":2,
@@ -74,7 +74,7 @@ class LaneFollowingScenario:
         self.synchronous_mode = True
         self.no_rendering_mode = False
         self.fixed_delta_seconds = 0.05
-        self.hybrid_physics_mode = True
+        self.hybrid_physics_mode = False
         self.auto_lane_change = False
         self.distance_to_leading_vehicle = 2
         self.target_speed = self.config["target_speed"]
@@ -91,8 +91,8 @@ class LaneFollowingScenario:
     def configure_traffic_manager(self):
         tm = self.traffic_manager
         tm.set_synchronous_mode(self.synchronous_mode)
-        tm.set_hybrid_physics_mode(self.hybrid_physics_mode)
-        tm.set_global_distance_to_leading_vehicle(self.distance_to_leading_vehicle)
+        # tm.set_hybrid_physics_mode(self.hybrid_physics_mode)
+        # tm.set_global_distance_to_leading_vehicle(self.distance_to_leading_vehicle)
 
     def configure_world(self, no_rendering_mode=False, synchronous_mode=True, \
                                                     fixed_delta_seconds=0.03):
@@ -103,9 +103,10 @@ class LaneFollowingScenario:
         self.no_rendering_mode = no_rendering_mode
         self.fixed_delta_seconds = fixed_delta_seconds
 
-    def tick(self):            
-        if self.synchronous_mode:
-            self.world.tick()
+    def tick(self):     
+        pass       
+        # if self.synchronous_mode:
+        #     self.world.tick()
     
     def warm_start(self, warm_start_duration=5):
         warm_start_curr = 0
@@ -200,7 +201,7 @@ class LaneFollowingScenario:
             self.traffic_manager.auto_lane_change(actor, self.auto_lane_change)
             self.traffic_manager.ignore_lights_percentage(actor, 100)
             self.traffic_manager.ignore_signs_percentage(actor, 100)
-            actor.set_simulate_physics(True)
+            # actor.set_simulate_physics(True)
 
         self.ego_vehicle = ego_vehicle
         self.non_ego_vehicle_list = non_ego_vehicle_list
@@ -211,7 +212,10 @@ class LaneFollowingScenario:
         # destroy all old actors
         all_actors = self.world.get_actors().filter("vehicle*")
         self.client.apply_batch([carla.command.DestroyActor(x) for x in all_actors])
-        self.tick()
+        # self.tick()
+        self.world.tick()
+
+        
 
     def disable_autopilot(self):
         SetAutopilot = carla.command.SetAutopilot
@@ -226,6 +230,7 @@ class LaneFollowingScenario:
 
         route = self.global_planner.trace_route(start_location, end_location)
         global_path_wps = [route[i][0] for i in range(len(route))]
+        print(global_path_wps)
 
         return global_path_wps
     
@@ -235,7 +240,7 @@ class LaneFollowingScenario:
     def reset(self, warm_start=True, warm_start_duration=2):
 
         # configure asynchronous mode
-        self.configure_world(self.no_rendering_mode,self.synchronous_mode,self.fixed_delta_seconds)
+        # self.configure_world(self.no_rendering_mode,self.synchronous_mode,self.fixed_delta_seconds)
         self.configure_traffic_manager()
         self.tick()
 
