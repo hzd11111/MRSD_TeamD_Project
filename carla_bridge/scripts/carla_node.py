@@ -438,12 +438,15 @@ class CarlaManager:
             tracking_pose = plan.tracking_pose
             tracking_speed = plan.tracking_speed  # / 3.6
             
-            draw_string(location=carla.Location(x=tracking_pose.x, y=tracking_pose.y, z=2), color=(255,0,0))
+            # draw the tracking pose
+            tracking_loc = carla.Location(x=tracking_pose.x,
+                                            y=tracking_pose.y,
+                                            z=2)
+            draw_string(location=tracking_loc, text='+', color=(255,0,0))
 
             # apply vehicle control using custom controller
             control = self.vehicle_controller.run_step(tracking_speed, 
                                                         tracking_pose)
-            print("ID in control fn", self.ego_vehicle.id)
             self.ego_vehicle.apply_control(control)
 
             # print the speed of the vehicle
@@ -464,9 +467,10 @@ class CarlaManager:
                 except:
                     print("Missed Tick" + '.' * 50)
 
-            self.timestamp += float(self.simulation_sync_timestep * num_of_ticks)
+            self.timestamp += self.simulation_sync_timestep * num_of_ticks
 
-        def draw_string(vehicle=None, location=None, text='o', life_time=1, color=(0,255,0)):
+        def draw_string(vehicle=None, location=None, text='o', life_time=1, 
+                        color=(0,255,0)):
             '''Draws an 'o' or other specified text on a given vehicle or 
             location'''
 
@@ -487,8 +491,6 @@ class CarlaManager:
                 life_time=life_time
             )
 
-        ############################################################
-
         '''
         Part 1: Apply vehicle control and step/reset the environment
         '''
@@ -501,19 +503,12 @@ class CarlaManager:
             self.first_frame_generated = True
         else: # else apply control and step
             self.first_run = 0
-            print("Control applied")
             apply_control(plan)
 
         '''
         Part 2: State extraction of the relevant info for return to agent        
         '''
-        '''
-        Rohan's state extraction checklist
-        1. Current vehicle state
-        2. current lane
-        3. global path
-        
-        '''
+
         state_information = self.carla_handler. \
                             get_state_information_lane_follow(self.ego_vehicle)
 
@@ -532,22 +527,22 @@ class CarlaManager:
         ego_vehicle = Vehicle(self.carla_handler.world, self.ego_vehicle.id)
 
         draw_string(ego_vehicle)
+        draw_string(location=self.tm.goal_waypoint.transform.location, text='X',
+                                                            color=(0,0,255))
         
-        global_pose = ego_vehicle.get_location_global() #TODO: Fix the global pose
-        #TODO: ensure the right waypoint is selcected 
+        lane_origin = current_lane_waypoints[0].global_pose
 
         self.lane_cur = CurrentLane(
             lane_vehicles=actors_in_current_lane, 
             lane_points=current_lane_waypoints,
             crossing_pedestrain=[],
-            origin_global_pose=global_pose #TODO: Ask Mayank
+            origin_global_pose=lane_origin
             )
         lane_cur = copy.copy(self.lane_cur)
-        
+        draw_string(location=carla.Location(x=lane_origin.x,y=lane_origin.y,z=2), text='8')
         '''
         Update Frenet Values
         '''
-        # import ipdb; ipdb.set_trace()
 
         ### Get the frenet coordinate of the ego vehicle in the current lane.
         ego_vehicle_frenet_pose = lane_cur.GlobalToFrenet(ego_vehicle.location_global)
@@ -573,17 +568,12 @@ class CarlaManager:
                 lane_cur.lane_points[i].global_pose
             )
         
-        
-        
-        
         '''
         Part 3: Create ROS msg objects and ship it!
         '''
         self.end_of_action = plan.end_of_action
         self.action_progress = plan.action_progress
         self.path_planner_terminate = plan.path_planner_terminate
-        self.speed_limit = 25
-
 
         # Reward info object DONE
         reward_info = RewardInfo()
@@ -593,7 +583,6 @@ class CarlaManager:
         reward_info.action_progress = self.action_progress
         reward_info.end_of_action = self.end_of_action
         reward_info.path_planner_terminate = self.path_planner_terminate
-        # import ipdb; ipdb.set_trace()
 
         # EnvDesc Object 
         env_desc = EnvDesc()
@@ -604,9 +593,6 @@ class CarlaManager:
         env_desc.speed_limit = self.speed_limit
         env_desc.reward_info = reward_info
         env_desc.global_path = self.global_path_in_intersection
-        print("sending this message")
-        # import ipdb; ipdb.set_trace()
-        
         
         return SimServiceResponse(env_desc.toRosMsg())
 
@@ -641,6 +627,7 @@ class CarlaManager:
         self.timestamp = 0
         self.collision_marker = 0
         self.first_run = 1
+        self.speed_limit = 25
 
         try:
             if False:
@@ -677,7 +664,7 @@ class CarlaManager:
                 (
                     self.ego_vehicle,
                     self.vehicles_list,
-                    self.global_path_in_intersection #TODO: change
+                    self.global_path_in_intersection #TODO: change variable name
                 ) = self.tm.reset()
 
 
@@ -691,8 +678,6 @@ class CarlaManager:
                 self.global_path_in_intersection = GlobalPath(
                     path_points=self.global_path_in_intersection
                 )
-                # self.global_path_in_intersection. = self.global_path_in_intersection[::-1]
-                # pass
 
             ## Handing over control
             del self.collision_sensor

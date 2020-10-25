@@ -112,7 +112,7 @@ class TrajGenerator:
             action_progress = 1.
             
         path_planner_terminate = False
-        if self.global_path_pointer >= len(global_path_points):
+        if self.global_path_pointer >= len(global_path_points)-1:
             tracking_pose = global_path_points[-1].global_pose
             action_progress = 1.
             end_of_action = True
@@ -175,7 +175,7 @@ class TrajGenerator:
             action_progress = 1.
             
         path_planner_terminate = False
-        if self.global_path_pointer >= len(global_path_points):
+        if self.global_path_pointer >= len(global_path_points)-1:
             tracking_pose = global_path_points[-1].global_pose
             action_progress = 1.
             end_of_action = True
@@ -241,7 +241,7 @@ class TrajGenerator:
             action_progress = 1.
             
         path_planner_terminate = False
-        if self.global_path_pointer >= len(global_path_points):
+        if self.global_path_pointer >= len(global_path_points)-1:
             tracking_pose = global_path_points[-1].global_pose
             action_progress = 1.
             end_of_action = True

@@ -84,13 +84,18 @@ class GeneralRLManager:
         Returns:
         RLDecision enum
         """
-
         if action == 0:
-            return RLDecision.CONSTANT_SPEED
+            return RLDecision.GLOBAL_PATH_CONSTANT_SPEED
         elif action == 1:
-            return RLDecision.ACCELERATE
+            return RLDecision.GLOBAL_PATH_ACCELERATE
         elif action == 2:
-            return RLDecision.DECELERATE
+            return RLDecision.GLOBAL_PATH_DECELERATE
+        # if action == 0:
+        #     return RLDecision.CONSTANT_SPEED
+        # elif action == 1:
+        #     return RLDecision.ACCELERATE
+        # elif action == 2:
+        #     return RLDecision.DECELERATE
 
     def convertDecision(self, action, event) -> RLDecision:
         """

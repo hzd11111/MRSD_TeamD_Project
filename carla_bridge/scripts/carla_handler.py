@@ -695,6 +695,8 @@ class CarlaHandler:
         nearest_waypoint = self.world_map.get_waypoint(
             vehicle_location, project_to_road=True
         )
+        # else:
+        #     nearest_waypoint = self.spawn_ego_point
 
         # filter current_lane, right_lane, left lane waypoints
         current_lane_waypoints = self.filter_waypoints(
