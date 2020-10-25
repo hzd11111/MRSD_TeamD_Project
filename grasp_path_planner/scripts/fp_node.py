@@ -30,8 +30,6 @@ from settings import MODEL_LOAD_PATH, MODEL_SAVE_PATH, CURRENT_MODE, CURRENT_SCE
 dir_path = os.path.dirname(os.path.realpath(__file__))
 # -----------------------------------Code------------------------------------------------------#
 
-wandb.init(entity="rsp2020", project="grasp", config=tf.flags.FLAGS, sync_tensorboard=True)
-checkpoint_callback = CheckpointCallback(save_freq=1000, save_path=MODEL_CP_PATH, name_prefix='rl_model')
 
 class FullPlannerManager:
     def __init__(self, event):
@@ -43,6 +41,8 @@ class FullPlannerManager:
         self.path_planner.initialize()
 
     def run_train(self):
+        wandb.init(entity="rsp2020", project="grasp", config=tf.flags.FLAGS, sync_tensorboard=True)
+        checkpoint_callback = CheckpointCallback(save_freq=1000, save_path=wandb.run.dir, name_prefix='rl_model')
         env = CustomEnv(self.path_planner, self.behavior_planner, event)
         env = make_vec_env(lambda: env, n_envs=1)
         model = None
@@ -77,17 +77,17 @@ class FullPlannerManager:
                         target_network_update_freq=100,
                         tensorboard_log=wandb.run.dir, gamma=0.93, learning_rate=0.0001)
 
+        wandb.save("./*.py")
+        wandb.save("./*.md")
         model.learn(total_timesteps=20000, callback=checkpoint_callback)
         model.save(MODEL_SAVE_PATH)
-        wandb.save(MODEL_SAVE_PATH)
-        wandb.save(dir_path + "scripts/*.py")
-        wandb.save(dir_path + "scripts/*.md")
+        wandb.save(MODEL_SAVE_PATH + ".zip")
 
     def run_test(self):
         env = CustomEnv(self.path_planner, self.behavior_planner, self.event)
         env = make_vec_env(lambda: env, n_envs=1)
         decision_maker = GeneralRLManager()
-        model = DQN.load("./Models/Right_Turn_CP/rl_model_20000_steps.zip")
+        model = DQN.load(MODEL_LOAD_PATH)
         print(MODEL_LOAD_PATH)
         obs = env.reset()
         count = 0
