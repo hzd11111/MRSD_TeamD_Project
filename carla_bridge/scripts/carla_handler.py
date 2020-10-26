@@ -651,25 +651,25 @@ class CarlaHandler:
             current_lane_waypoints = self.filter_waypoints(
                 self.all_waypoints, nearest_waypoint.road_id, nearest_waypoint.lane_id
             )
-            left_lane_waypoints = self.filter_waypoints(
-                self.all_waypoints,
-                nearest_waypoint.get_left_lane().road_id,
-                nearest_waypoint.get_left_lane().lane_id,
-            )
-            right_lane_waypoints = self.filter_waypoints(
-                self.all_waypoints,
-                nearest_waypoint.get_right_lane().road_id,
-                nearest_waypoint.get_right_lane().lane_id,
-            )
+            # left_lane_waypoints = self.filter_waypoints(
+            #     self.all_waypoints,
+            #     nearest_waypoint.get_left_lane().road_id,
+            #     nearest_waypoint.get_left_lane().lane_id,
+            # )
+            # right_lane_waypoints = self.filter_waypoints(
+            #     self.all_waypoints,
+            #     nearest_waypoint.get_right_lane().road_id,
+            #     nearest_waypoint.get_right_lane().lane_id,
+            # )
 
-            left_lane_ids = list(set([wp.lane_id for wp in left_lane_waypoints]))
-            # current_lane_ids = list(set([wp.lane_id for wp in current_lane_waypoints]))
-            right_lane_ids = list(set([wp.lane_id for wp in right_lane_waypoints]))
+            # left_lane_ids = list(set([wp.lane_id for wp in left_lane_waypoints]))
+            # # current_lane_ids = list(set([wp.lane_id for wp in current_lane_waypoints]))
+            # right_lane_ids = list(set([wp.lane_id for wp in right_lane_waypoints]))
 
             # Containers for actors in current, left and right lanes
             actors_in_current_lane = []
-            actors_in_left_lane = []
-            actors_in_right_lane = []
+            # actors_in_left_lane = []
+            # actors_in_right_lane = []
 
             # Containers for leading and rear vehicle in current lane
             front_vehicle = None
@@ -689,11 +689,11 @@ class CarlaHandler:
                     actor_nearest_waypoint = self.world_map.get_waypoint(
                         actor.get_location(), project_to_road=True
                     )
-                    if actor_nearest_waypoint.lane_id in left_lane_ids:
-                        actors_in_left_lane.append(actor)
-                    elif actor_nearest_waypoint.lane_id in right_lane_ids:
-                        actors_in_right_lane.append(actor)
-                    else:
+                    # if actor_nearest_waypoint.lane_id in left_lane_ids:
+                    #     actors_in_left_lane.append(actor)
+                    # elif actor_nearest_waypoint.lane_id in right_lane_ids:
+                    #     actors_in_right_lane.append(actor)
+                    if True:
 
                         actors_in_current_lane.append(actor)
 
@@ -729,14 +729,14 @@ class CarlaHandler:
             LanePoint(global_pose=self.waypoint_to_pose2D(wp))
             for wp in current_lane_waypoints
         ]
-        left_lane_waypoints = [
-            LanePoint(global_pose=self.waypoint_to_pose2D(wp))
-            for wp in left_lane_waypoints
-        ]
-        right_lane_waypoints = [
-            LanePoint(global_pose=self.waypoint_to_pose2D(wp))
-            for wp in right_lane_waypoints
-        ]
+        # left_lane_waypoints = [
+        #     LanePoint(global_pose=self.waypoint_to_pose2D(wp))
+        #     for wp in left_lane_waypoints
+        # ]
+        # right_lane_waypoints = [
+        #     LanePoint(global_pose=self.waypoint_to_pose2D(wp))
+        #     for wp in right_lane_waypoints
+        # ]
 
         vehicle_dummy = Vehicle(
             actor_id=-1, speed=-1, location_global=Pose2D(1000, 1000, 0)
@@ -757,22 +757,22 @@ class CarlaHandler:
             Vehicle(self.world, vehicle.id) for vehicle in actors_in_current_lane
         ]
 
-        actors_in_left_lane = [
-            Vehicle(self.world, vehicle.id) for vehicle in actors_in_left_lane
-        ]
+        # actors_in_left_lane = [
+        #     Vehicle(self.world, vehicle.id) for vehicle in actors_in_left_lane
+        # ]
 
-        actors_in_right_lane = [
-            Vehicle(self.world, vehicle.id) for vehicle in actors_in_right_lane
-        ]
+        # actors_in_right_lane = [
+        #     Vehicle(self.world, vehicle.id) for vehicle in actors_in_right_lane
+        # ]
 
         return (
             current_lane_waypoints,
-            left_lane_waypoints,
-            right_lane_waypoints,
+            [],
+            [],
             vehicle_front,
             vehicle_rear,
             actors_in_current_lane,
-            actors_in_left_lane,
-            actors_in_right_lane,
+            [],
+            [],
             lane_distance,
         )
