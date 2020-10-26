@@ -6,6 +6,8 @@ import rospy
 import math
 
 from functional_utility import Frenet, Pose2D
+
+# from utility import ParallelLane, PerpendicularLane
 from geometry_msgs.msg import Pose2D as Pose2DMsg
 from carla_utils.msg import ActorMsg, VehicleMsg, PedestrainMsg, FrenetMsg
 from options import TrafficLightStatus, PedestrainPriority
@@ -121,19 +123,20 @@ class Actor:
         """
         Gets the distance from the ego/controlling vehicle in frenet coordinate frame
         """
-        if self.actor is None:
-            current_global_pose = self.location_global
-        else:
-            current_global_pose = self.get_state_dict()["Pose2D"]
 
-        current_frenet_pose = current_lane.GlobalToFrenet(current_global_pose)
+        if hasattr(current_lane, "adjacent_lane"):
+            return self.location_frenet.parallelFromCurrent(
+                current_lane.lane_distance,
+                current_lane.same_direction,
+                current_lane.left_to_the_current,
+            )
 
-        relative_s = current_frenet_pose.x - frenet.x
-        # relative_d = current_frenet_pose.y - frenet.y
-        # relative_theta = current_frenet_pose.theta - frenet.theta
-        return Frenet(
-            x=relative_s, y=current_frenet_pose.y, theta=current_frenet_pose.theta
-        )
+        if hasattr(current_lane, "directed_right"):
+            return self.location_frenet.perpendicularFromCurrent(
+                current_lane.intersecting_distance, current_lane.directed_right
+            )
+
+        return self.location_frenet
 
     # ---------GETTERS------------------------------
 

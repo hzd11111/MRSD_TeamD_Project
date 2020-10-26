@@ -451,9 +451,10 @@ class PlainReward(Reward):
         Gives the cost of taking action
         """
         reward = 0
-        if desc.reward_info.collision:
+        # print("Action progress is ", desc.reward_info.action_progress)
+        if desc.reward_info.collision or \
+                (desc.reward_info.time_elapsed > 80):
             reward = reward - 1
-            print("Collision")
         elif desc.reward_info.path_planner_terminate:
             reward += desc.reward_info.action_progress
         print("Reward is ", reward)

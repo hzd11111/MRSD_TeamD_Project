@@ -2,6 +2,8 @@
 import math
 import rospy
 
+import numpy as np
+
 from geometry_msgs.msg import Pose2D as Pose2DMsg
 from carla_utils.msg import FrenetMsg
 
@@ -29,11 +31,41 @@ class Frenet(object):
         msg.theta = self.theta
         return msg
 
-    def perpendicularFromCurrent(self):
-        pass
+    def perpendicularFromCurrent(
+        self, distance_to_intersection: float, directed_right: bool
+    ):
+        new_frenet = Frenet()
+        if directed_right:
+            new_frenet.x = distance_to_intersection - self.y
+            new_frenet.y = self.x
+            new_frenet.theta = self.theta + np.pi / 2
+        else:
+            new_frenet.x = distance_to_intersection + self.y
+            new_frenet.y = -self.x
+            new_frenet.theta = self.theta - np.pi / 2
 
-    def parallelFromCurrent(self):
-        pass
+        return new_frenet
+
+    def parallelFromCurrent(
+        self, lane_distance: float, same_direction: bool, left_to_current: bool
+    ):
+        new_frenet = Frenet()
+        if same_direction:
+            new_frenet.x = self.x
+            if left_to_current:
+                new_frenet.y = self.y - lane_distance
+            else:
+                new_frenet.y = self.y + lane_distance
+            new_frenet.theta = self.theta
+        else:
+            new_frenet.x = -self.x
+            if left_to_current:
+                new_frenet.y = -lane_distance - self.y
+            else:
+                new_frenet.y = lane_distance - self.y
+            new_frenet.theta = self.theta + np.pi
+
+        return new_frenet
 
 
 class Vec2D:

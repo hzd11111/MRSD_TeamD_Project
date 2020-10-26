@@ -39,6 +39,7 @@ class PathPlan(object):
         "path_planner_terminate",
         "end_of_action",
         "action_progress",
+        "auto_pilot",
     ]
 
     def __init__(
@@ -50,6 +51,7 @@ class PathPlan(object):
         path_planner_terminate=False,
         end_of_action=False,
         action_progress=0.0,
+        auto_pilot=False,
     ):
         self.tracking_pose = tracking_pose
         self.future_poses = future_poses
@@ -58,6 +60,7 @@ class PathPlan(object):
         self.path_planner_terminate = path_planner_terminate
         self.end_of_action = end_of_action
         self.action_progress = action_progress
+        self.auto_pilot = auto_pilot
 
     @classmethod
     def fromRosMsg(cls, path_plan_msg):
@@ -69,6 +72,7 @@ class PathPlan(object):
         obj.path_planner_terminate = path_plan_msg.path_planner_terminate
         obj.end_of_action = path_plan_msg.end_of_action
         obj.action_progress = path_plan_msg.action_progress
+        obj.auto_pilot = path_plan_msg.auto_pilot
         return obj
 
     def toRosMsg(self):
@@ -80,30 +84,33 @@ class PathPlan(object):
         msg.path_planner_terminate = self.path_planner_terminate
         msg.end_of_action = self.end_of_action
         msg.action_progress = self.action_progress
+        msg.auto_pilot = self.auto_pilot
         return msg
 
 
 class GlobalPathPoint(object):
     __slots__ = ["global_pose", "lane_id", "action"]
 
-    def __init__(self, global_pose=Pose2D(), lane_id=0, action=0):
+    def __init__(self, global_pose=Pose2D(), lane_id=0, action=None):
         self.global_pose = global_pose
         self.lane_id = lane_id
         self.action = action
+        if self.action is None:
+            self.action = GlobalPathAction.NO_ACTION
 
     @classmethod
     def fromRosMsg(cls, msg):
         obj = cls.__new__(cls)
         obj.global_pose = Pose2D.fromRosMsg(msg.global_pose)
         obj.lane_id = msg.lane_id
-        obj.action = msg.action
+        obj.action = GlobalPathAction(msg.action)
         return obj
 
     def toRosMsg(self):
         msg = GlobalPathPointMsg()
         msg.global_pose = self.global_pose.toRosMsg()
         msg.lane_id = self.lane_id
-        msg.action = self.action
+        msg.action = self.action.value
         return msg
 
 
@@ -169,6 +176,9 @@ class LaneStatus(object):
         "crossing_pedestrain",
         "origin_global_pose",
         "ego_offset",
+        "left_turning_lane",
+        "right_turning_lane",
+        "right_most_lane",
         "linestring",
     ]
 
@@ -180,6 +190,9 @@ class LaneStatus(object):
         crossing_pedestrain=[],
         origin_global_pose=Pose2D(),
         ego_offset=0,
+        left_turning_lane=False,
+        right_turning_lane=False,
+        right_most_lane=False,
     ):
         self.lane_vehicles = lane_vehicles
         self.lane_points = lane_points
@@ -187,8 +200,11 @@ class LaneStatus(object):
         self.crossing_pedestrain = crossing_pedestrain
         self.origin_global_pose = origin_global_pose
 
-        self.linestring = get_path_linestring(self.lane_points)
         self.ego_offset = ego_offset
+        self.left_turning_lane = left_turning_lane
+        self.right_turning_lane = right_turning_lane
+        self.right_most_lane = right_most_lane
+        self.linestring = get_path_linestring(self.lane_points)
 
     @classmethod
     def fromRosMsg(cls, msg):
@@ -202,6 +218,9 @@ class LaneStatus(object):
         obj.origin_global_pose = Pose2D.fromRosMsg(msg.origin_global_pose)
         obj.linestring = get_path_linestring(obj.lane_points)
         obj.ego_offset = msg.ego_offset
+        obj.left_turning_lane = msg.left_turning_lane
+        obj.right_turning_lane = msg.right_turning_lane
+        obj.right_most_lane = msg.right_most_lane
         return obj
 
     def toRosMsg(self):
@@ -212,9 +231,11 @@ class LaneStatus(object):
         msg.crossing_pedestrain = [p.toRosMsg() for p in self.crossing_pedestrain]
         msg.origin_global_pose = self.origin_global_pose.toRosMsg()
         msg.ego_offset = self.ego_offset
+        msg.left_turning_lane = self.left_turning_lane
+        msg.right_turning_lane = self.right_turning_lane
+        msg.right_most_lane = self.right_most_lane
         return msg
 
-    # TODO: add definition (Mayank)
     def frenetToGlobal(self, pose):
 
         global_pose = get_cartesian_from_frenet(
@@ -223,14 +244,15 @@ class LaneStatus(object):
 
         return Pose2D(x=global_pose[0], y=global_pose[1], theta=global_pose[2])
 
-    # TODO: add definition (Mayank)
     def GlobalToFrenet(self, pose):
 
         frenet_pose = get_frenet_from_cartesian(
             self.linestring, Point(pose.x, pose.y), pose.theta
         )
 
-        return Frenet(x=frenet_pose[0], y=frenet_pose[1], theta=frenet_pose[2])
+        return Frenet(
+            x=frenet_pose[0] - self.ego_offset, y=frenet_pose[1], theta=frenet_pose[2]
+        )
 
 
 class CurrentLane(LaneStatus):
@@ -249,18 +271,40 @@ class CurrentLane(LaneStatus):
         return msg
 
     # TODO: add definition
-    def VehicleInFront(curret_vehicle):
-        vehicle_dummy = Vehicle(
-            actor_id=-1, speed=-1, location_frenet=Pose2D(1000, 1000, 0)
-        )
-        return vehicle_dummy
+    def VehicleInFront(self, current_vehicle: Vehicle):
+
+        closest_distance = 10000
+        front_vehicle = None
+
+        current_vehicle_s = current_vehicle.location_frenet.x
+        for vehicle in self.lane_vehicles:
+            vehicle_s = vehicle.location_frenet.x
+            if vehicle_s > current_vehicle_s:
+
+                distance = abs(vehicle_s - current_vehicle_s)
+                if distance < closest_distance and distance > 0.1:
+                    front_vehicle = vehicle
+                    closest_distance = distance
+
+        return front_vehicle
 
     # TODO: add definition
-    def VehicleBehind(curret_vehicle):
-        vehicle_dummy = Vehicle(
-            actor_id=-1, speed=-1, location_frenet=Pose2D(1000, 1000, 0)
-        )
-        return vehicle_dummy
+    def VehicleBehind(self, current_vehicle: Vehicle):
+
+        closest_distance = 10000
+        rear_vehicle = None
+
+        current_vehicle_s = current_vehicle.location_frenet.x
+        for vehicle in self.lane_vehicles:
+            vehicle_s = vehicle.location_frenet.x
+            if vehicle_s < current_vehicle_s:
+
+                distance = abs(vehicle_s - current_vehicle_s)
+                if distance < closest_distance and distance > 0.1:
+                    rear_vehicle = vehicle
+                    closest_distance = distance
+
+        return rear_vehicle
 
 
 class ParallelLane(LaneStatus):
@@ -271,13 +315,25 @@ class ParallelLane(LaneStatus):
         lane_id=0,
         crossing_pedestrain=[],
         origin_global_pose=Pose2D(),
+        ego_offset=0,
+        left_turning_lane=False,
+        right_turning_lane=False,
+        right_most_lane=False,
         same_direction=False,
         left_to_the_current=False,
         adjacent_lane=False,
         lane_distance=0.0,
     ):
         super(ParallelLane, self).__init__(
-            lane_vehicles, lane_points, lane_id, crossing_pedestrain, origin_global_pose
+            lane_vehicles,
+            lane_points,
+            lane_id,
+            crossing_pedestrain,
+            origin_global_pose,
+            ego_offset,
+            left_turning_lane,
+            right_turning_lane,
+            right_most_lane,
         )
         self.same_direction = same_direction
         self.left_to_the_current = left_to_the_current
@@ -312,11 +368,23 @@ class PerpendicularLane(LaneStatus):
         lane_id=0,
         crossing_pedestrain=[],
         origin_global_pose=Pose2D(),
+        ego_offset=0,
+        left_turning_lane=False,
+        right_turning_lane=False,
+        right_most_lane=False,
         intersecting_distance=0.0,
         directed_right=False,
     ):
         super(PerpendicularLane, self).__init__(
-            lane_vehicles, lane_points, lane_id, crossing_pedestrain, origin_global_pose
+            lane_vehicles,
+            lane_points,
+            lane_id,
+            crossing_pedestrain,
+            origin_global_pose,
+            ego_offset,
+            left_turning_lane,
+            right_turning_lane,
+            right_most_lane,
         )
         self.intersecting_distance = intersecting_distance
         self.directed_right = directed_right
@@ -458,6 +526,9 @@ def callback(data):
     obj = EnvDesc.fromRosMsg(data)
     pl = obj.next_intersection[0]
     print(pl.__dict__)
+    print(pl.left_turning_lane)
+    print(pl.right_turning_lane)
+
     for p in pl.crossing_pedestrain:
         print(p.location_global.x)
         print(p.location_global.y)

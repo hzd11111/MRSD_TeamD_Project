@@ -98,8 +98,10 @@ class CarlaManager:
         self.ego_start_road_lane_pair = None
         self.intersection_connections = None
         self.adjacent_lanes = None
-        self.next_insersection = None
+        self.next_intersection = None
         self.global_path_in_intersection = None
+        self.road_lane_to_orientation = None
+        self.all_vehicles = None
 
     def pathRequest(self, data):
 
@@ -129,6 +131,9 @@ class CarlaManager:
                 self.ego_vehicle.apply_control(
                     self.vehicle_controller.run_step(tracking_speed, tracking_pose)
                 )
+                # self.draw_location(tracking_pose)
+                speed = self.ego_vehicle.get_velocity()
+                print("Speed:", np.linalg.norm([speed.x, speed.y, speed.z]) * 3.6)
 
                 #### Check Sync ###
                 flag = 0
@@ -146,8 +151,34 @@ class CarlaManager:
             self.first_frame_generated = True
             self.resetEnv()
 
-        state_information = self.carla_handler.get_state_information_intersection(
-            self.ego_vehicle, self.ego_start_road_lane_pair, self.intersection_topology
+        if self.lane_cur == None:
+            state_information = self.carla_handler.get_state_information_intersection(
+                self.ego_vehicle,
+                self.all_vehicles,
+                self.ego_start_road_lane_pair,
+                self.intersection_topology,
+                self.road_lane_to_orientation,
+            )
+
+        else:
+            state_information = self.carla_handler.get_state_information_intersection(
+                self.ego_vehicle,
+                self.all_vehicles,
+                self.ego_start_road_lane_pair,
+                self.intersection_topology,
+                self.road_lane_to_orientation,
+                only_actors=True,
+            )
+
+        ego_nearest_waypoint = self.carla_handler.world_map.get_waypoint(
+            self.ego_vehicle.get_location(), project_to_road=True
+        )
+        self.carla_handler.world.debug.draw_string(
+            ego_nearest_waypoint.transform.location,
+            "O",
+            draw_shadow=False,
+            color=carla.Color(r=0, g=255, b=0),
+            life_time=1,
         )
 
         vehicle_ego = Vehicle(self.carla_handler.world, self.ego_vehicle.id)
@@ -160,116 +191,202 @@ class CarlaManager:
             ego_lane_info,
         ) = state_information
 
-        # Current Lane
-        # if reset_sim == True:
+        if self.lane_cur == None:
+            # Current Lane
+            self.lane_cur = CurrentLane(
+                lane_vehicles=ego_lane_info[0][0],
+                lane_points=ego_lane_info[0][1],
+                crossing_pedestrain=[],
+                origin_global_pose=ego_lane_info[0][1][0].global_pose
+                if len(ego_lane_info[0][1]) != 0
+                else Pose2D(),
+            )
+            # lane_cur = copy.copy(self.lane_cur)
 
-        # Current Lane
+            self.adjacent_lanes = []
+            for elem in parallel_same_dir_info:
 
-        self.lane_cur = CurrentLane(
-            lane_vehicles=ego_lane_info[0][0],
-            lane_points=ego_lane_info[0][1],
-            crossing_pedestrain=[],
-            origin_global_pose=ego_lane_info[0][1][0].global_pose
-            if len(ego_lane_info[0][1]) != 0
-            else Pose2D(),
-        )
+                (
+                    left_turning_lane,
+                    right_turning_lane,
+                    left_to_the_current,
+                    right_next_to_the_current,
+                ) = self.carla_handler.get_positional_booleans(
+                    elem[2],
+                    self.ego_start_road_lane_pair,
+                    self.intersection_connections,
+                    self.intersection_topology,
+                    True,
+                )
+
+                parallel_lane = ParallelLane(
+                    lane_vehicles=Vehicle.getClosest(elem[0], vehicle_ego, n=5)[0],
+                    lane_points=elem[1],
+                    same_direction=True,
+                    left_to_the_current=left_to_the_current,
+                    adjacent_lane=right_next_to_the_current,
+                    lane_distance=10,
+                    origin_global_pose=elem[1][0].global_pose
+                    if len(elem[1]) != 0
+                    else Pose2D(),
+                    left_turning_lane=left_turning_lane,
+                    right_turning_lane=right_turning_lane,
+                )
+
+                self.adjacent_lanes.append(parallel_lane)
+
+            for elem in parallel_opposite_dir_info:
+                (
+                    left_turning_lane,
+                    right_turning_lane,
+                    left_to_the_current,
+                    right_next_to_the_current,
+                ) = self.carla_handler.get_positional_booleans(
+                    elem[2],
+                    self.ego_start_road_lane_pair,
+                    self.intersection_connections,
+                    self.intersection_topology,
+                    False,
+                )
+                parallel_lane = ParallelLane(
+                    lane_vehicles=Vehicle.getClosest(elem[0], vehicle_ego, n=5)[0],
+                    lane_points=elem[1],
+                    same_direction=False,
+                    left_to_the_current=left_to_the_current,
+                    adjacent_lane=right_next_to_the_current,
+                    lane_distance=10,
+                    origin_global_pose=elem[1][0].global_pose
+                    if len(elem[1]) != 0
+                    else Pose2D(),
+                    left_turning_lane=left_turning_lane,
+                    right_turning_lane=right_turning_lane,
+                )
+                self.adjacent_lanes.append(parallel_lane)
+
+            # adjacent_lanes = copy.copy(self.adjacent_lanes)
+
+            self.next_intersection = []
+            for elem in intersecting_left_info:
+                perpendicular_lane = PerpendicularLane(
+                    lane_vehicles=Vehicle.getClosest(elem[0], vehicle_ego, n=5)[0],
+                    lane_points=elem[1],
+                    intersecting_distance=10,
+                    directed_right=False,
+                    origin_global_pose=elem[1][0].global_pose
+                    if len(elem[1]) != 0
+                    else Pose2D(),
+                )
+                self.next_intersection.append(perpendicular_lane)
+
+            for elem in intersecting_right_info:
+                perpendicular_lane = PerpendicularLane(
+                    lane_vehicles=Vehicle.getClosest(elem[0], vehicle_ego, n=5)[0],
+                    lane_points=elem[1],
+                    intersecting_distance=10,
+                    directed_right=True,
+                    origin_global_pose=elem[1][0].global_pose
+                    if len(elem[1]) != 0
+                    else Pose2D(),
+                )
+                self.next_intersection.append(perpendicular_lane)
+
+        else:
+            # Update current lane vehicles. TODO: Check
+            self.lane_cur.lane_vehicles = ego_lane_info[0][0]
+            for i, elem in enumerate(parallel_same_dir_info):
+                self.adjacent_lanes[i].lane_vehicles = Vehicle.getClosest(
+                    elem[0], vehicle_ego, n=5
+                )[0]
+            for j, elem in enumerate(parallel_opposite_dir_info):
+                self.adjacent_lanes[i + j + 1].lane_vehicles = Vehicle.getClosest(
+                    elem[0], vehicle_ego, n=5
+                )[0]
+            for i, elem in enumerate(intersecting_left_info):
+                self.next_intersection[i].lane_vehicles = Vehicle.getClosest(
+                    elem[0], vehicle_ego, n=5
+                )[0]
+            for j, elem in enumerate(intersecting_right_info):
+                self.next_intersection[i + j + 1].lane_vehicles = Vehicle.getClosest(
+                    elem[0], vehicle_ego, n=5
+                )[0]
+
+        ### Get copies of current_lane, adjacent lanes and intersecting lanes
         lane_cur = copy.copy(self.lane_cur)
-
-        self.adjacent_lanes = []
-        for elem in parallel_same_dir_info:
-            parallel_lane = ParallelLane(
-                lane_vehicles=Vehicle.getClosest(elem[0], vehicle_ego, n=5)[0],
-                lane_points=elem[1],
-                same_direction=True,
-                left_to_the_current=False,
-                adjacent_lane=False,
-                lane_distance=10,
-                origin_global_pose=elem[1][0].global_pose
-                if len(elem[1]) != 0
-                else Pose2D(),
-            )
-            self.adjacent_lanes.append(parallel_lane)
-
-        for elem in parallel_opposite_dir_info:
-            parallel_lane = ParallelLane(
-                lane_vehicles=Vehicle.getClosest(elem[0], vehicle_ego, n=5)[0],
-                lane_points=elem[1],
-                same_direction=False,
-                left_to_the_current=False,
-                adjacent_lane=False,
-                lane_distance=10,
-                origin_global_pose=elem[1][0].global_pose
-                if len(elem[1]) != 0
-                else Pose2D(),
-            )
-            self.adjacent_lanes.append(parallel_lane)
-
         adjacent_lanes = copy.copy(self.adjacent_lanes)
+        next_intersection = copy.copy(self.next_intersection)
 
-        self.next_insersection = []
-        for elem in intersecting_left_info:
-            perpendicular_lane = PerpendicularLane(
-                lane_vehicles=Vehicle.getClosest(elem[0], vehicle_ego, n=5)[0],
-                lane_points=elem[1],
-                intersecting_distance=10,
-                directed_right=False,
-                origin_global_pose=elem[1][0].global_pose
-                if len(elem[1]) != 0
-                else Pose2D(),
+        ### Get the frenet coordinate of the ego vehicle in the current lane.
+        ego_vehicle_frenet_pose = lane_cur.GlobalToFrenet(vehicle_ego.location_global)
+
+        ### Update the ego_offset for current lane
+        lane_cur.ego_offset = ego_vehicle_frenet_pose.x
+
+        ### Update the ego offsets for parallel lanes
+        for i in range(len(adjacent_lanes)):
+            if adjacent_lanes[i].same_direction:
+                adjacent_lanes[i].ego_offset = ego_vehicle_frenet_pose.x
+            else:
+                adjacent_lanes[i].ego_offset = (
+                    adjacent_lanes[i].linestring.length - ego_vehicle_frenet_pose.x
+                )
+
+        ### TODO: Update origin and offsets for perpendicular lanes.
+        self.update_intersecting_distance_and_intersecting_lane_origins(
+            lane_cur, next_intersection
+        )
+        ### Update lane distances for adjacent lanes.
+        self.update_lane_distance(lane_cur, adjacent_lanes)
+
+        ### Update distance to intersection for each intersecting lane.
+        for i in range(len(next_intersection)):
+            next_intersection[i].intersecting_distance -= ego_vehicle_frenet_pose.x
+
+        ### Update frenet for ego vehicle (will be (0,x,x))
+        vehicle_ego.location_frenet = lane_cur.GlobalToFrenet(
+            vehicle_ego.location_global
+        )
+
+        ### Update local frenet for vehicles on current lane
+        for i in range(len(lane_cur.lane_vehicles)):
+            lane_cur.lane_vehicles[i].location_frenet = lane_cur.GlobalToFrenet(
+                lane_cur.lane_vehicles[i].location_global
             )
-            self.next_insersection.append(perpendicular_lane)
 
-        for elem in intersecting_right_info:
-            perpendicular_lane = PerpendicularLane(
-                lane_vehicles=Vehicle.getClosest(elem[0], vehicle_ego, n=5)[0],
-                lane_points=elem[1],
-                intersecting_distance=10,
-                directed_right=True,
-                origin_global_pose=elem[1][0].global_pose
-                if len(elem[1]) != 0
-                else Pose2D(),
+        ### Update frenet for vehicles on adjacent lanes
+        # Update frenet after adjusting origin for the lane
+        for i in range(len(adjacent_lanes)):
+            for j in range(len(adjacent_lanes[i].lane_vehicles)):
+                adjacent_lanes[i].lane_vehicles[j].location_frenet = adjacent_lanes[
+                    i
+                ].GlobalToFrenet(adjacent_lanes[i].lane_vehicles[j].location_global)
+
+        ### Update frenet for vehicles on next_intersection lanes
+        for i in range(len(next_intersection)):
+            for j in range(len(next_intersection[i].lane_vehicles)):
+                next_intersection[i].lane_vehicles[
+                    j
+                ].location_frenet = next_intersection[i].GlobalToFrenet(
+                    next_intersection[i].lane_vehicles[j].location_global
+                )
+
+        ### Update all waypoint frenet coordinates.
+        # Update current lane points
+        for i in range(len(lane_cur.lane_points)):
+            lane_cur.lane_points[i].frenet_pose = lane_cur.GlobalToFrenet(
+                lane_cur.lane_points[i].global_pose
             )
-            self.next_insersection.append(perpendicular_lane)
-
-        next_intersection = copy.copy(self.next_insersection)
-
-        global_path = [
-            self.waypoint_to_pose2D(wp) for wp in self.global_path_in_intersection
-        ]
-        global_path = [GlobalPathPoint(global_pose=pose) for pose in global_path]
-        global_path = GlobalPath(path_points=global_path)
-
-        # ego_vehicle_frenet_pose = lane_cur.GlobalToFrenet(vehicle_ego.location_global)
-
-        # # Update Frenet Coordinates: Vehicles
-        # lane_cur.lane_vehicles = self.update_frenet(
-        #     ego_vehicle_frenet_pose, lane_cur.lane_vehicles, lane_cur
-        # )
-        # lane_left.lane_vehicles = self.update_frenet(
-        #     ego_vehicle_frenet_pose, lane_left.lane_vehicles, lane_cur
-        # )
-        # lane_right.lane_vehicles = self.update_frenet(
-        #     ego_vehicle_frenet_pose, lane_right.lane_vehicles, lane_cur
-        # )
-
-        # # Update Frenet Coordinates: LanePoints
-        # lane_point_curr = copy.deepcopy(lane_cur.lane_points)
-        # lane_cur.lane_points = self.update_frenet_lanepoints(
-        #     ego_vehicle_frenet_pose, lane_point_curr
-        # )
-        # lane_point_left = copy.deepcopy(lane_left.lane_points)
-        # lane_left.lane_points = self.update_frenet_lanepoints(
-        #     ego_vehicle_frenet_pose, lane_point_left
-        # )
-        # lane_point_right = copy.deepcopy(lane_right.lane_points)
-        # lane_right.lane_points = self.update_frenet_lanepoints(
-        #     ego_vehicle_frenet_pose, lane_point_right
-        # )
-
-        # vehicle_ego.location_frenet = ego_vehicle_frenet_pose
-
-        # lane_cur.ego_offset = ego_vehicle_frenet_pose.x
-        # vehicle_ego.location_frenet.x = 0
+        # Update points for adjacent lanes.
+        for i in range(len(adjacent_lanes)):
+            for j in range(len(adjacent_lanes[i].lane_points)):
+                adjacent_lanes[i].lane_points[j].frenet_pose = adjacent_lanes[
+                    i
+                ].GlobalToFrenet(adjacent_lanes[i].lane_points[j].global_pose)
+        # Update points for intersecting lanes.
+        for i in range(len(next_intersection)):
+            for j in range(len(next_intersection[i].lane_points)):
+                next_intersection[i].lane_points[j].frenet_pose = next_intersection[
+                    i
+                ].GlobalToFrenet(next_intersection[i].lane_points[j].global_pose)
 
         self.speed_limit = 25
 
@@ -289,16 +406,12 @@ class CarlaManager:
         env_desc.next_intersection = next_intersection
         env_desc.speed_limit = self.speed_limit
         env_desc.reward_info = reward_info
-        env_desc.global_path = global_path
-
-        # import ipdb
-
-        # ipdb.set_trace()
+        env_desc.global_path = self.global_path_in_intersection
 
         return SimServiceResponse(env_desc.toRosMsg())
 
     def destroy_actors_and_sensors(self):
-        # TODO: ROHAN: get destroy method from Actor Class
+
         if self.collision_sensor is not None:
             self.collision_sensor.destroy()
 
@@ -322,18 +435,6 @@ class CarlaManager:
 
         return Pose2D(x=x, y=y, theta=theta)
 
-    def update_frenet(self, ego_frenet, vehicle_list, current_lane):
-        for i in range(len(vehicle_list)):
-            vehicle_list[i].location_frenet = vehicle_list[i].fromControllingVehicle(
-                ego_frenet, current_lane
-            )
-        return vehicle_list
-
-    def update_frenet_lanepoints(self, ego_frenet, lanepoints):
-        for i in range(len(lanepoints)):
-            lanepoints[i].frenet_pose.x = lanepoints[i].frenet_pose.x - ego_frenet.x
-        return lanepoints
-
     def resetEnv(self):
 
         self.destroy_actors_and_sensors()
@@ -350,7 +451,29 @@ class CarlaManager:
                 self.intersection_topology,
                 self.ego_start_road_lane_pair,
                 self.global_path_in_intersection,
-            ) = self.tm.reset(num_vehicles=10, junction_id=53, warm_start_duration=3)
+                self.road_lane_to_orientation,
+            ) = self.tm.reset(num_vehicles=10, junction_id=53, warm_start_duration=2)
+
+            self.all_vehicles = self.carla_handler.world.get_actors().filter(
+                "vehicle.*"
+            )
+            self.lane_cur = None
+            self.adjacent_lanes = None
+            self.next_intersection = None
+
+            self.global_path_in_intersection = [
+                self.waypoint_to_pose2D(wp) for wp in self.global_path_in_intersection
+            ]
+            self.global_path_in_intersection = [
+                GlobalPathPoint(global_pose=pose)
+                for pose in self.global_path_in_intersection
+            ]
+            self.global_path_in_intersection = GlobalPath(
+                path_points=self.global_path_in_intersection
+            )
+
+            self.draw_global_path(self.global_path_in_intersection)
+
             ## Handing over control
             del self.collision_sensor
             self.collision_sensor = self.carla_handler.world.spawn_actor(
@@ -371,18 +494,23 @@ class CarlaManager:
                     "dt": self.simulation_sync_timestep,
                 },
                 args_longitudinal={
-                    "K_P": 3.5,
+                    "K_P": 0.5,
                     "K_D": 0,
-                    "K_I": 0.01,
+                    "K_I": 0.1,
                     "dt": self.simulation_sync_timestep,
                 },
             )
-
+            self.ego_vehicle.apply_control(
+                carla.VehicleControl(manual_gear_shift=True, gear=1)
+            )
+            self.ego_vehicle.apply_control(
+                carla.VehicleControl(manual_gear_shift=False)
+            )
         except rospy.ROSInterruptException:
             print("failed....")
             pass
 
-    def initialize(self):
+    def initialize(self, synchronous_mode=True):
         # initialize node
         rospy.init_node(NODE_NAME, anonymous=True)
 
@@ -401,10 +529,11 @@ class CarlaManager:
         self.carla_handler = CarlaHandler(client)
         self.client = client
 
-        settings = self.carla_handler.world.get_settings()
-        settings.synchronous_mode = True
-        settings.fixed_delta_seconds = self.simulation_sync_timestep
-        self.carla_handler.world.apply_settings(settings)
+        if synchronous_mode:
+            settings = self.carla_handler.world.get_settings()
+            settings.synchronous_mode = True
+            settings.fixed_delta_seconds = self.simulation_sync_timestep
+            self.carla_handler.world.apply_settings(settings)
 
         # self.tm = CustomScenario(self.client, self.carla_handler)
 
@@ -413,97 +542,90 @@ class CarlaManager:
         # Reset Environment
         self.resetEnv()
 
-        # state_information = self.carla_handler.get_state_information_intersection(
-        #     self.ego_vehicle, self.ego_start_road_lane_pair, self.intersection_topology
-        # )
-
-        # vehicle_ego = Vehicle(self.carla_handler.world, self.ego_vehicle.id)
-
-        # (
-        #     intersecting_left_info,
-        #     intersecting_right_info,
-        #     parallel_same_dir_info,
-        #     parallel_opposite_dir_info,
-        #     ego_lane_info,
-        # ) = state_information
-
-        ##############################################################################################################
-        # publish the first frame
-        # Current Lane
-
-        # self.lane_cur = CurrentLane(
-        #     lane_vehicles=ego_lane_info[0][0],
-        #     lane_points=ego_lane_info[0][1],
-        #     crossing_pedestrain=[],
-        #     origin_global_pose=ego_lane_info[0][1][0].global_pose
-        #     if len(ego_lane_info[0][1]) != 0
-        #     else Pose2D(),
-        # )
-
-        # self.adjacent_lanes = []
-        # for elem in parallel_same_dir_info:
-        #     parallel_lane = ParallelLane(
-        #         lane_vehicles=Vehicle.getClosest(elem[0], vehicle_ego, n=5)[0],
-        #         lane_points=elem[1],
-        #         same_direction=True,
-        #         left_to_the_current=False,
-        #         adjacent_lane=False,
-        #         lane_distance=10,
-        #         origin_global_pose=elem[1][0].global_pose
-        #         if len(elem[1]) != 0
-        #         else Pose2D(),
-        #     )
-        #     self.adjacent_lanes.append(parallel_lane)
-
-        # for elem in parallel_opposite_dir_info:
-        #     parallel_lane = ParallelLane(
-        #         lane_vehicles=Vehicle.getClosest(elem[0], vehicle_ego, n=5)[0],
-        #         lane_points=elem[1],
-        #         same_direction=False,
-        #         left_to_the_current=False,
-        #         adjacent_lane=False,
-        #         lane_distance=10,
-        #         origin_global_pose=elem[1][0].global_pose
-        #         if len(elem[1]) != 0
-        #         else Pose2D(),
-        #     )
-        #     self.adjacent_lanes.append(parallel_lane)
-
-        # self.next_insersection = []
-        # for elem in intersecting_left_info:
-        #     perpendicular_lane = PerpendicularLane(
-        #         lane_vehicles=Vehicle.getClosest(elem[0], vehicle_ego, n=5)[0],
-        #         lane_points=elem[1],
-        #         intersecting_distance=10,
-        #         directed_right=False,
-        #         origin_global_pose=elem[1][0].global_pose
-        #         if len(elem[1]) != 0
-        #         else Pose2D(),
-        #     )
-        #     self.next_insersection.append(perpendicular_lane)
-
-        # for elem in intersecting_right_info:
-        #     perpendicular_lane = PerpendicularLane(
-        #         lane_vehicles=Vehicle.getClosest(elem[0], vehicle_ego, n=5)[0],
-        #         lane_points=elem[1],
-        #         intersecting_distance=10,
-        #         directed_right=True,
-        #         origin_global_pose=elem[1][0].global_pose
-        #         if len(elem[1]) != 0
-        #         else Pose2D(),
-        #     )
-        #     self.next_insersection.append(perpendicular_lane)
-
     def spin(self):
         print("Start Ros Spin")
         # spin
         rospy.spin()
 
+    def update_intersecting_distance_and_intersecting_lane_origins(
+        self, current_lane, perpendicular_lanes
+    ):
+        """
+        Calculate the frenet coordinates of the vehicles in perpendicular lane wrt the current lane
+        """
+        for i in range(len(perpendicular_lanes)):
+            intersecting_point = perpendicular_lanes[i].linestring.intersection(
+                current_lane.linestring
+            )
+            perpendicular_lanes[
+                i
+            ].intersecting_distance = current_lane.linestring.project(
+                intersecting_point
+            )
+            perpendicular_lanes[i].ego_offset = perpendicular_lanes[
+                i
+            ].linestring.project(intersecting_point)
+
+    def update_lane_distance(self, current_lane, adjacent_lanes):
+        """
+        Calculate the lane_distance parameter for adjacent lanes.
+        """
+        for i in range(len(adjacent_lanes)):
+            num_wps_in_lane = len(adjacent_lanes[i].lane_points)
+            middle_lane_point = adjacent_lanes[i].lane_points[num_wps_in_lane // 2]
+            middle_lane_point_global_pose = middle_lane_point.global_pose
+            middle_point_frenet_relative_to_current_lane = current_lane.GlobalToFrenet(
+                middle_lane_point_global_pose
+            )
+            adjacent_lanes[i].lane_distance = abs(
+                middle_point_frenet_relative_to_current_lane.y
+            )
+
+    def draw(self, vehicle, color=(0, 255, 0)):
+
+        vehicle_location = carla.Location(
+            x=vehicle.location_global.x, y=vehicle.location_global.y, z=2
+        )
+
+        self.carla_handler.client.get_world().debug.draw_string(
+            vehicle_location,
+            "O",
+            draw_shadow=False,
+            color=carla.Color(r=color[0], g=color[1], b=color[2]),
+            life_time=5,
+        )
+
+        print(vehicle.toRosMsg())
+
+    def draw_location(self, location, color=(255, 0, 0)):
+
+        location_ = carla.Location(location.x, location.y, z=2)
+
+        self.carla_handler.client.get_world().debug.draw_string(
+            location_,
+            "O",
+            draw_shadow=False,
+            color=carla.Color(r=color[0], g=color[1], b=color[2]),
+            life_time=1,
+        )
+
+    def draw_global_path(self, global_path, color=(0, 255, 0)):
+        for point in global_path.path_points:
+            location = carla.Location(x=point.global_pose.x, y=point.global_pose.y, z=2)
+
+            self.carla_handler.client.get_world().debug.draw_string(
+                location,
+                "O",
+                draw_shadow=False,
+                color=carla.Color(r=color[0], g=color[1], b=color[2]),
+                life_time=6,
+            )
+
 
 if __name__ == "__main__":
     try:
         carla_manager = CarlaManager()
-        carla_manager.initialize()
+        carla_manager.initialize(synchronous_mode=True)
         print("Initialize Done.....")
         carla_manager.spin()
     except rospy.ROSInterruptException:

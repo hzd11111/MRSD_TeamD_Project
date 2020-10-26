@@ -120,7 +120,7 @@ class GeneralRLManager:
 class RLManager(GeneralRLManager):
     def __init__(self, event: Scenario):
         super().__init__()
-        self.eps_time = 40
+        self.eps_time = 80
         self.reward_manager = reward_selector(event)
         self.event = event
         self.state_manager = StateManager()

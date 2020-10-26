@@ -18,15 +18,19 @@ class TrajGenerator:
         self.path_pointer = 0
         self.action_start_time = 0
         self.start_speed = 0
+        self.global_path_pointer = 0
         self.reset()
 
     # reset the traj generator with
-    def reset(self, cur_act=RLDecision.NO_ACTION, start_speed=0, action_start_time=0):
+    def reset(self, cur_act=RLDecision.NO_ACTION, start_speed=0, action_start_time=0, complete_reset = False):
         self.current_action = cur_act
         self.generated_path = []
         self.path_pointer = 0
         self.action_start_time = action_start_time
         self.start_speed = start_speed
+        if complete_reset:
+            self.global_path_pointer = 0
+
 
     def newActionType(self, rl_decision):
         if self.current_action == RLDecision.NO_ACTION:
@@ -126,8 +130,8 @@ class TrajGenerator:
 
     def globalConstSpeedTraj(self, sim_data):
         # check if this is a new action
-        if not self.current_action == RLDecision.CONSTANT_SPEED:
-            self.reset(RLDecision.CONSTANT_SPEED,
+        if not self.current_action == RLDecision.GLOBAL_PATH_CONSTANT_SPEED:
+            self.reset(RLDecision.GLOBAL_PATH_CONSTANT_SPEED,
                        sim_data.cur_vehicle_state.speed,
                        sim_data.reward_info.time_elapsed)
 
@@ -143,16 +147,13 @@ class TrajGenerator:
         global_path_points = global_path.path_points
         tracking_pose = False
         tracking_pose_ind = False
-        for point_ind, path_point in enumerate(global_path_points):
-            single_pose = path_point.global_pose
+        while self.global_path_pointer < len(global_path_points):
+            single_pose = global_path_points[self.global_path_pointer].global_pose
+            tracking_pose = single_pose
             if single_pose.isInfrontOf(curr_vehicle_global_pose) and \
-                   single_pose.distance(curr_vehicle_global_pose) > TrajGenerator.SAME_POSE_LOWER_THRESHOLD:
-                tracking_pose = single_pose
-                tracking_pose_ind = point_ind
+                single_pose.distance(curr_vehicle_global_pose) > TrajGenerator.SAME_POSE_LOWER_THRESHOLD:
                 break
-
-        if not tracking_pose:
-            print("--------------- Global Path Error --------------")
+            self.global_path_pointer += 1
 
         # determine the action progress
         action_progress = (new_sim_time - self.action_start_time) / self.traj_parameters['action_duration']
@@ -162,6 +163,14 @@ class TrajGenerator:
         if action_progress >= 1.:
             end_of_action = True
             action_progress = 1.
+            
+        path_planner_terminate = False
+        if self.global_path_pointer >= len(global_path_points):
+            tracking_pose = global_path_points[-1].global_pose
+            action_progress = 1.
+            end_of_action = True
+            path_planner_terminate = True
+            print("Lane Navigation Terminated")
 
         new_path_plan = PathPlan()
         new_path_plan.tracking_pose = tracking_pose
@@ -169,11 +178,11 @@ class TrajGenerator:
         new_path_plan.tracking_speed = max(self.traj_parameters['min_speed'],self.start_speed)
         new_path_plan.end_of_action = end_of_action
         new_path_plan.action_progress = action_progress
-        new_path_plan.path_planner_terminate = False
+        new_path_plan.path_planner_terminate = path_planner_terminate
 
         # add future poses ToDo
         new_path_plan.future_poses = []
-        for i in range(tracking_pose_ind, tracking_pose_ind + 5):
+        for i in range(tracking_pose_ind, self.global_path_pointer + 5):
             if i < len(global_path_points):
                 new_path_plan.future_poses.append(global_path_points[i].global_pose)
 
@@ -201,16 +210,13 @@ class TrajGenerator:
         global_path_points = global_path.path_points
         tracking_pose = False
         tracking_pose_ind = False
-        for point_ind, path_point in enumerate(global_path_points):
-            single_pose = path_point.global_pose
+        while self.global_path_pointer < len(global_path_points):
+            single_pose = global_path_points[self.global_path_pointer].global_pose
             tracking_pose = single_pose
-            tracking_pose_ind = point_ind
             if single_pose.isInfrontOf(curr_vehicle_global_pose) and \
-                   single_pose.distance(curr_vehicle_global_pose) > TrajGenerator.SAME_POSE_LOWER_THRESHOLD:
+                single_pose.distance(curr_vehicle_global_pose) > TrajGenerator.SAME_POSE_LOWER_THRESHOLD:
                 break
-
-        if not tracking_pose:
-            print("--------------- Global Path Error --------------")
+            self.global_path_pointer += 1
 
         # determine the action progress
         action_progress = (new_sim_time - self.action_start_time) / self.traj_parameters['action_duration']
@@ -220,6 +226,14 @@ class TrajGenerator:
         if action_progress >= 1.:
             end_of_action = True
             action_progress = 1.
+            
+        path_planner_terminate = False
+        if self.global_path_pointer >= len(global_path_points):
+            tracking_pose = global_path_points[-1].global_pose
+            action_progress = 1.
+            end_of_action = True
+            path_planner_terminate = True
+            print("Lane Navigation Terminated")
 
         new_path_plan = PathPlan()
         new_path_plan.tracking_pose = tracking_pose
@@ -227,11 +241,11 @@ class TrajGenerator:
         new_path_plan.tracking_speed = max(self.traj_parameters['min_speed'],self.start_speed + action_progress * self.traj_parameters['accelerate_amt'])
         new_path_plan.end_of_action = end_of_action
         new_path_plan.action_progress = action_progress
-        new_path_plan.path_planner_terminate = False
+        new_path_plan.path_planner_terminate = path_planner_terminate
 
         # add future poses ToDo
         new_path_plan.future_poses = []
-        for i in range(tracking_pose_ind, tracking_pose_ind + 5):
+        for i in range(tracking_pose_ind, self.global_path_pointer + 5):
             if i < len(global_path_points):
                 new_path_plan.future_poses.append(global_path_points[i].global_pose)
 
@@ -259,16 +273,16 @@ class TrajGenerator:
         global_path_points = global_path.path_points
         tracking_pose = False
         tracking_pose_ind = False
-        for point_ind, path_point in enumerate(global_path_points):
-            single_pose = path_point.global_pose
+        while self.global_path_pointer < len(global_path_points):
+            single_pose = global_path_points[self.global_path_pointer].global_pose
+            tracking_pose = single_pose
             if single_pose.isInfrontOf(curr_vehicle_global_pose) and \
-                   single_pose.distance(curr_vehicle_global_pose) > TrajGenerator.SAME_POSE_LOWER_THRESHOLD:
-                tracking_pose = single_pose
-                tracking_pose_ind = point_ind
+                single_pose.distance(curr_vehicle_global_pose) > TrajGenerator.SAME_POSE_LOWER_THRESHOLD:
                 break
+            self.global_path_pointer += 1
 
-        if not tracking_pose:
-            print("--------------- Global Path Error --------------")
+        # if not tracking_pose:
+        #     print("--------------- Global Path Error --------------")
 
         # determine the action progress
         action_progress = (new_sim_time - self.action_start_time) / self.traj_parameters['action_duration']
@@ -278,6 +292,15 @@ class TrajGenerator:
         if action_progress >= 1.:
             end_of_action = True
             action_progress = 1.
+            
+        path_planner_terminate = False
+        if self.global_path_pointer >= len(global_path_points):
+            tracking_pose = global_path_points[-1].global_pose
+            action_progress = 1.
+            end_of_action = True
+            path_planner_terminate = True
+            print("Lane Navigation Terminated")
+
 
         new_path_plan = PathPlan()
         new_path_plan.tracking_pose = tracking_pose
@@ -286,11 +309,11 @@ class TrajGenerator:
                                            self.start_speed - action_progress * self.traj_parameters['decelerate_amt'])
         new_path_plan.end_of_action = end_of_action
         new_path_plan.action_progress = action_progress
-        new_path_plan.path_planner_terminate = False
+        new_path_plan.path_planner_terminate = path_planner_terminate
 
         # add future poses ToDo
         new_path_plan.future_poses = []
-        for i in range(tracking_pose_ind, tracking_pose_ind + 5):
+        for i in range(tracking_pose_ind, self.global_path_pointer + 5):
             if i < len(global_path_points):
                 new_path_plan.future_poses.append(global_path_points[i].global_pose)
 

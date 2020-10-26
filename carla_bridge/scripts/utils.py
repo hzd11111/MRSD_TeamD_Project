@@ -295,8 +295,7 @@ def get_parallel_and_perpendicular_keys(ego_key, road_lane_to_init_point):
     parallel_opposite_direction_keys = []
 
     for key in angles_with_other_lanes:
-        # print(angles_with_other_lanes[key])
-        if (abs(angles_with_other_lanes[key])) < 0.1:
+        if (abs(angles_with_other_lanes[key])) < 0.2:
             parallel_same_direction_keys.append(key)
             # print("Same", key)
 
@@ -304,11 +303,11 @@ def get_parallel_and_perpendicular_keys(ego_key, road_lane_to_init_point):
             parallel_opposite_direction_keys.append(key)
             # print("Opposite", key)
 
-        elif angles_with_other_lanes[key] > 0.1 and angles_with_other_lanes[key] < 3:
+        elif angles_with_other_lanes[key] > 0.2 and angles_with_other_lanes[key] < 3:
             perpendicular_right_keys.append(key)
             # print("right", key)
 
-        elif angles_with_other_lanes[key] < -0.1 and angles_with_other_lanes[key] > -3:
+        elif angles_with_other_lanes[key] < -0.2 and angles_with_other_lanes[key] > -3:
             perpendicular_left_keys.append(key)
             # print("left", key)
 
@@ -329,6 +328,7 @@ def get_intersection_topology(
 ):
 
     road_lane_to_init_point = {}
+    e = 2
 
     for key in incoming_road_lane_id_set:
         wps = [
@@ -337,29 +337,30 @@ def get_intersection_topology(
         first_wp = wps[0]
         last_wp = wps[-1]
 
-        next_wp = first_wp.next(1)[0]
+        next_wp = first_wp.next(e)[0]
         if next_wp.is_junction:
             if next_wp.get_junction().id == junctionId:
-                road_lane_to_init_point[key] = (wps[:2], "incoming")
+                road_lane_to_init_point[key] = (wps[:2], "incoming", 0)
                 continue
 
-        next_wp = last_wp.next(1)[0]
+        next_wp = last_wp.next(e)[0]
         if next_wp.is_junction:
             if next_wp.get_junction().id == junctionId:
-                road_lane_to_init_point[key] = (wps[-2:][::-1], "incoming")
+                road_lane_to_init_point[key] = (wps[-2:][::-1], "incoming", 1)
                 continue
 
-        next_wp = first_wp.previous(1)[0]
+        next_wp = first_wp.previous(e)[0]
         if next_wp.is_junction:
             if next_wp.get_junction().id == junctionId:
-                road_lane_to_init_point[key] = (wps[:2], "incoming")
+                road_lane_to_init_point[key] = (wps[:2], "incoming", 0)
                 continue
 
-        next_wp = last_wp.previous(1)[0]
+        next_wp = last_wp.previous(e)[0]
         if next_wp.is_junction:
             if next_wp.get_junction().id == junctionId:
-                road_lane_to_init_point[key] = (wps[-2:][::-1], "incoming")
+                road_lane_to_init_point[key] = (wps[-2:][::-1], "incoming", 1)
                 continue
+        print("Missed", key)
 
     for key in outgoing_road_lane_id_set:
         wps = [
@@ -368,31 +369,35 @@ def get_intersection_topology(
         first_wp = wps[0]
         last_wp = wps[-1]
 
-        next_wp = first_wp.next(1)[0]
+        next_wp = first_wp.next(e)[0]
         if next_wp.is_junction:
             if next_wp.get_junction().id == junctionId:
-                road_lane_to_init_point[key] = (wps[:2][::-1], "outgoing")
+                road_lane_to_init_point[key] = (wps[:2][::-1], "outgoing", 0)
                 continue
 
-        next_wp = last_wp.next(1)[0]
+        next_wp = last_wp.next(e)[0]
         if next_wp.is_junction:
             if next_wp.get_junction().id == junctionId:
-                road_lane_to_init_point[key] = (wps[-2:], "outgoing")
+                road_lane_to_init_point[key] = (wps[-2:], "outgoing", 1)
                 continue
 
-        next_wp = first_wp.previous(1)[0]
+        next_wp = first_wp.previous(e)[0]
         if next_wp.is_junction:
             if next_wp.get_junction().id == junctionId:
-                road_lane_to_init_point[key] = (wps[:2][::-1], "outgoing")
+                road_lane_to_init_point[key] = (wps[:2][::-1], "outgoing", 0)
                 continue
 
-        next_wp = last_wp.previous(1)[0]
+        next_wp = last_wp.previous(e)[0]
         if next_wp.is_junction:
             if next_wp.get_junction().id == junctionId:
-                road_lane_to_init_point[key] = (wps[-2:], "outgoing")
+                road_lane_to_init_point[key] = (wps[-2:], "outgoing", 1)
                 continue
+        print("Missed", key)
 
-    return get_parallel_and_perpendicular_keys(ego_key, road_lane_to_init_point)
+    return (
+        get_parallel_and_perpendicular_keys(ego_key, road_lane_to_init_point),
+        road_lane_to_init_point,
+    )
 
 
 def get_full_lanes(
