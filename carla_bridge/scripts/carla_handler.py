@@ -725,6 +725,9 @@ class CarlaHandler:
         # Lane Distance
         lane_distance = current_lane_waypoints[0].lane_width
 
+        if len(current_lane_waypoints) < 2:
+            current_lane_waypoints.append(current_lane_waypoints[-1])
+
         current_lane_waypoints = [
             LanePoint(global_pose=self.waypoint_to_pose2D(wp))
             for wp in current_lane_waypoints
