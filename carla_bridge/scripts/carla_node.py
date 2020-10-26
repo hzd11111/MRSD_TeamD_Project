@@ -2,6 +2,7 @@ import time
 import subprocess
 import sys
 import os
+from enum import Enum
 
 import rospy
 import copy
@@ -27,6 +28,8 @@ from agents.tools.misc import get_speed
 
 # from agents.navigation.local_planner import LocalPlanner
 from agents.navigation.roaming_agent import RoamingAgent
+from agents.navigation.local_planner import RoadOption
+
 
 from utils import *
 
@@ -54,6 +57,7 @@ from utility import (
     GlobalPath,
 )
 from functional_utility import Pose2D, Frenet
+from options import GlobalPathAction
 
 from actors import Actor, Vehicle, Pedestrian
 
@@ -544,15 +548,24 @@ class CarlaManager:
             self.agent = RoamingAgent(self.ego_vehicle)
             self.autopilot_recompute_flag = 0
 
-            # self.local_planner.set_global_plan(route)
-            # self.local_planner._min_distance = 20
+            ## Process route
+
+            global_path_actions = self.get_global_path_actions(route)[:-2]
+            for i in range(len(global_path_actions)):
+                print("--", route[i][1], global_path_actions[i])
 
             self.global_path = [
                 self.waypoint_to_pose2D(wp)
                 for wp in self.global_path_carla_waypoints[:-2]
             ]
+            # self.global_path = [
+            #     GlobalPathPoint(global_pose=pose) for pose in self.global_path
+            # ]
             self.global_path = [
-                GlobalPathPoint(global_pose=pose) for pose in self.global_path
+                GlobalPathPoint(
+                    global_pose=self.global_path[i], action=global_path_actions[i]
+                )
+                for i in range(len(self.global_path))
             ]
             self.global_path = GlobalPath(path_points=self.global_path)
 
@@ -710,6 +723,39 @@ class CarlaManager:
                 color=carla.Color(r=color[0], g=color[1], b=color[2]),
                 life_time=6,
             )
+
+    def get_global_path_actions(self, route):
+
+        global_path_actions = [route[i][1] for i in range(len(route))]
+
+        for i in range(len(global_path_actions) - 1):
+            if global_path_actions[i] == RoadOption.LANEFOLLOW:
+                continue
+            ct = 0
+            curr_action = global_path_actions[i]
+            while global_path_actions[i + ct + 1] == curr_action:
+                ct += 1
+                if i + ct + 1 >= len(global_path_actions):
+                    break
+
+            for j in range(i + 1, i + ct + 1):
+                global_path_actions[j] = RoadOption.LANEFOLLOW
+
+        for i in range(len(global_path_actions)):
+            if global_path_actions[i] == RoadOption.LANEFOLLOW:
+                global_path_actions[i] = GlobalPathAction.NO_ACTION
+            elif global_path_actions[i] == RoadOption.LEFT:
+                global_path_actions[i] = GlobalPathAction.LEFT_TURN
+            elif global_path_actions[i] == RoadOption.RIGHT:
+                global_path_actions[i] = GlobalPathAction.RIGHT_TURN
+            elif global_path_actions[i] == RoadOption.STRAIGHT:
+                global_path_actions[i] = GlobalPathAction.GO_STRAIGHT
+            elif global_path_actions[i] == RoadOption.CHANGELANELEFT:
+                global_path_actions[i] = GlobalPathAction.SWITCH_LANE_LEFT
+            elif global_path_actions[i] == RoadOption.CHANGELANERIGHT:
+                global_path_actions[i] = GlobalPathAction.SWITCH_LANE_RIGHT
+
+        return global_path_actions
 
 
 if __name__ == "__main__":
