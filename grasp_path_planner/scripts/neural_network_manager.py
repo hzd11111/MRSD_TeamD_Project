@@ -94,7 +94,6 @@ class NeuralNetworkSelector:
         # determine the distance to the last pose of global path
         curr_pose = env_desc.cur_vehicle_state.location_global
         distance_to_goal = curr_pose.distance(last_global_path_pose)
-        print(distance_to_goal)
         return distance_to_goal < 7
 
     def leftTurnStateCondition(self, env_desc):
