@@ -24,15 +24,21 @@ from intersection_scenario_manager import IntersectionScenario
 from grasp_path_planner.srv import SimService, SimServiceResponse
 from agents.tools.misc import get_speed
 
+# from agents.navigation.local_planner import LocalPlanner
+from agents.navigation.roaming_agent import RoamingAgent
+
 from utils import *
 
 sys.path.append("../../carla_bridge/scripts/cartesian_to_frenet")
+sys.path.insert(0, "../../../global_route_planner/")
+from global_planner import get_global_planner
 
 from cartesian_to_frenet import (
     get_cartesian_from_frenet,
     get_frenet_from_cartesian,
     get_path_linestring,
 )
+
 
 sys.path.append("../../carla_utils/utils")
 from utility import (
@@ -99,9 +105,19 @@ class CarlaManager:
         self.intersection_connections = None
         self.adjacent_lanes = None
         self.next_intersection = None
-        self.global_path_in_intersection = None
+        self.global_path = None
         self.road_lane_to_orientation = None
         self.all_vehicles = None
+
+        ### Autopilot
+        self.autopilot_recompute_flag = 0
+        # self.local_planner_opt_dict = {
+        #     "target_speed": 30,
+        #     "num_waypoints_in_lane": 10000,
+        # }
+        self.agent = None
+        self.global_planner = None
+        self.global_path_carla_waypoints = None
 
     def pathRequest(self, data):
 
@@ -114,6 +130,7 @@ class CarlaManager:
             tracking_pose = plan.tracking_pose
             tracking_speed = plan.tracking_speed  # / 3.6
             reset_sim = plan.reset_sim
+            is_autopilot = plan.auto_pilot
 
             self.end_of_action = plan.end_of_action
             self.action_progress = plan.action_progress
@@ -127,10 +144,31 @@ class CarlaManager:
             else:
                 self.first_run = 0
 
-                ### Apply Control signal on the vehicle. Vehicle and controller spawned in resetEnv###
-                self.ego_vehicle.apply_control(
-                    self.vehicle_controller.run_step(tracking_speed, tracking_pose)
-                )
+                if not is_autopilot:
+                    self.autopilot_recompute_flag = 0
+                    ### Apply Control signal on the vehicle. Vehicle and controller spawned in resetEnv###
+                    self.ego_vehicle.apply_control(
+                        self.vehicle_controller.run_step(tracking_speed, tracking_pose)
+                    )
+                else:
+                    if self.autopilot_recompute_flag == 0:
+                        destination_location = (
+                            self.global_path_carla_waypoints[-1]
+                            .next(5)[0]
+                            .transform.location
+                        )
+                        ego_vehicle_location = self.ego_vehicle.get_transform().location
+
+                        tmp_route = self.global_planner.trace_route(
+                            ego_vehicle_location, destination_location
+                        )
+                        self.agent._local_planner.set_global_plan(tmp_route)
+                        self.autopilot_recompute_flag = 1
+                        print("Recomputing autopilot route...")
+
+                    control = self.agent.run_step(debug=True)
+                    self.ego_vehicle.apply_control(control)
+
                 # self.draw_location(tracking_pose)
                 speed = self.ego_vehicle.get_velocity()
                 print("Speed:", np.linalg.norm([speed.x, speed.y, speed.z]) * 3.6)
@@ -406,7 +444,7 @@ class CarlaManager:
         env_desc.next_intersection = next_intersection
         env_desc.speed_limit = self.speed_limit
         env_desc.reward_info = reward_info
-        env_desc.global_path = self.global_path_in_intersection
+        env_desc.global_path = self.global_path
 
         return SimServiceResponse(env_desc.toRosMsg())
 
@@ -450,7 +488,7 @@ class CarlaManager:
                 self.intersection_connections,
                 self.intersection_topology,
                 self.ego_start_road_lane_pair,
-                self.global_path_in_intersection,
+                self.global_path_carla_waypoints,
                 self.road_lane_to_orientation,
             ) = self.tm.reset(num_vehicles=10, junction_id=53, warm_start_duration=2)
 
@@ -461,18 +499,23 @@ class CarlaManager:
             self.adjacent_lanes = None
             self.next_intersection = None
 
-            self.global_path_in_intersection = [
-                self.waypoint_to_pose2D(wp) for wp in self.global_path_in_intersection
-            ]
-            self.global_path_in_intersection = [
-                GlobalPathPoint(global_pose=pose)
-                for pose in self.global_path_in_intersection
-            ]
-            self.global_path_in_intersection = GlobalPath(
-                path_points=self.global_path_in_intersection
-            )
+            ## Initialize local planner
 
-            self.draw_global_path(self.global_path_in_intersection)
+            self.agent = RoamingAgent(self.ego_vehicle)
+            self.autopilot_recompute_flag = 0
+
+            # self.local_planner.set_global_plan(route)
+            # self.local_planner._min_distance = 20
+
+            self.global_path = [
+                self.waypoint_to_pose2D(wp) for wp in self.global_path_carla_waypoints
+            ]
+            self.global_path = [
+                GlobalPathPoint(global_pose=pose) for pose in self.global_path
+            ]
+            self.global_path = GlobalPath(path_points=self.global_path)
+
+            self.draw_global_path(self.global_path)
 
             ## Handing over control
             del self.collision_sensor
@@ -506,6 +549,7 @@ class CarlaManager:
             self.ego_vehicle.apply_control(
                 carla.VehicleControl(manual_gear_shift=False)
             )
+
         except rospy.ROSInterruptException:
             print("failed....")
             pass
@@ -538,6 +582,10 @@ class CarlaManager:
         # self.tm = CustomScenario(self.client, self.carla_handler)
 
         self.tm = IntersectionScenario(self.client)
+
+        self.global_planner = get_global_planner(
+            world=self.carla_handler.world, planner_resolution=1
+        )
 
         # Reset Environment
         self.resetEnv()
