@@ -418,6 +418,9 @@ class CarlaHandler:
         full_info = []
         ego_lane_info = []
 
+        ### Misc Info
+        allocated_actor_ids = []
+
         road_lane_to_vehicle_id = defaultdict(lambda: [])
 
         for vehicle in all_vehicles:
@@ -474,6 +477,11 @@ class CarlaHandler:
                     Vehicle(self.world, vehicle_id)
                     for vehicle_id in this_connection_actors
                 ]
+
+                ## Keep a list of all allocated actor ids. Unused actor ids will be sent in an additional misc_lane.
+                for actor in this_connection_actors:
+                    allocated_actor_ids.append(actor.actor_id)
+
                 ### Convert waypoints to custom objects
                 this_connection_waypoints = [
                     LanePoint(global_pose=self.waypoint_to_pose2D(wp))
@@ -506,12 +514,26 @@ class CarlaHandler:
                     ]
                 )
 
+            ## Get unallocated actor ids
+            unallocated_actor_ids = [
+                vehicle.id
+                for vehicle in all_vehicles
+                if vehicle.id not in allocated_actor_ids
+            ]
+
+            misc_vehicles = [
+                Vehicle(self.world, vehicle_id) for vehicle_id in unallocated_actor_ids
+            ]
+
         return full_info, ego_lane_info
 
     def get_lane_info_only_actors(self, all_vehicles, lane_list, ego_road_lane_ID_pair):
 
         full_info = []
         ego_lane_info = []
+
+        ### Misc Info
+        allocated_actor_ids = []
 
         road_lane_to_vehicle_id = defaultdict(lambda: [])
 
@@ -559,6 +581,10 @@ class CarlaHandler:
                     for vehicle_id in this_connection_actors
                 ]
 
+                ## Keep a list of all allocated actor ids. Unused actor ids will be sent in an additional misc_lane.
+                for actor in this_connection_actors:
+                    allocated_actor_ids.append(actor.actor_id)
+
             if ego_road_lane_ID_pair is not None and ego_road_lane_ID_pair in elem:
                 ego_lane_info.append(
                     [this_connection_actors, [], this_connection_road_lanes]
@@ -567,6 +593,17 @@ class CarlaHandler:
                 full_info.append(
                     [this_connection_actors, [], this_connection_road_lanes]
                 )
+
+            ## Get unallocated actor ids
+            unallocated_actor_ids = [
+                vehicle.id
+                for vehicle in all_vehicles
+                if vehicle.id not in allocated_actor_ids
+            ]
+
+            misc_vehicles = [
+                Vehicle(self.world, vehicle_id) for vehicle_id in unallocated_actor_ids
+            ]
 
         return full_info, ego_lane_info
 
