@@ -4,8 +4,8 @@ from stable_baselines import DQN
 
 # other packages
 from state_manager import StateManager
-from RLManager import GeneralRLManager
-from options import Scenario, RLDecision
+from rl_manager import GeneralRLManager
+from options import Scenario, RLDecision, GlobalPathAction
 
 
 class NNManager:
@@ -46,8 +46,8 @@ class NeuralNetworkSelector:
         self.global_path_pointer = 0
 
     def updateGlobalPathProgress(self, global_path, curr_vehicle_global_pose):
-        while self.global_path_pointer < len(global_path):
-            single_pose = global_path[self.global_path_pointer].global_pose
+        while self.global_path_pointer < len(global_path.path_points):
+            single_pose = global_path.path_points[self.global_path_pointer].global_pose
             if single_pose.isInfrontOf(curr_vehicle_global_pose) and \
                    single_pose.distance(curr_vehicle_global_pose) > 0.2 and \
                     single_pose.distance(curr_vehicle_global_pose) < 3:
@@ -76,24 +76,24 @@ class NeuralNetworkSelector:
 
     def doneStateCondition(self, env_desc):
         # get the last point of the global path
-        global_path = env_desc.global_path
+        global_path = env_desc.global_path.path_points
         last_global_path_point = global_path[-1]
         last_global_path_pose = last_global_path_point.global_pose
 
         # determine the distance to the last pose of global path
         curr_pose = env_desc.cur_vehicle_state.location_global
-        distance_to_goal = curr_pose.distance(last_global_path_point)
+        distance_to_goal = curr_pose.distance(last_global_path_pose)
         return distance_to_goal < 2
 
     def stopStateCondition(self, env_desc):
         # get the last point of the global path
-        global_path = env_desc.global_path
+        global_path = env_desc.global_path.path_points
         last_global_path_point = global_path[-1]
         last_global_path_pose = last_global_path_point.global_pose
 
         # determine the distance to the last pose of global path
         curr_pose = env_desc.cur_vehicle_state.location_global
-        distance_to_goal = curr_pose.distance(last_global_path_point)
+        distance_to_goal = curr_pose.distance(last_global_path_pose)
         return distance_to_goal < 7
 
     def leftTurnStateCondition(self, env_desc):
@@ -101,11 +101,11 @@ class NeuralNetworkSelector:
         cul_distance = 0
         temp_global_path_pointer = self.global_path_pointer
         left_turn_action_found = False
-        while temp_global_path_pointer < (len(env_desc.global_path) - 1) and \
+        while temp_global_path_pointer < (len(env_desc.global_path.path_points) - 1) and \
             cul_distance < 20:
-            if env_desc.global_path[temp_global_path_pointer].action == GlobalPathAction.LEFT_TURN:
+            if env_desc.global_path.path_points[temp_global_path_pointer].action == GlobalPathAction.LEFT_TURN:
                 left_turn_action_found = True
-            cul_distance += env_desc.global_path[temp_global_path_pointer].distance(env_desc.global_path[temp_global_path_pointer+1])
+            cul_distance += env_desc.global_path.path_points[temp_global_path_pointer].global_pose.distance(env_desc.global_path.path_points[temp_global_path_pointer+1].global_pose)
             temp_global_path_pointer += 1
 
         if not left_turn_action_found:
@@ -119,11 +119,11 @@ class NeuralNetworkSelector:
         cul_distance = 0
         temp_global_path_pointer = self.global_path_pointer
         right_turn_action_found = False
-        while temp_global_path_pointer < (len(env_desc.global_path) - 1) and \
+        while temp_global_path_pointer < (len(env_desc.global_path.path_points) - 1) and \
             cul_distance < 20:
-            if env_desc.global_path[temp_global_path_pointer].action == GlobalPathAction.RIGHT_TURN:
+            if env_desc.global_path.path_points[temp_global_path_pointer].action == GlobalPathAction.RIGHT_TURN:
                 right_turn_action_found = True
-            cul_distance += env_desc.global_path[temp_global_path_pointer].distance(env_desc.global_path[temp_global_path_pointer+1])
+            cul_distance += env_desc.global_path.path_points[temp_global_path_pointer].global_pose.distance(env_desc.global_path.path_points[temp_global_path_pointer+1].global_pose)
             temp_global_path_pointer += 1
 
         if not right_turn_action_found:
@@ -137,12 +137,12 @@ class NeuralNetworkSelector:
         cul_distance = 0
         temp_global_path_pointer = self.global_path_pointer
         go_straight_action_found = False
-        while temp_global_path_pointer < (len(env_desc.global_path) - 1) and \
+        while temp_global_path_pointer < (len(env_desc.global_path.path_points) - 1) and \
                 cul_distance < 20:
-            if env_desc.global_path[temp_global_path_pointer].action == GlobalPathAction.GO_STRAIGHT:
+            if env_desc.global_path.path_points[temp_global_path_pointer].action == GlobalPathAction.GO_STRAIGHT:
                 go_straight_action_found = True
-            cul_distance += env_desc.global_path[temp_global_path_pointer].distance(
-                env_desc.global_path[temp_global_path_pointer + 1])
+            cul_distance += env_desc.global_path.path_points[temp_global_path_pointer].global_pose.distance(
+                env_desc.global_path.path_points[temp_global_path_pointer + 1].global_pose)
             temp_global_path_pointer += 1
 
         return go_straight_action_found
@@ -152,12 +152,12 @@ class NeuralNetworkSelector:
         cul_distance = 0
         temp_global_path_pointer = self.global_path_pointer
         lane_change_action_found = False
-        while temp_global_path_pointer < (len(env_desc.global_path) - 1) and \
+        while temp_global_path_pointer < (len(env_desc.global_path.path_points) - 1) and \
                 cul_distance < 50:
-            if env_desc.global_path[temp_global_path_pointer].action == GlobalPathAction.SWITCH_LANE_LEFT:
+            if env_desc.global_path.path_points[temp_global_path_pointer].action == GlobalPathAction.SWITCH_LANE_LEFT:
                 lane_change_action_found = True
-            cul_distance += env_desc.global_path[temp_global_path_pointer].distance(
-                env_desc.global_path[temp_global_path_pointer + 1])
+            cul_distance += env_desc.global_path.path_points[temp_global_path_pointer].global_pose.distance(
+                env_desc.global_path.path_points[temp_global_path_pointer + 1].global_pose)
             temp_global_path_pointer += 1
 
         return lane_change_action_found
@@ -167,12 +167,12 @@ class NeuralNetworkSelector:
         cul_distance = 0
         temp_global_path_pointer = self.global_path_pointer
         lane_change_action_found = False
-        while temp_global_path_pointer < (len(env_desc.global_path) - 1) and \
+        while temp_global_path_pointer < (len(env_desc.global_path.path_points) - 1) and \
                 cul_distance < 50:
-            if env_desc.global_path[temp_global_path_pointer].action == GlobalPathAction.SWITCH_LANE_RIGHT:
+            if env_desc.global_path.path_points[temp_global_path_pointer].action == GlobalPathAction.SWITCH_LANE_RIGHT:
                 lane_change_action_found = True
-            cul_distance += env_desc.global_path[temp_global_path_pointer].distance(
-                env_desc.global_path[temp_global_path_pointer + 1])
+            cul_distance += env_desc.global_path.path_points[temp_global_path_pointer].global_pose.distance(
+                env_desc.global_path.path_points[temp_global_path_pointer + 1].global_pose)
             temp_global_path_pointer += 1
 
         return lane_change_action_found
