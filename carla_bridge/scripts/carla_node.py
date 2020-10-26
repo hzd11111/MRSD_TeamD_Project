@@ -115,8 +115,10 @@ class CarlaManager:
         self.agent = None
         self.global_planner = None
         self.global_path_carla_waypoints = None
+        # self.counter = 0
 
     def pathRequest(self, data):
+        # self.counter += 1
 
         plan = PathPlan.fromRosMsg(data.path_plan)
 
@@ -128,6 +130,14 @@ class CarlaManager:
             tracking_speed = plan.tracking_speed  # / 3.6
             reset_sim = plan.reset_sim
             is_autopilot = plan.auto_pilot
+            # print("Counter:", self.counter)
+            # if self.counter > 150:
+            #     is_autopilot = True  # plan.auto_pilot
+            # else:
+            #     is_autopilot = False
+
+            # if self.counter > 300:
+            #     is_autopilot = False
 
             self.end_of_action = plan.end_of_action
             self.action_progress = plan.action_progress
@@ -186,24 +196,39 @@ class CarlaManager:
             self.first_frame_generated = True
             self.resetEnv()
 
-        if self.lane_cur == None:
-            state_information = self.carla_handler.get_state_information_intersection(
-                self.ego_vehicle,
-                self.all_vehicles,
-                self.ego_start_road_lane_pair,
-                self.intersection_topology,
-                self.road_lane_to_orientation,
-            )
+        # if self.lane_cur == None:
+        #     state_information = self.carla_handler.get_state_information_intersection(
+        #         self.ego_vehicle,
+        #         self.all_vehicles,
+        #         self.ego_start_road_lane_pair,
+        #         self.intersection_topology,
+        #         self.road_lane_to_orientation,
+        #     )
 
-        else:
-            state_information = self.carla_handler.get_state_information_intersection(
-                self.ego_vehicle,
-                self.all_vehicles,
-                self.ego_start_road_lane_pair,
-                self.intersection_topology,
-                self.road_lane_to_orientation,
-                only_actors=True,
-            )
+        # else:
+        #     state_information = self.carla_handler.get_state_information_intersection(
+        #         self.ego_vehicle,
+        #         self.all_vehicles,
+        #         self.ego_start_road_lane_pair,
+        #         self.intersection_topology,
+        #         self.road_lane_to_orientation,
+        #         only_actors=True,
+        #     )
+
+        state_information = self.carla_handler.get_state_information_new(
+            self.ego_vehicle
+        )
+        (
+            current_lane_waypoints,
+            left_lane_waypoints,
+            right_lane_waypoints,
+            vehicle_front,
+            vehicle_rear,
+            actors_in_current_lane,
+            actors_in_left_lane,
+            actors_in_right_lane,
+            lane_distance,
+        ) = state_information
 
         ego_nearest_waypoint = self.carla_handler.world_map.get_waypoint(
             self.ego_vehicle.get_location(), project_to_road=True
@@ -218,136 +243,148 @@ class CarlaManager:
 
         vehicle_ego = Vehicle(self.carla_handler.world, self.ego_vehicle.id)
 
-        (
-            intersecting_left_info,
-            intersecting_right_info,
-            parallel_same_dir_info,
-            parallel_opposite_dir_info,
-            ego_lane_info,
-        ) = state_information
+        # (
+        #     intersecting_left_info,
+        #     intersecting_right_info,
+        #     parallel_same_dir_info,
+        #     parallel_opposite_dir_info,
+        #     ego_lane_info,
+        # ) = state_information
 
-        if self.lane_cur == None:
-            # Current Lane
-            self.lane_cur = CurrentLane(
-                lane_vehicles=ego_lane_info[0][0],
-                lane_points=ego_lane_info[0][1],
-                crossing_pedestrain=[],
-                origin_global_pose=ego_lane_info[0][1][0].global_pose
-                if len(ego_lane_info[0][1]) != 0
-                else Pose2D(),
-            )
+        # if self.lane_cur == None:
+        #     # Current Lane
+        #     self.lane_cur = CurrentLane(
+        #         lane_vehicles=ego_lane_info[0][0],
+        #         lane_points=ego_lane_info[0][1],
+        #         crossing_pedestrain=[],
+        #         origin_global_pose=ego_lane_info[0][1][0].global_pose
+        #         if len(ego_lane_info[0][1]) != 0
+        #         else Pose2D(),
+        #     )
 
-            self.adjacent_lanes = []
-            for elem in parallel_same_dir_info:
+        #     self.adjacent_lanes = []
+        #     for elem in parallel_same_dir_info:
 
-                (
-                    left_turning_lane,
-                    right_turning_lane,
-                    left_to_the_current,
-                    right_next_to_the_current,
-                ) = self.carla_handler.get_positional_booleans(
-                    elem[2],
-                    self.ego_start_road_lane_pair,
-                    self.intersection_connections,
-                    self.intersection_topology,
-                    True,
-                )
+        #         (
+        #             left_turning_lane,
+        #             right_turning_lane,
+        #             left_to_the_current,
+        #             right_next_to_the_current,
+        #         ) = self.carla_handler.get_positional_booleans(
+        #             elem[2],
+        #             self.ego_start_road_lane_pair,
+        #             self.intersection_connections,
+        #             self.intersection_topology,
+        #             True,
+        #         )
 
-                parallel_lane = ParallelLane(
-                    lane_vehicles=Vehicle.getClosest(elem[0], vehicle_ego, n=5)[0],
-                    lane_points=elem[1],
-                    same_direction=True,
-                    left_to_the_current=left_to_the_current,
-                    adjacent_lane=right_next_to_the_current,
-                    lane_distance=10,
-                    origin_global_pose=elem[1][0].global_pose
-                    if len(elem[1]) != 0
-                    else Pose2D(),
-                    left_turning_lane=left_turning_lane,
-                    right_turning_lane=right_turning_lane,
-                )
+        #         parallel_lane = ParallelLane(
+        #             lane_vehicles=Vehicle.getClosest(elem[0], vehicle_ego, n=5)[0],
+        #             lane_points=elem[1],
+        #             same_direction=True,
+        #             left_to_the_current=left_to_the_current,
+        #             adjacent_lane=right_next_to_the_current,
+        #             lane_distance=10,
+        #             origin_global_pose=elem[1][0].global_pose
+        #             if len(elem[1]) != 0
+        #             else Pose2D(),
+        #             left_turning_lane=left_turning_lane,
+        #             right_turning_lane=right_turning_lane,
+        #         )
 
-                self.adjacent_lanes.append(parallel_lane)
+        #         self.adjacent_lanes.append(parallel_lane)
 
-            for elem in parallel_opposite_dir_info:
-                (
-                    left_turning_lane,
-                    right_turning_lane,
-                    left_to_the_current,
-                    right_next_to_the_current,
-                ) = self.carla_handler.get_positional_booleans(
-                    elem[2],
-                    self.ego_start_road_lane_pair,
-                    self.intersection_connections,
-                    self.intersection_topology,
-                    False,
-                )
-                parallel_lane = ParallelLane(
-                    lane_vehicles=Vehicle.getClosest(elem[0], vehicle_ego, n=5)[0],
-                    lane_points=elem[1],
-                    same_direction=False,
-                    left_to_the_current=left_to_the_current,
-                    adjacent_lane=right_next_to_the_current,
-                    lane_distance=10,
-                    origin_global_pose=elem[1][0].global_pose
-                    if len(elem[1]) != 0
-                    else Pose2D(),
-                    left_turning_lane=left_turning_lane,
-                    right_turning_lane=right_turning_lane,
-                )
-                self.adjacent_lanes.append(parallel_lane)
+        #     for elem in parallel_opposite_dir_info:
+        #         (
+        #             left_turning_lane,
+        #             right_turning_lane,
+        #             left_to_the_current,
+        #             right_next_to_the_current,
+        #         ) = self.carla_handler.get_positional_booleans(
+        #             elem[2],
+        #             self.ego_start_road_lane_pair,
+        #             self.intersection_connections,
+        #             self.intersection_topology,
+        #             False,
+        #         )
+        #         parallel_lane = ParallelLane(
+        #             lane_vehicles=Vehicle.getClosest(elem[0], vehicle_ego, n=5)[0],
+        #             lane_points=elem[1],
+        #             same_direction=False,
+        #             left_to_the_current=left_to_the_current,
+        #             adjacent_lane=right_next_to_the_current,
+        #             lane_distance=10,
+        #             origin_global_pose=elem[1][0].global_pose
+        #             if len(elem[1]) != 0
+        #             else Pose2D(),
+        #             left_turning_lane=left_turning_lane,
+        #             right_turning_lane=right_turning_lane,
+        #         )
+        #         self.adjacent_lanes.append(parallel_lane)
 
-            # adjacent_lanes = copy.copy(self.adjacent_lanes)
+        #     # adjacent_lanes = copy.copy(self.adjacent_lanes)
 
-            self.next_intersection = []
-            for elem in intersecting_left_info:
-                perpendicular_lane = PerpendicularLane(
-                    lane_vehicles=Vehicle.getClosest(elem[0], vehicle_ego, n=5)[0],
-                    lane_points=elem[1],
-                    intersecting_distance=10,
-                    directed_right=False,
-                    origin_global_pose=elem[1][0].global_pose
-                    if len(elem[1]) != 0
-                    else Pose2D(),
-                )
-                self.next_intersection.append(perpendicular_lane)
+        #     self.next_intersection = []
+        #     for elem in intersecting_left_info:
+        #         perpendicular_lane = PerpendicularLane(
+        #             lane_vehicles=Vehicle.getClosest(elem[0], vehicle_ego, n=5)[0],
+        #             lane_points=elem[1],
+        #             intersecting_distance=10,
+        #             directed_right=False,
+        #             origin_global_pose=elem[1][0].global_pose
+        #             if len(elem[1]) != 0
+        #             else Pose2D(),
+        #         )
+        #         self.next_intersection.append(perpendicular_lane)
 
-            for elem in intersecting_right_info:
-                perpendicular_lane = PerpendicularLane(
-                    lane_vehicles=Vehicle.getClosest(elem[0], vehicle_ego, n=5)[0],
-                    lane_points=elem[1],
-                    intersecting_distance=10,
-                    directed_right=True,
-                    origin_global_pose=elem[1][0].global_pose
-                    if len(elem[1]) != 0
-                    else Pose2D(),
-                )
-                self.next_intersection.append(perpendicular_lane)
+        #     for elem in intersecting_right_info:
+        #         perpendicular_lane = PerpendicularLane(
+        #             lane_vehicles=Vehicle.getClosest(elem[0], vehicle_ego, n=5)[0],
+        #             lane_points=elem[1],
+        #             intersecting_distance=10,
+        #             directed_right=True,
+        #             origin_global_pose=elem[1][0].global_pose
+        #             if len(elem[1]) != 0
+        #             else Pose2D(),
+        #         )
+        #         self.next_intersection.append(perpendicular_lane)
 
-        else:
-            # Update current lane vehicles. TODO: Check
-            self.lane_cur.lane_vehicles = ego_lane_info[0][0]
-            for i, elem in enumerate(parallel_same_dir_info):
-                self.adjacent_lanes[i].lane_vehicles = Vehicle.getClosest(
-                    elem[0], vehicle_ego, n=5
-                )[0]
-            for j, elem in enumerate(parallel_opposite_dir_info):
-                self.adjacent_lanes[i + j + 1].lane_vehicles = Vehicle.getClosest(
-                    elem[0], vehicle_ego, n=5
-                )[0]
-            for i, elem in enumerate(intersecting_left_info):
-                self.next_intersection[i].lane_vehicles = Vehicle.getClosest(
-                    elem[0], vehicle_ego, n=5
-                )[0]
-            for j, elem in enumerate(intersecting_right_info):
-                self.next_intersection[i + j + 1].lane_vehicles = Vehicle.getClosest(
-                    elem[0], vehicle_ego, n=5
-                )[0]
+        # else:
+        #     # Update current lane vehicles. TODO: Check
+        #     self.lane_cur.lane_vehicles = ego_lane_info[0][0]
+        #     for i, elem in enumerate(parallel_same_dir_info):
+        #         self.adjacent_lanes[i].lane_vehicles = Vehicle.getClosest(
+        #             elem[0], vehicle_ego, n=5
+        #         )[0]
+        #     for j, elem in enumerate(parallel_opposite_dir_info):
+        #         self.adjacent_lanes[i + j + 1].lane_vehicles = Vehicle.getClosest(
+        #             elem[0], vehicle_ego, n=5
+        #         )[0]
+        #     for i, elem in enumerate(intersecting_left_info):
+        #         self.next_intersection[i].lane_vehicles = Vehicle.getClosest(
+        #             elem[0], vehicle_ego, n=5
+        #         )[0]
+        #     for j, elem in enumerate(intersecting_right_info):
+        #         self.next_intersection[i + j + 1].lane_vehicles = Vehicle.getClosest(
+        #             elem[0], vehicle_ego, n=5
+        #         )[0]
 
-        ### Get copies of current_lane, adjacent lanes and intersecting lanes
-        lane_cur = copy.copy(self.lane_cur)
-        adjacent_lanes = copy.copy(self.adjacent_lanes)
-        next_intersection = copy.copy(self.next_intersection)
+        # ### Get copies of current_lane, adjacent lanes and intersecting lanes
+        # lane_cur = copy.copy(self.lane_cur)
+        # adjacent_lanes = copy.copy(self.adjacent_lanes)
+        # next_intersection = copy.copy(self.next_intersection)
+
+        # Current Lane
+        lane_cur = CurrentLane(
+            lane_vehicles=actors_in_current_lane,
+            lane_points=current_lane_waypoints,
+            crossing_pedestrain=[],
+            origin_global_pose=current_lane_waypoints[0].global_pose
+            if len(current_lane_waypoints) != 0
+            else Pose2D(),
+        )
+        adjacent_lanes = []
+        next_intersection = []
 
         ### Get the frenet coordinate of the ego vehicle in the current lane.
         ego_vehicle_frenet_pose = lane_cur.GlobalToFrenet(vehicle_ego.location_global)
@@ -475,18 +512,25 @@ class CarlaManager:
         self.timestamp = 0
         self.collision_marker = 0
         self.first_run = 1
-
+        # self.counter = 0
         try:
+
+            # (
+            #     self.ego_vehicle,
+            #     self.vehicles_list,
+            #     self.intersection_connections,
+            #     self.intersection_topology,
+            #     self.ego_start_road_lane_pair,
+            #     self.global_path_carla_waypoints,
+            #     self.road_lane_to_orientation,
+            # ) = self.tm.reset(num_vehicles=10, junction_id=53, warm_start_duration=2)
 
             (
                 self.ego_vehicle,
                 self.vehicles_list,
-                self.intersection_connections,
-                self.intersection_topology,
-                self.ego_start_road_lane_pair,
                 self.global_path_carla_waypoints,
-                self.road_lane_to_orientation,
-            ) = self.tm.reset(num_vehicles=10, junction_id=53, warm_start_duration=2)
+                route,
+            ) = self.tm.reset(warm_start_duration=5, num_vehicles=50)
 
             self.all_vehicles = self.carla_handler.world.get_actors().filter(
                 "vehicle.*"
@@ -578,7 +622,8 @@ class CarlaManager:
 
         # self.tm = CustomScenario(self.client, self.carla_handler)
 
-        self.tm = IntersectionScenario(self.client)
+        # self.tm = IntersectionScenario(self.client)
+        self.tm = P2PScenario(self.client)
 
         self.global_planner = get_global_planner(
             world=self.carla_handler.world, planner_resolution=1
