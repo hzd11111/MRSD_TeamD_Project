@@ -20,6 +20,7 @@ from carla_handler import CarlaHandler
 from grasp_controller import GRASPPIDController
 
 from scenario_manager import CustomScenario
+from p2p_scenario_manager import P2PScenario
 from intersection_scenario_manager import IntersectionScenario
 from grasp_path_planner.srv import SimService, SimServiceResponse
 from agents.tools.misc import get_speed
@@ -111,10 +112,6 @@ class CarlaManager:
 
         ### Autopilot
         self.autopilot_recompute_flag = 0
-        # self.local_planner_opt_dict = {
-        #     "target_speed": 30,
-        #     "num_waypoints_in_lane": 10000,
-        # }
         self.agent = None
         self.global_planner = None
         self.global_path_carla_waypoints = None
@@ -239,7 +236,6 @@ class CarlaManager:
                 if len(ego_lane_info[0][1]) != 0
                 else Pose2D(),
             )
-            # lane_cur = copy.copy(self.lane_cur)
 
             self.adjacent_lanes = []
             for elem in parallel_same_dir_info:
@@ -508,7 +504,8 @@ class CarlaManager:
             # self.local_planner._min_distance = 20
 
             self.global_path = [
-                self.waypoint_to_pose2D(wp) for wp in self.global_path_carla_waypoints
+                self.waypoint_to_pose2D(wp)
+                for wp in self.global_path_carla_waypoints[:-2]
             ]
             self.global_path = [
                 GlobalPathPoint(global_pose=pose) for pose in self.global_path
