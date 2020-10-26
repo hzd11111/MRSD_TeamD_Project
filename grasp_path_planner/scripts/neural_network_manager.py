@@ -104,15 +104,17 @@ class NeuralNetworkSelector:
         while temp_global_path_pointer < (len(env_desc.global_path.path_points) - 1) and \
             cul_distance < 20:
             if env_desc.global_path.path_points[temp_global_path_pointer].action == GlobalPathAction.LEFT_TURN:
+                #print("Left Turn Found")
                 left_turn_action_found = True
+                break
             cul_distance += env_desc.global_path.path_points[temp_global_path_pointer].global_pose.distance(env_desc.global_path.path_points[temp_global_path_pointer+1].global_pose)
             temp_global_path_pointer += 1
 
         if not left_turn_action_found:
             return False
-
+        return True
         # check if left turn is allowed
-        return env_desc.current_lane.left_turning_lane
+        #return env_desc.current_lane.left_turning_lane
 
     def rightTurnStateCondition(self, env_desc):
         # check if there is a intersection point in the next 20 meters
@@ -122,15 +124,17 @@ class NeuralNetworkSelector:
         while temp_global_path_pointer < (len(env_desc.global_path.path_points) - 1) and \
             cul_distance < 20:
             if env_desc.global_path.path_points[temp_global_path_pointer].action == GlobalPathAction.RIGHT_TURN:
+                #print("Right Turn Found")
                 right_turn_action_found = True
+                break
             cul_distance += env_desc.global_path.path_points[temp_global_path_pointer].global_pose.distance(env_desc.global_path.path_points[temp_global_path_pointer+1].global_pose)
             temp_global_path_pointer += 1
 
         if not right_turn_action_found:
             return False
-
+        return True
         # check if left turn is allowed
-        return env_desc.current_lane.right_turning_lane
+        #return env_desc.current_lane.right_turning_lane
 
     def goStraightStateCondition(self, env_desc):
         # check if there is a intersection point in the next 20 meters
@@ -140,7 +144,9 @@ class NeuralNetworkSelector:
         while temp_global_path_pointer < (len(env_desc.global_path.path_points) - 1) and \
                 cul_distance < 20:
             if env_desc.global_path.path_points[temp_global_path_pointer].action == GlobalPathAction.GO_STRAIGHT:
+                #print("Go Straight Found")
                 go_straight_action_found = True
+                break
             cul_distance += env_desc.global_path.path_points[temp_global_path_pointer].global_pose.distance(
                 env_desc.global_path.path_points[temp_global_path_pointer + 1].global_pose)
             temp_global_path_pointer += 1
@@ -155,7 +161,12 @@ class NeuralNetworkSelector:
         while temp_global_path_pointer < (len(env_desc.global_path.path_points) - 1) and \
                 cul_distance < 50:
             if env_desc.global_path.path_points[temp_global_path_pointer].action == GlobalPathAction.SWITCH_LANE_LEFT:
+                #print("Left Lane CHange Found")
                 lane_change_action_found = True
+                break
+            if env_desc.global_path.path_points[temp_global_path_pointer].action == GlobalPathAction.LEFT_TURN or\
+                env_desc.global_path.path_points[temp_global_path_pointer].action == GlobalPathAction.RIGHT_TURN:
+                return False
             cul_distance += env_desc.global_path.path_points[temp_global_path_pointer].global_pose.distance(
                 env_desc.global_path.path_points[temp_global_path_pointer + 1].global_pose)
             temp_global_path_pointer += 1
@@ -170,7 +181,12 @@ class NeuralNetworkSelector:
         while temp_global_path_pointer < (len(env_desc.global_path.path_points) - 1) and \
                 cul_distance < 50:
             if env_desc.global_path.path_points[temp_global_path_pointer].action == GlobalPathAction.SWITCH_LANE_RIGHT:
+                #print("Right Lane CHange Found")
                 lane_change_action_found = True
+                break
+            if env_desc.global_path.path_points[temp_global_path_pointer].action == GlobalPathAction.LEFT_TURN or\
+                env_desc.global_path.path_points[temp_global_path_pointer].action == GlobalPathAction.RIGHT_TURN:
+                return False
             cul_distance += env_desc.global_path.path_points[temp_global_path_pointer].global_pose.distance(
                 env_desc.global_path.path_points[temp_global_path_pointer + 1].global_pose)
             temp_global_path_pointer += 1
