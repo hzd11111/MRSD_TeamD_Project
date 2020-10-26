@@ -87,10 +87,11 @@ class TrajGenerator:
                 break
 
         # determine the speed needed
-        if tracking_pose:
+        action_end = not (tracking_pose and not tracking_pose_ind >= len(global_path_points) - 1)
+        if not action_end:
             # determine the distance till the end of path
-            distance = tracking_pose.distance(global_path_points[-1].global_pose)
-            target_speed = curr_vehicle.speed - curr_vehicle.speed / distance
+            distance = curr_vehicle_global_pose.distance(global_path_points[-1].global_pose)
+            target_speed = 20 - 20 / distance
             target_pose = tracking_pose
         else:
             target_speed = 0
@@ -102,9 +103,9 @@ class TrajGenerator:
         new_path_plan.tracking_pose = target_pose
         new_path_plan.reset_sim = False
         new_path_plan.tracking_speed = target_speed
-        new_path_plan.end_of_action = (tracking_pose == False)
+        new_path_plan.end_of_action = action_end
         new_path_plan.action_progress = 1 - target_speed/self.start_speed
-        new_path_plan.path_planner_terminate = (tracking_pose == False)
+        new_path_plan.path_planner_terminate = action_end
 
         # add future poses ToDo
         new_path_plan.future_poses = []

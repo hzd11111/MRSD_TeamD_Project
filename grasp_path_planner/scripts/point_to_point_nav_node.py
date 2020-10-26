@@ -17,6 +17,7 @@ from grasp_path_planner.srv import SimService, SimServiceRequest
 from utility import PathPlan, EnvDesc
 from neural_network_manager import NNManager, NeuralNetworkSelector
 from trajectory_generator import TrajGenerator
+from options import RLDecision
 
 
 TRAJ_PARAM = {'look_up_distance': 0, \
@@ -77,7 +78,7 @@ class Point2PointPlanner:
         end_of_action = False
         path_planner_terminate = False
         while not end_of_action:
-            env_desc, end_of_action, path_planner_terminate = self.path_planner.performAction(decision)
+            env_desc, end_of_action, path_planner_terminate = self.performAction(decision)
             end_of_action = end_of_action
         return path_planner_terminate
 
@@ -85,6 +86,7 @@ class Point2PointPlanner:
         selected_scenario = self.neural_network_selector.selectNeuralNetwork(self.prev_env_desc, True)
         while not selected_scenario is Scenario.DONE:
             path_planner_terminate = False
+            print(selected_scenario)
             if selected_scenario is Scenario.STOP:
                 self.performRLDecision(RLDecision.STOP)
                 path_planner_terminate = True
