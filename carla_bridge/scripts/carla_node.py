@@ -189,6 +189,7 @@ class CarlaManager:
             parallel_same_dir_info,
             parallel_opposite_dir_info,
             ego_lane_info,
+            all_misc_vehicles,
         ) = state_information
 
         if self.lane_cur == None:
@@ -263,7 +264,23 @@ class CarlaManager:
                 )
                 self.adjacent_lanes.append(parallel_lane)
 
-            # adjacent_lanes = copy.copy(self.adjacent_lanes)
+            ##### Adding an extra "Miscellaneous Lane". Holds all the vehicles that we couldn't assign to a parallel or intersecting lane
+            misc_lane = ParallelLane(
+                lane_vehicles=Vehicle.getClosest(all_misc_vehicles, vehicle_ego, n=10)[
+                    0
+                ],
+                lane_points=self.lane_cur.lane_points,
+                same_direction=True,
+                left_to_the_current=False,
+                adjacent_lane=False,
+                lane_distance=-1,
+                origin_global_pose=Pose2D(),
+                left_turning_lane=False,
+                right_turning_lane=False,
+                is_misc=True,
+            )
+            self.adjacent_lanes.append(misc_lane)
+            #################################################################################################################################
 
             self.next_intersection = []
             for elem in intersecting_left_info:
@@ -301,6 +318,11 @@ class CarlaManager:
                 self.adjacent_lanes[i + j + 1].lane_vehicles = Vehicle.getClosest(
                     elem[0], vehicle_ego, n=5
                 )[0]
+            ### Misc Lane
+            self.adjacent_lanes[-1].lane_vehicles = Vehicle.getClosest(
+                all_misc_vehicles, vehicle_ego, n=5
+            )[0]
+
             for i, elem in enumerate(intersecting_left_info):
                 self.next_intersection[i].lane_vehicles = Vehicle.getClosest(
                     elem[0], vehicle_ego, n=5
@@ -330,7 +352,7 @@ class CarlaManager:
                     adjacent_lanes[i].linestring.length - ego_vehicle_frenet_pose.x
                 )
 
-        ### TODO: Update origin and offsets for perpendicular lanes.
+        ### Update origin and offsets for perpendicular lanes.
         self.update_intersecting_distance_and_intersecting_lane_origins(
             lane_cur, next_intersection
         )
@@ -353,12 +375,19 @@ class CarlaManager:
             )
 
         ### Update frenet for vehicles on adjacent lanes
-        # Update frenet after adjusting origin for the lane
-        for i in range(len(adjacent_lanes)):
+        # Update frenet for normal adjacent lanes
+        for i in range(len(adjacent_lanes) - 1):
             for j in range(len(adjacent_lanes[i].lane_vehicles)):
                 adjacent_lanes[i].lane_vehicles[j].location_frenet = adjacent_lanes[
                     i
                 ].GlobalToFrenet(adjacent_lanes[i].lane_vehicles[j].location_global)
+        # Update frenet for misc adjacnet lane. These vehicles are represented wrt to the current lane.
+        for j in range(len(adjacent_lanes[-1].lane_vehicles)):
+            adjacent_lanes[-1].lane_vehicles[
+                j
+            ].location_frenet = lane_cur.GlobalToFrenet(
+                adjacent_lanes[-1].lane_vehicles[j].location_global
+            )
 
         ### Update frenet for vehicles on next_intersection lanes
         for i in range(len(next_intersection)):
@@ -376,11 +405,18 @@ class CarlaManager:
                 lane_cur.lane_points[i].global_pose
             )
         # Update points for adjacent lanes.
-        for i in range(len(adjacent_lanes)):
+        # For normal adjacent lanes
+        for i in range(len(adjacent_lanes) - 1):
             for j in range(len(adjacent_lanes[i].lane_points)):
                 adjacent_lanes[i].lane_points[j].frenet_pose = adjacent_lanes[
                     i
                 ].GlobalToFrenet(adjacent_lanes[i].lane_points[j].global_pose)
+        # For misc adjacent lane, we represent wrt to the current lane.
+        for j in range(len(adjacent_lanes[-1].lane_points)):
+            adjacent_lanes[-1].lane_points[j].frenet_pose = lane_cur.GlobalToFrenet(
+                adjacent_lanes[-1].lane_points[j].global_pose
+            )
+
         # Update points for intersecting lanes.
         for i in range(len(next_intersection)):
             for j in range(len(next_intersection[i].lane_points)):

@@ -514,18 +514,18 @@ class CarlaHandler:
                     ]
                 )
 
-            ## Get unallocated actor ids
-            unallocated_actor_ids = [
-                vehicle.id
-                for vehicle in all_vehicles
-                if vehicle.id not in allocated_actor_ids
-            ]
+        # ## Get unallocated actor ids
+        # unallocated_actor_ids = [
+        #     vehicle.id
+        #     for vehicle in all_vehicles
+        #     if vehicle.id not in allocated_actor_ids
+        # ]
 
-            misc_vehicles = [
-                Vehicle(self.world, vehicle_id) for vehicle_id in unallocated_actor_ids
-            ]
+        # misc_vehicles = [
+        #     Vehicle(self.world, vehicle_id) for vehicle_id in unallocated_actor_ids
+        # ]
 
-        return full_info, ego_lane_info
+        return full_info, ego_lane_info, allocated_actor_ids
 
     def get_lane_info_only_actors(self, all_vehicles, lane_list, ego_road_lane_ID_pair):
 
@@ -594,18 +594,19 @@ class CarlaHandler:
                     [this_connection_actors, [], this_connection_road_lanes]
                 )
 
-            ## Get unallocated actor ids
-            unallocated_actor_ids = [
-                vehicle.id
-                for vehicle in all_vehicles
-                if vehicle.id not in allocated_actor_ids
-            ]
+        # ## Get unallocated actor ids
+        # unallocated_actor_ids = [
+        #     vehicle.id
+        #     for vehicle in all_vehicles
+        #     if vehicle.id not in allocated_actor_ids
+        # ]
+        # print("Allocated:", allocated_actor_ids, "Unallocated:", unallocated_actor_ids)
 
-            misc_vehicles = [
-                Vehicle(self.world, vehicle_id) for vehicle_id in unallocated_actor_ids
-            ]
+        # misc_vehicles = [
+        #     Vehicle(self.world, vehicle_id) for vehicle_id in unallocated_actor_ids
+        # ]
 
-        return full_info, ego_lane_info
+        return full_info, ego_lane_info, allocated_actor_ids
 
     def get_state_information_intersection(
         self,
@@ -625,21 +626,44 @@ class CarlaHandler:
         ) = intersection_topology
 
         if only_actors == False:
-            intersecting_left_info, _ = self.get_lane_info(
+            (intersecting_left_info, _, allocated_left,) = self.get_lane_info(
                 all_vehicles, intersecting_left, None, road_lane_to_orientation
             )
-            intersecting_right_info, _ = self.get_lane_info(
+            (intersecting_right_info, _, allocated_right,) = self.get_lane_info(
                 all_vehicles, intersecting_right, None, road_lane_to_orientation
             )
-            parallel_same_dir_info, ego_lane_info = self.get_lane_info(
+            (
+                parallel_same_dir_info,
+                ego_lane_info,
+                allocated_parallel_same,
+            ) = self.get_lane_info(
                 all_vehicles,
                 parallel_same_dir,
                 ego_road_lane_ID_pair,
                 road_lane_to_orientation,
             )
-            parallel_opposite_dir_info, _ = self.get_lane_info(
+            (
+                parallel_opposite_dir_info,
+                _,
+                allocated_parallel_opposite,
+            ) = self.get_lane_info(
                 all_vehicles, parallel_opposite_dir, None, road_lane_to_orientation
             )
+
+            all_allocated_vehicle_ids = (
+                allocated_left
+                + allocated_right
+                + allocated_parallel_same
+                + allocated_parallel_opposite
+            )
+            unallocated_actor_ids = [
+                vehicle.id
+                for vehicle in all_vehicles
+                if vehicle.id not in all_allocated_vehicle_ids
+            ]
+            all_misc_vehicles = [
+                Vehicle(self.world, vehicle_id) for vehicle_id in unallocated_actor_ids
+            ]
 
             return (
                 intersecting_left_info,
@@ -647,26 +671,62 @@ class CarlaHandler:
                 parallel_same_dir_info,
                 parallel_opposite_dir_info,
                 ego_lane_info,
+                all_misc_vehicles,
             )
         else:
-            intersecting_left_info, _ = self.get_lane_info_only_actors(
-                all_vehicles, intersecting_left, None
-            )
-            intersecting_right_info, _ = self.get_lane_info_only_actors(
-                all_vehicles, intersecting_right, None
-            )
-            parallel_same_dir_info, ego_lane_info = self.get_lane_info_only_actors(
+            (
+                intersecting_left_info,
+                _,
+                allocated_left,
+            ) = self.get_lane_info_only_actors(all_vehicles, intersecting_left, None)
+            (
+                intersecting_right_info,
+                _,
+                allocated_right,
+            ) = self.get_lane_info_only_actors(all_vehicles, intersecting_right, None)
+            (
+                parallel_same_dir_info,
+                ego_lane_info,
+                allocated_parallel_same,
+            ) = self.get_lane_info_only_actors(
                 all_vehicles, parallel_same_dir, ego_road_lane_ID_pair
             )
-            parallel_opposite_dir_info, _ = self.get_lane_info_only_actors(
+            (
+                parallel_opposite_dir_info,
+                _,
+                allocated_parallel_opposite,
+            ) = self.get_lane_info_only_actors(
                 all_vehicles, parallel_opposite_dir, None
             )
+
+            all_allocated_vehicle_ids = (
+                allocated_left
+                + allocated_right
+                + allocated_parallel_same
+                + allocated_parallel_opposite
+            )
+            unallocated_actor_ids = [
+                vehicle.id
+                for vehicle in all_vehicles
+                if vehicle.id not in all_allocated_vehicle_ids
+            ]
+            print(
+                "Allocated:",
+                all_allocated_vehicle_ids,
+                "Unallocated:",
+                unallocated_actor_ids,
+            )
+            all_misc_vehicles = [
+                Vehicle(self.world, vehicle_id) for vehicle_id in unallocated_actor_ids
+            ]
+
             return (
                 intersecting_left_info,
                 intersecting_right_info,
                 parallel_same_dir_info,
                 parallel_opposite_dir_info,
                 ego_lane_info,
+                all_misc_vehicles,
             )
 
     def get_state_information_new(
