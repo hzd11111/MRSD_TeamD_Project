@@ -1,8 +1,10 @@
 #!/usr/bin/env python
 # -----------------------------------Packages------------------------------------------------------#
 import sys
+
 print(sys.path)
 import os
+
 homedir = os.getenv("HOME")
 distro = os.getenv("ROS_DISTRO")
 # os.environ["WANDB_MODE"] = "dryrun"
@@ -10,22 +12,35 @@ sys.path.remove("/opt/ros/" + distro + "/lib/python2.7/dist-packages")
 sys.path.append("/opt/ros/" + distro + "/lib/python2.7/dist-packages")
 import rospy
 import numpy as np
+
 # RL packages
 from stable_baselines import DQN
 from stable_baselines.common.cmd_util import make_vec_env
 from stable_baselines.common.callbacks import CheckpointCallback
 import wandb
 import tensorflow as tf
+
 # Other Packages
 from path_planner import PathPlannerManager
 from rl_manager import RLManager, GeneralRLManager
 from lane_change_policy import CustomLaneChangePolicy
-from intersection_policy import CustomIntersectionStraight, CustomIntersectionLeftTurn, CustomIntersectionRightTurn
+from intersection_policy import (
+    CustomIntersectionStraight,
+    CustomIntersectionLeftTurn,
+    CustomIntersectionRightTurn,
+)
 from lane_following_policy import CustomLaneFollowingPolicy
 from custom_env import CustomEnv
 from options import Scenario, RLDecision
 from settings import Mode
-from settings import MODEL_LOAD_PATH, MODEL_SAVE_PATH, CURRENT_MODE, CURRENT_SCENARIO, MODEL_CP_PATH
+from settings import (
+    MODEL_LOAD_PATH,
+    MODEL_SAVE_PATH,
+    CURRENT_MODE,
+    CURRENT_SCENARIO,
+    MODEL_CP_PATH,
+)
+
 # -----------------------------------Global------------------------------------------------------#
 dir_path = os.path.dirname(os.path.realpath(__file__))
 # -----------------------------------Code------------------------------------------------------#
@@ -41,41 +56,88 @@ class FullPlannerManager:
         self.path_planner.initialize()
 
     def run_train(self):
-        wandb.init(entity="rsp2020", project="grasp", config=tf.flags.FLAGS, sync_tensorboard=True)
-        checkpoint_callback = CheckpointCallback(save_freq=1000, save_path=wandb.run.dir, name_prefix='rl_model')
+        wandb.init(
+            entity="rsp2020",
+            project="grasp",
+            config=tf.flags.FLAGS,
+            sync_tensorboard=True,
+        )
+        checkpoint_callback = CheckpointCallback(
+            save_freq=1000, save_path=wandb.run.dir, name_prefix="rl_model"
+        )
         env = CustomEnv(self.path_planner, self.behavior_planner, event)
         env = make_vec_env(lambda: env, n_envs=1)
         model = None
-        if self.event == Scenario.SWITCH_LANE_LEFT or\
-                self.event == Scenario.SWITCH_LANE_RIGHT:
-            model = DQN(CustomLaneChangePolicy, env, verbose=1,
-                        learning_starts=256, batch_size=256,
-                        exploration_fraction=0.9, target_network_update_freq=100,
-                        tensorboard_log=wandb.run.dir)
+        if (
+            self.event == Scenario.SWITCH_LANE_LEFT
+            or self.event == Scenario.SWITCH_LANE_RIGHT
+        ):
+            model = DQN(
+                CustomLaneChangePolicy,
+                env,
+                verbose=1,
+                learning_starts=256,
+                batch_size=256,
+                exploration_fraction=0.9,
+                target_network_update_freq=100,
+                tensorboard_log=wandb.run.dir,
+            )
 
         if self.event == Scenario.LANE_FOLLOWING:
-            model = DQN(CustomLaneFollowingPolicy, env, verbose=1,
-                        learning_starts=256, batch_size=256, exploration_fraction=0.9,
-                        target_network_update_freq=100,
-                        tensorboard_log=wandb.run.dir, gamma=0.93, learning_rate=0.0001)
+            model = DQN(
+                CustomLaneFollowingPolicy,
+                env,
+                verbose=1,
+                learning_starts=256,
+                batch_size=256,
+                exploration_fraction=0.9,
+                target_network_update_freq=100,
+                tensorboard_log=wandb.run.dir,
+                gamma=0.93,
+                learning_rate=0.0001,
+            )
 
         if self.event == Scenario.GO_STRAIGHT:
-            model = DQN(CustomIntersectionStraight, env, verbose=1,
-                        learning_starts=256, batch_size=256, exploration_fraction=0.9,
-                        target_network_update_freq=100,
-                        tensorboard_log=wandb.run.dir, gamma=0.93, learning_rate=0.0001)
+            model = DQN(
+                CustomIntersectionStraight,
+                env,
+                verbose=1,
+                learning_starts=256,
+                batch_size=256,
+                exploration_fraction=0.9,
+                target_network_update_freq=100,
+                tensorboard_log=wandb.run.dir,
+                gamma=0.93,
+                learning_rate=0.0001,
+            )
 
         if self.event == Scenario.LEFT_TURN:
-            model = DQN(CustomIntersectionLeftTurn, env, verbose=1,
-                        learning_starts=256, batch_size=256, exploration_fraction=0.9,
-                        target_network_update_freq=100,
-                        tensorboard_log=wandb.run.dir, gamma=0.93, learning_rate=0.0001)
+            model = DQN(
+                CustomIntersectionLeftTurn,
+                env,
+                verbose=1,
+                learning_starts=256,
+                batch_size=256,
+                exploration_fraction=0.9,
+                target_network_update_freq=100,
+                tensorboard_log=wandb.run.dir,
+                gamma=0.93,
+                learning_rate=0.0001,
+            )
 
         if self.event == Scenario.RIGHT_TURN:
-            model = DQN(CustomIntersectionRightTurn, env, verbose=1,
-                        learning_starts=256, batch_size=256, exploration_fraction=0.9,
-                        target_network_update_freq=100,
-                        tensorboard_log=wandb.run.dir, gamma=0.93, learning_rate=0.0001)
+            model = DQN(
+                CustomIntersectionRightTurn,
+                env,
+                verbose=1,
+                learning_starts=256,
+                batch_size=256,
+                exploration_fraction=0.9,
+                target_network_update_freq=100,
+                tensorboard_log=wandb.run.dir,
+                gamma=0.93,
+                learning_rate=0.0001,
+            )
 
         wandb.save("./*.py")
         wandb.save("./*.md")
@@ -106,18 +168,25 @@ class FullPlannerManager:
             count += 1
             if info[0]["success"]:
                 success += 1
-            print("Count ", count, "Success ", success,
-                  "Success Rate:", success * 100 / float(count), "%")
+            print(
+                "Count ",
+                count,
+                "Success ",
+                success,
+                "Success Rate:",
+                success * 100 / float(count),
+                "%",
+            )
         print("Success Rate ", success / count, success, count)
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     try:
         event = CURRENT_SCENARIO
         full_planner = FullPlannerManager(event)
         full_planner.initialize()
 
-        if(CURRENT_MODE == Mode.TEST):
+        if CURRENT_MODE == Mode.TEST:
             full_planner.run_test()
         else:
             full_planner.run_train()
