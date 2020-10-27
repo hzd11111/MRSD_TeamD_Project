@@ -267,9 +267,11 @@ class CustomIntersectionLeftTurn(DQNPolicy):
         out = input_vec
         with tf.variable_scope("action_value"):
             out = tf_layers.fully_connected(
-                out, num_outputs=64, activation_fn=tf.nn.relu)
+                out, num_outputs=256, activation_fn=tf.nn.relu)
             out = tf_layers.fully_connected(
                 out, num_outputs=128, activation_fn=tf.nn.relu)
+            out = tf_layers.fully_connected(
+                out, num_outputs=64, activation_fn=tf.nn.relu)
             out = tf_layers.fully_connected(
                 out, num_outputs=out_num, activation_fn=tf.nn.tanh)
         return out
@@ -361,11 +363,14 @@ class CustomIntersectionLeftTurn(DQNPolicy):
             # stack them and take max
             embed_list = embed_front_vehicle + embed_back_vehicle + embed_pedestrians + \
                 embed_perp_lane_vehs + embed_opp_lane_vehs + embed_inter_vehs
-            stacked_out = tf.stack(embed_list, axis=1)
-            max_out = tf.reduce_max(stacked_out, axis=1)
-
+            # stacked_out = tf.stack(embed_list, axis=1)
+            # max_out = tf.reduce_max(stacked_out, axis=1)
+            max_front_back = tf.reduce_max(tf.stack(embed_front_vehicle + embed_back_vehicle, axis=1), axis=1)
+            max_perp = tf.reduce_max(tf.stack(embed_perp_lane_vehs, axis=1), axis=1)
+            max_opp = tf.reduce_max(tf.stack(embed_opp_lane_vehs, axis=1), axis=1)
+            max_intersection = tf.reduce_max(tf.stack(embed_inter_vehs, axis=1), axis=1)
             # concatenate the current_lane_status
-            max_out = tf.concat([max_out, out_ph[:, :8]], axis=1)
+            max_out = tf.concat([max_front_back, max_perp, max_opp, max_intersection, out_ph[:, :8]], axis=1)
             q_out = self.q_net(max_out, ac_space.n)
 
         self.q_values = q_out
