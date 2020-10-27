@@ -256,7 +256,7 @@ class CustomIntersectionLeftTurn(DQNPolicy):
     def embedding_net_intersection(self, input_vec):
         out = input_vec
         with tf.variable_scope("embedding_network_intersection", reuse=tf.compat.v1.AUTO_REUSE):
-            out = tf.Print(out, [out], summarize=200, message="INTER_VEH:")
+            # out = tf.Print(out, [out], summarize=200, message="INTER_VEH:")
             out = tf_layers.fully_connected(
                 out, num_outputs=16, activation_fn=tf.nn.relu)
             out = tf_layers.fully_connected(
@@ -285,7 +285,7 @@ class CustomIntersectionLeftTurn(DQNPolicy):
             current_lane_len = 8
             mask = 1
             out_ph = tf.layers.flatten(self.processed_obs)
-            out_ph = tf.Print(out_ph, [out_ph], summarize=300, message="OUT_PH:")
+            # out_ph = tf.Print(out_ph, [out_ph], summarize=300, message="OUT_PH:")
             cur_veh = out_ph[:, current_lane_len:current_lane_len + veh_state_len]
 
             # Add front vehicle
@@ -328,7 +328,7 @@ class CustomIntersectionLeftTurn(DQNPolicy):
                 perp_veh = out_ph[:, start:start + veh_state_len]
                 perp_veh_state = tf.concat([cur_veh, perp_veh], axis=1)
                 embed_perp_lane_vehs.append(
-                    self.embedding_net_perpendicular(perp_veh_state) * perp_mask)
+                    self.embedding_net_front_back(perp_veh_state) * perp_mask)
 
             # Add opposite lane vehicles
             opp_lane_start_index = current_lane_len + veh_state_len + \
@@ -342,7 +342,7 @@ class CustomIntersectionLeftTurn(DQNPolicy):
                 opp_lane_veh = out_ph[:, start:start + veh_state_len]
                 opp_lane_veh_state = tf.concat([cur_veh, opp_lane_veh], axis=1)
                 embed_opp_lane_vehs.append(
-                    self.embedding_net_opposite(opp_lane_veh_state) * opp_lane_mask)
+                    self.embedding_net_front_back(opp_lane_veh_state) * opp_lane_mask)
 
             # Add vehicles in the intersection
             inter_start_index = current_lane_len + veh_state_len + \
@@ -356,7 +356,7 @@ class CustomIntersectionLeftTurn(DQNPolicy):
                 inter_veh = out_ph[:, start:start + veh_state_len]
                 inter_veh_state = tf.concat([cur_veh, inter_veh], axis=1)
                 embed_inter_vehs.append(
-                    self.embedding_net_intersection(inter_veh_state) * inter_lane_mask)
+                    self.embedding_net_front_back(inter_veh_state) * inter_lane_mask)
 
             # stack them and take max
             embed_list = embed_front_vehicle + embed_back_vehicle + embed_pedestrians + \
