@@ -206,52 +206,52 @@ class NeuralNetworkSelector:
         # exit when the current state priority is smaller than the state
 
         # Done state
-        if current_state_priority < self.priorityDeterminatoin(Scenario.DONE):
-            return current_state
+        if current_state_priority <= self.priorityDeterminatoin(Scenario.DONE):
+            return current_state, False
         if self.doneStateCondition(env_desc):
-            return Scenario.DONE
+            return Scenario.DONE, True
 
         # update global path progress
         self.updateGlobalPathProgress(env_desc.global_path, env_desc.cur_vehicle_state.location_global)
 
         # STOP state
-        if current_state_priority < self.priorityDeterminatoin(Scenario.STOP):
-            return current_state
+        if current_state_priority <= self.priorityDeterminatoin(Scenario.STOP):
+            return current_state, False
         if self.stopStateCondition(env_desc):
-            return Scenario.STOP
+            return Scenario.STOP, True
 
         # LEFT_TURN state
-        if current_state_priority < self.priorityDeterminatoin(Scenario.LEFT_TURN):
-            return current_state
+        if current_state_priority <= self.priorityDeterminatoin(Scenario.LEFT_TURN):
+            return current_state, False
         if self.leftTurnStateCondition(env_desc):
-            return Scenario.LEFT_TURN
+            return Scenario.LEFT_TURN, True
 
         # RIGHT_TURN state
-        if current_state_priority < self.priorityDeterminatoin(Scenario.RIGHT_TURN):
-            return current_state
+        if current_state_priority <= self.priorityDeterminatoin(Scenario.RIGHT_TURN):
+            return current_state, False
         if self.rightTurnStateCondition(env_desc):
-            return Scenario.RIGHT_TURN
+            return Scenario.RIGHT_TURN, True
 
         # GO_STRAIGHT state
-        if current_state_priority < self.priorityDeterminatoin(Scenario.GO_STRAIGHT):
-            return current_state
+        if current_state_priority <= self.priorityDeterminatoin(Scenario.GO_STRAIGHT):
+            return current_state, False
         if self.goStraightStateCondition(env_desc):
-            return Scenario.GO_STRAIGHT
+            return Scenario.GO_STRAIGHT, True
 
         # SWITCH_LANE_LEFT state
-        if current_state_priority < self.priorityDeterminatoin(Scenario.SWITCH_LANE_LEFT):
-            return current_state
+        if current_state_priority <= self.priorityDeterminatoin(Scenario.SWITCH_LANE_LEFT):
+            return current_state, False
         if self.switchLaneLeftStateCondition(env_desc):
-            return Scenario.SWITCH_LANE_LEFT
+            return Scenario.SWITCH_LANE_LEFT, True
 
         # SWITCH_LANE_RIGHT state
-        if current_state_priority < self.priorityDeterminatoin(Scenario.SWITCH_LANE_RIGHT):
-            return current_state
+        if current_state_priority <= self.priorityDeterminatoin(Scenario.SWITCH_LANE_RIGHT):
+            return current_state, False
         if self.switchLaneRightStateCondition(env_desc):
-            return Scenario.SWITCH_LANE_RIGHT
+            return Scenario.SWITCH_LANE_RIGHT, True
 
         # LANE_FOLLOWING state
-        if current_state_priority < self.priorityDeterminatoin(Scenario.LANE_FOLLOWING):
-            return current_state
+        if current_state_priority <= self.priorityDeterminatoin(Scenario.LANE_FOLLOWING):
+            return current_state, False
         if self.laneFollowingStateCondition(env_desc):
-            return Scenario.LANE_FOLLOWING
+            return Scenario.LANE_FOLLOWING, True

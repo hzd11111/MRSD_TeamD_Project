@@ -48,22 +48,24 @@ class Point2PointPlanner:
         reset_msg = PathPlan()
         reset_msg.reset_sim = True
         reset_msg.end_of_action = True
+        reset_msg.scenario_chosen = Scenario.LANE_FOLLOWING
         req = SimServiceRequest()
-        req.path_plan = reset_msg
+        req.path_plan = reset_msg.toRosMsg()
         self.prev_env_desc = EnvDesc.fromRosMsg(self.sim_service_interface(req).env)
         return self.prev_env_desc
 
     # perform action for a single timestep
-    def performAction(self, action, auto_pilot=False):
+    def performAction(self, action, selected_scenario, auto_pilot=False):
         if auto_pilot:
             path_plan = PathPlan()
             path_plan.auto_pilot = True
+            path_plan.scenario_chosen = selected_scenario
             req = SimServiceRequest()
-            req.path_plan = path_plan
+            req.path_plan = path_plan.toRosMsg()
             self.prev_env_desc = EnvDesc.fromRosMsg(self.sim_service_interface(req).env)
             return self.prev_env_desc, True, False
 
-        path_plan = self.traj_generator.trajPlan(action, self.prev_env_desc)
+        path_plan = self.traj_generator.trajPlan(action, self.prev_env_desc, selected_scenario)
         req = SimServiceRequest()
         req.path_plan = path_plan
         # import ipdb; ipdb.set_trace()
@@ -71,31 +73,31 @@ class Point2PointPlanner:
         return self.prev_env_desc, path_plan.end_of_action, path_plan.path_planner_terminate
 
     # perform action for a single RL decision
-    def performRLDecision(self, decision, auto_pilot=False):
+    def performRLDecision(self, decision, selected_scenario, auto_pilot=False):
         if auto_pilot:
-            self.performAction(None, True)
+            self.performAction(None, selected_scenario, True)
             return True
         end_of_action = False
         path_planner_terminate = False
         while not end_of_action:
-            env_desc, end_of_action, path_planner_terminate = self.performAction(decision)
+            env_desc, end_of_action, path_planner_terminate = self.performAction(decision, selected_scenario)
             end_of_action = end_of_action
         return path_planner_terminate
 
     def run(self):
-        selected_scenario = self.neural_network_selector.selectNeuralNetwork(self.prev_env_desc, True)
+        selected_scenario, new_scenario = self.neural_network_selector.selectNeuralNetwork(self.prev_env_desc, True)
         while not selected_scenario is Scenario.DONE:
             path_planner_terminate = False
             print(selected_scenario)
             if selected_scenario is Scenario.STOP:
-                self.performRLDecision(RLDecision.STOP)
+                self.performRLDecision(RLDecision.STOP, selected_scenario)
                 path_planner_terminate = True
             else:
-                path_planner_terminate = self.performRLDecision(None, True)
+                path_planner_terminate = self.performRLDecision(None, selected_scenario, True)
                 # call neural network manager
                 #rl_decision = self.nn_manager.makeDecision(self.prev_env_desc, selected_scenario)
                 #path_planner_terminate = self.performRLDecision(rl_decision)
-            selected_scenario = self.neural_network_selector.selectNeuralNetwork(self.prev_env_desc,
+            selected_scenario, new_scenario = self.neural_network_selector.selectNeuralNetwork(self.prev_env_desc,
                                                                                  path_planner_terminate,
                                                                                  selected_scenario)
         print("Location Reached!")

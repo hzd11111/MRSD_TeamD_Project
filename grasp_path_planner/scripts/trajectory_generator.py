@@ -9,6 +9,7 @@ import copy
 class TrajGenerator:
     SAME_POSE_THRESHOLD = 2
     SAME_POSE_LOWER_THRESHOLD = 0.02
+    MAX_GLOBAL_SPEED = 30
 
     # constructor
     def __init__(self, traj_parameters):
@@ -37,7 +38,7 @@ class TrajGenerator:
             return rl_decision
         return self.current_action
 
-    def trajPlan(self, rl_decision, env_desc):
+    def trajPlan(self, rl_decision, env_desc, chosen_scenario = None):
         # check the validity of env_desc
         # import ipdb; ipdb.set_trace()
         # continue the previous action if it hasn't ended
@@ -45,22 +46,46 @@ class TrajGenerator:
 
         # plan trajectory switch cases
         if action_to_perform == RLDecision.CONSTANT_SPEED:
-            return self.constSpeedTraj(env_desc).toRosMsg()
+            path_plan = self.constSpeedTraj(env_desc)
+            if chosen_scenario is not None:
+                path_plan.scenario_chosen = chosen_scenario
+            return path_plan.toRosMsg()
         elif action_to_perform == RLDecision.ACCELERATE:
-            return self.accelerateTraj(env_desc).toRosMsg()
+            path_plan = self.accelerateTraj(env_desc)
+            if chosen_scenario is not None:
+                path_plan.scenario_chosen = chosen_scenario
+            return path_plan.toRosMsg()
         elif action_to_perform == RLDecision.DECELERATE:
-            return self.decelerateTraj(env_desc).toRosMsg()
+            path_plan = self.decelerateTraj(env_desc)
+            if chosen_scenario is not None:
+                path_plan.scenario_chosen = chosen_scenario
+            return path_plan.toRosMsg()
         elif (action_to_perform == RLDecision.SWITCH_LANE_LEFT) or \
                 (action_to_perform == RLDecision.SWITCH_LANE_RIGHT):
-            return self.laneChangeTraj(env_desc, rl_decision).toRosMsg()
+            path_plan = self.laneChangeTraj(env_desc, rl_decision)
+            if chosen_scenario is not None:
+                path_plan.scenario_chosen = chosen_scenario
+            return path_plan.toRosMsg()
         elif action_to_perform == RLDecision.GLOBAL_PATH_CONSTANT_SPEED:
-            return self.globalConstSpeedTraj(env_desc).toRosMsg()
+            path_plan = self.globalConstSpeedTraj(env_desc)
+            if chosen_scenario is not None:
+                path_plan.scenario_chosen = chosen_scenario
+            return path_plan.toRosMsg()
         elif action_to_perform == RLDecision.GLOBAL_PATH_ACCELERATE:
-            return self.globalAccelerateTraj(env_desc).toRosMsg()
+            path_plan = self.globalAccelerateTraj(env_desc)
+            if chosen_scenario is not None:
+                path_plan.scenario_chosen = chosen_scenario
+            return path_plan.toRosMsg()
         elif action_to_perform == RLDecision.GLOBAL_PATH_DECELERATE:
-            return self.globalDecelerateTraj(env_desc).toRosMsg()
+            path_plan = self.globalDecelerateTraj(env_desc)
+            if chosen_scenario is not None:
+                path_plan.scenario_chosen = chosen_scenario
+            return path_plan.toRosMsg()
         elif action_to_perform == RLDecision.STOP:
-            return self.stop(env_desc).toRosMsg()
+            path_plan = self.stop(env_desc)
+            if chosen_scenario is not None:
+                path_plan.scenario_chosen = chosen_scenario
+            return path_plan.toRosMsg()
         else:
             print("RLDecision ERROR:", action_to_perform)
 
@@ -176,7 +201,7 @@ class TrajGenerator:
         new_path_plan = PathPlan()
         new_path_plan.tracking_pose = tracking_pose
         new_path_plan.reset_sim = False
-        new_path_plan.tracking_speed = max(self.traj_parameters['min_speed'],self.start_speed)
+        new_path_plan.tracking_speed = min(max(self.traj_parameters['min_speed'],self.start_speed), self.MAX_GLOBAL_SPEED)
         new_path_plan.end_of_action = end_of_action
         new_path_plan.action_progress = action_progress
         new_path_plan.path_planner_terminate = path_planner_terminate
@@ -239,7 +264,7 @@ class TrajGenerator:
         new_path_plan = PathPlan()
         new_path_plan.tracking_pose = tracking_pose
         new_path_plan.reset_sim = False
-        new_path_plan.tracking_speed = max(self.traj_parameters['min_speed'],self.start_speed + action_progress * self.traj_parameters['accelerate_amt'])
+        new_path_plan.tracking_speed = min(max(self.traj_parameters['min_speed'],self.start_speed + action_progress * self.traj_parameters['accelerate_amt']), self.MAX_GLOBAL_SPEED)
         new_path_plan.end_of_action = end_of_action
         new_path_plan.action_progress = action_progress
         new_path_plan.path_planner_terminate = path_planner_terminate
@@ -306,8 +331,8 @@ class TrajGenerator:
         new_path_plan = PathPlan()
         new_path_plan.tracking_pose = tracking_pose
         new_path_plan.reset_sim = False
-        new_path_plan.tracking_speed = max(self.traj_parameters['min_speed'],
-                                           self.start_speed - action_progress * self.traj_parameters['decelerate_amt'])
+        new_path_plan.tracking_speed = min(max(self.traj_parameters['min_speed'],
+                                           self.start_speed - action_progress * self.traj_parameters['decelerate_amt']), self.MAX_GLOBAL_SPEED)
         new_path_plan.end_of_action = end_of_action
         new_path_plan.action_progress = action_progress
         new_path_plan.path_planner_terminate = path_planner_terminate

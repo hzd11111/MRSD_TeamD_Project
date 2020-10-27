@@ -18,7 +18,7 @@ from carla_utils.msg import LanePointMsg
 
 
 from actors import *
-from options import *
+from options import Scenario, GlobalPathAction, StopLineStatus, RLDecision, PedestrainPriority, TrafficLightStatus
 from functional_utility import Pose2D, Frenet
 
 sys.path.append("../../carla_bridge/scripts/cartesian_to_frenet")
@@ -40,6 +40,7 @@ class PathPlan(object):
         "end_of_action",
         "action_progress",
         "auto_pilot",
+        "scenario_chosen",
     ]
 
     def __init__(
@@ -52,6 +53,7 @@ class PathPlan(object):
         end_of_action=False,
         action_progress=0.0,
         auto_pilot=False,
+        scenario_chosen=None,
     ):
         self.tracking_pose = tracking_pose
         self.future_poses = future_poses
@@ -61,6 +63,7 @@ class PathPlan(object):
         self.end_of_action = end_of_action
         self.action_progress = action_progress
         self.auto_pilot = auto_pilot
+        self.scenario_chosen = scenario_chosen
 
     @classmethod
     def fromRosMsg(cls, path_plan_msg):
@@ -73,6 +76,7 @@ class PathPlan(object):
         obj.end_of_action = path_plan_msg.end_of_action
         obj.action_progress = path_plan_msg.action_progress
         obj.auto_pilot = path_plan_msg.auto_pilot
+        obj.scenario_chosen = Scenario(path_plan_msg.scenario_chosen)
         return obj
 
     def toRosMsg(self):
@@ -85,6 +89,7 @@ class PathPlan(object):
         msg.end_of_action = self.end_of_action
         msg.action_progress = self.action_progress
         msg.auto_pilot = self.auto_pilot
+        msg.scenario_chosen = self.scenario_chosen.value
         return msg
 
 
