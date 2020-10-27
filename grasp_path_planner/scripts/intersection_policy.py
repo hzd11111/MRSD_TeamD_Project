@@ -69,7 +69,7 @@ class CustomIntersectionStraight(DQNPolicy):
     def embedding_net_intersection(self, input_vec):
         out = input_vec
         with tf.variable_scope("embedding_network_intersection", reuse=tf.compat.v1.AUTO_REUSE):
-            out = tf.Print(out, [out], summarize=200, message="INTER_VEH:")
+            # out = tf.Print(out, [out], summarize=200, message="INTER_VEH:")
             out = tf_layers.fully_connected(
                 out, num_outputs=16, activation_fn=tf.nn.relu)
             out = tf_layers.fully_connected(
@@ -99,7 +99,7 @@ class CustomIntersectionStraight(DQNPolicy):
             current_lane_len = 8
             mask = 1
             out_ph = tf.layers.flatten(self.processed_obs)
-            out_ph = tf.Print(out_ph, [out_ph], summarize=300, message="OUT_PH:")
+            # out_ph = tf.Print(out_ph, [out_ph], summarize=300, message="OUT_PH:")
             cur_veh = out_ph[:, current_lane_len:current_lane_len + veh_state_len]
             # Add front vehicle
             front_veh_start = current_lane_len + veh_state_len
@@ -256,7 +256,7 @@ class CustomIntersectionLeftTurn(DQNPolicy):
     def embedding_net_intersection(self, input_vec):
         out = input_vec
         with tf.variable_scope("embedding_network_intersection", reuse=tf.compat.v1.AUTO_REUSE):
-            out = tf.Print(out, [out], summarize=200, message="INTER_VEH:")
+            # out = tf.Print(out, [out], summarize=200, message="INTER_VEH:")
             out = tf_layers.fully_connected(
                 out, num_outputs=16, activation_fn=tf.nn.relu)
             out = tf_layers.fully_connected(
@@ -445,7 +445,7 @@ class CustomIntersectionRightTurn(DQNPolicy):
     def embedding_net_intersection(self, input_vec):
         out = input_vec
         with tf.variable_scope("embedding_network_intersection", reuse=tf.compat.v1.AUTO_REUSE):
-            out = tf.Print(out, [out], summarize=200, message="INTER_VEH:")
+            # out = tf.Print(out, [out], summarize=200, message="INTER_VEH:")
             out = tf_layers.fully_connected(
                 out, num_outputs=16, activation_fn=tf.nn.relu)
             out = tf_layers.fully_connected(
