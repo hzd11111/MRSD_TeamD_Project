@@ -12,24 +12,26 @@ TEST_NODE_NAME = 'custom_talker'
 TEST_TOPIC_NAME = 'custom_chatter'
 
 def talker():
-    pub = rospy.Publisher(TEST_TOPIC_NAME, EnvDescMsg)
+    pub = rospy.Publisher(TEST_TOPIC_NAME, PathPlanMsg)
     rospy.init_node(TEST_NODE_NAME, anonymous=True)
     r = rospy.Rate(10) #10hz
-    p = Pedestrian(priority_status=PedestrainPriority(2))
-    v = Vehicle(world=None, 
-                actor_id=99, 
-                speed=99, 
-                acceleration=99, 
-                location_global=Pose2D(99,99,99), 
-                location_frenet=Frenet(99,99,99), 
-                length=99, 
-                width=99,
-                traffic_light_status=None)
+    # p = Pedestrian(priority_status=PedestrainPriority(2))
+    # v = Vehicle(world=None, 
+    #             actor_id=99, 
+    #             speed=99, 
+    #             acceleration=99, 
+    #             location_global=Pose2D(99,99,99), 
+    #             location_frenet=Frenet(99,99,99), 
+    #             length=99, 
+    #             width=99,
+    #             traffic_light_status=None)
     
-    lane = PerpendicularLane(crossing_pedestrain=[p], right_turning_lane=True)
-    msg = EnvDesc(next_intersection=[lane], reward_info=RewardInfo(current_action=RLDecision(1))).toRosMsg()
+    # lane = PerpendicularLane(crossing_pedestrain=[p], right_turning_lane=True)
+    # msg = EnvDesc(next_intersection=[lane], reward_info=RewardInfo(current_action=RLDecision(1))).toRosMsg()
     # msg = p.toRosMsg()
     # msg = v.toRosMsg()
+    msg = PathPlan(scenario_chosen = Scenario(2)).toRosMsg()
+    
 
     while not rospy.is_shutdown():
         rospy.loginfo(msg)

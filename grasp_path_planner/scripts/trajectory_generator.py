@@ -9,6 +9,7 @@ import copy
 class TrajGenerator:
     SAME_POSE_THRESHOLD = 2
     SAME_POSE_LOWER_THRESHOLD = 0.02
+    MAX_GLOBAL_SPEED = 30
 
     # constructor
     def __init__(self, traj_parameters):
@@ -176,7 +177,7 @@ class TrajGenerator:
         new_path_plan = PathPlan()
         new_path_plan.tracking_pose = tracking_pose
         new_path_plan.reset_sim = False
-        new_path_plan.tracking_speed = max(self.traj_parameters['min_speed'],self.start_speed)
+        new_path_plan.tracking_speed = min(max(self.traj_parameters['min_speed'],self.start_speed), self.MAX_GLOBAL_SPEED)
         new_path_plan.end_of_action = end_of_action
         new_path_plan.action_progress = action_progress
         new_path_plan.path_planner_terminate = path_planner_terminate
@@ -239,7 +240,7 @@ class TrajGenerator:
         new_path_plan = PathPlan()
         new_path_plan.tracking_pose = tracking_pose
         new_path_plan.reset_sim = False
-        new_path_plan.tracking_speed = max(self.traj_parameters['min_speed'],self.start_speed + action_progress * self.traj_parameters['accelerate_amt'])
+        new_path_plan.tracking_speed = min(max(self.traj_parameters['min_speed'],self.start_speed + action_progress * self.traj_parameters['accelerate_amt']), self.MAX_GLOBAL_SPEED)
         new_path_plan.end_of_action = end_of_action
         new_path_plan.action_progress = action_progress
         new_path_plan.path_planner_terminate = path_planner_terminate
@@ -306,8 +307,8 @@ class TrajGenerator:
         new_path_plan = PathPlan()
         new_path_plan.tracking_pose = tracking_pose
         new_path_plan.reset_sim = False
-        new_path_plan.tracking_speed = max(self.traj_parameters['min_speed'],
-                                           self.start_speed - action_progress * self.traj_parameters['decelerate_amt'])
+        new_path_plan.tracking_speed = min(max(self.traj_parameters['min_speed'],
+                                           self.start_speed - action_progress * self.traj_parameters['decelerate_amt']), self.MAX_GLOBAL_SPEED)
         new_path_plan.end_of_action = end_of_action
         new_path_plan.action_progress = action_progress
         new_path_plan.path_planner_terminate = path_planner_terminate
