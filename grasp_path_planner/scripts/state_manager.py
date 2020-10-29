@@ -63,6 +63,13 @@ class StateManager:
         elif stop_line is StopLineStatus.RIGHT_TURN_STOP:
             return [0, 0, 0, 1]
 
+    def createEuclidDistanceVec(vehicle1, vehicle2):
+        """
+        Create a vector with one element containing distance, as a replacement for traffic lights
+        """
+        dist = vehicle1.location_global.distance(vehicle2.location_global)
+        return [dist, 0, 0]
+
     def createLaneChangeState(self, env_desc, left=True):
         """
         Create a dictionary of states. They keys are "adjacent", "front", "back", "pedestrians",
@@ -453,7 +460,7 @@ class StateManager:
         """
         Create a state for intersection when taking a left turn
         """
-        dummy_vehicle = [1000, 1000, np.cos(0), np.sin(0), 0, 0] + [0, 0, 1] + [0]
+        dummy_vehicle = [1000, 1000, np.cos(0), np.sin(0), 0, 0] + [0, 0, 1000] + [0]
         dummy_ped = [1000, 1000, np.cos(0), np.sin(0), 0, 0] + [0, 1] + [0]
         pedestrian_states = []
         ego_vehicle_state = [
@@ -463,7 +470,7 @@ class StateManager:
             np.sin(env_desc.cur_vehicle_state.location_frenet.theta),
             env_desc.cur_vehicle_state.speed,
             env_desc.cur_vehicle_state.acceleration] + \
-            self.createTrafficLightOneHotVec(env_desc.cur_vehicle_state.traffic_light_status)
+            [0, 0, 0]
         # extract front vehicle and back vehicle and pedestrian in current lane
         # TODO: Make sure vehicle in front or back are always present
         current_lane = env_desc.current_lane
@@ -505,7 +512,8 @@ class StateManager:
                                    np.sin(front_vehicle.location_frenet.theta),
                                    front_vehicle.speed,
                                    front_vehicle.acceleration] + \
-                self.createTrafficLightOneHotVec(front_vehicle.traffic_light_status) + [1]
+                self.createEuclidDistanceVec(front_vehicle, env_desc.cur_vehicle_state) + [1]
+                # self.createTrafficLightOneHotVec(front_vehicle.traffic_light_status) + [1]
 
         if back_vehicle is None:
             back_vehicle_state = dummy_vehicle
@@ -516,7 +524,8 @@ class StateManager:
                                   np.sin(back_vehicle.location_frenet.theta),
                                   back_vehicle.speed,
                                   back_vehicle.acceleration] + \
-                self.createTrafficLightOneHotVec(back_vehicle.traffic_light_status) + [1]
+                self.createEuclidDistanceVec(back_vehicle, env_desc.cur_vehicle_state) + [1]
+                # self.createTrafficLightOneHotVec(back_vehicle.traffic_light_status) + [1]
         # identify vehicles from perpendicular lanes within 20m
         # TODO: How to select within 20m. Is it frenet x, or global distance
         parallel_lane_vehs = []
@@ -541,8 +550,8 @@ class StateManager:
                                                    np.sin(veh_in_ego.theta),
                                                    vehicle.speed,
                                                    vehicle.acceleration] +
-                                                  self.createTrafficLightOneHotVec(
-                                                      vehicle.traffic_light_status) + [1])
+                                                  self.createEuclidDistanceVec(vehicle,
+                                                      env_desc.cur_vehicle_state) + [1]
 
         if len(perpendicular_lane_vehs_in_ego) > 10:
             perpendicular_lane_vehs_in_ego = sorted(
@@ -565,8 +574,8 @@ class StateManager:
                                               np.sin(veh_in_ego.theta),
                                               vehicle.speed,
                                               vehicle.acceleration] +
-                                             self.createTrafficLightOneHotVec(
-                                                 vehicle.traffic_light_status) + [1])
+                                             self.createEuclidDistanceVec(vehicle,
+                                                env_desc.cur_vehicle_state) + [1]
 
         # filter out vehicles with negative x frenet
         parallel_lane_vehs_in_ego = list(filter(lambda item: item[0] >= 0, parallel_lane_vehs_in_ego))
@@ -604,8 +613,8 @@ class StateManager:
                                              np.sin(veh_in_ego.theta),
                                              vehicle.speed,
                                              vehicle.acceleration] +
-                                            self.createTrafficLightOneHotVec(
-                                                vehicle.traffic_light_status) + [1])
+                                             self.createEuclidDistanceVec(vehicle,
+                                                env_desc.cur_vehicle_state) + [1]
 
         # if number of vehicles in intersection are less than 3 then add dummies
         if len(intersection_vehs_in_ego) < 3:
