@@ -5,7 +5,7 @@ print(sys.path)
 import os
 homedir = os.getenv("HOME")
 distro = os.getenv("ROS_DISTRO")
-# os.environ["WANDB_MODE"] = "dryrun"
+os.environ["WANDB_MODE"] = "dryrun"
 sys.path.remove("/opt/ros/" + distro + "/lib/python2.7/dist-packages")
 sys.path.append("/opt/ros/" + distro + "/lib/python2.7/dist-packages")
 import rospy

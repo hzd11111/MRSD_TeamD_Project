@@ -158,6 +158,7 @@ class CarlaManager:
                 self.ego_start_road_lane_pair,
                 self.intersection_topology,
                 self.road_lane_to_orientation,
+                intersection_id=53, #TODO: Do this for a generic intersection
             )
 
         else:
@@ -168,6 +169,7 @@ class CarlaManager:
                 self.intersection_topology,
                 self.road_lane_to_orientation,
                 only_actors=True,
+                intersection_id=53, #TODO
             )
 
         ego_nearest_waypoint = self.carla_handler.world_map.get_waypoint(
