@@ -736,31 +736,35 @@ class CarlaHandler:
         #     nearest_waypoint = self.spawn_ego_point
 
         # filter current_lane, right_lane, left lane waypoints
-        current_lane_waypoints = self.filter_waypoints(
-            self.all_waypoints, 
-            nearest_waypoint.road_id, 
-            nearest_waypoint.lane_id
-        )
-        left_lane_waypoints = self.filter_waypoints(
-            self.all_waypoints,
-            nearest_waypoint.get_left_lane().road_id,
-            nearest_waypoint.get_left_lane().lane_id,
-        )
-        right_lane_waypoints = self.filter_waypoints(
-            self.all_waypoints,
-            nearest_waypoint.get_right_lane().road_id,
-            nearest_waypoint.get_right_lane().lane_id,
-        )
+        current_lane_waypoints = self.get_full_lane_waypoints(nearest_waypoint)#self.filter_waypoints(
+        #     self.all_waypoints, 
+        #     nearest_waypoint.road_id, 
+        #     nearest_waypoint.lane_id
+        # )
+        left_lane_waypoints = self.get_full_lane_waypoints(nearest_waypoint.get_left_lane())#self.filter_waypoints(
+        #     self.all_waypoints,
+        #     nearest_waypoint.get_left_lane().road_id,
+        #     nearest_waypoint.get_left_lane().lane_id,
+        # )
+
+        right_lane_waypoints = self.get_full_lane_waypoints(nearest_waypoint.get_right_lane())#self.filter_waypoints(
+        #     self.all_waypoints,
+        #     nearest_waypoint.get_right_lane().road_id,
+        #     nearest_waypoint.get_right_lane().lane_id,
+        # )
 
         if as_LanePoint == True:
+            print("A")
             current_lane_waypoints = [
                 LanePoint(global_pose=self.waypoint_to_pose2D(wp))
                 for wp in current_lane_waypoints
             ]
+            print("B")
             left_lane_waypoints = [
                 LanePoint(global_pose=self.waypoint_to_pose2D(wp))
                 for wp in left_lane_waypoints
             ]
+            print("C")
             right_lane_waypoints = [
                 LanePoint(global_pose=self.waypoint_to_pose2D(wp))
                 for wp in right_lane_waypoints
@@ -772,6 +776,16 @@ class CarlaHandler:
         return self.world_map.get_waypoint(
                 actor.get_location(), project_to_road=True
             )
+        
+    def get_full_lane_waypoints(self, waypoint):
+        if(waypoint is None):
+            return []
+        if(waypoint.lane_type != carla.LaneType.Driving):
+            print("OLO")
+            return []
+        
+        waypoints =  waypoint.previous_until_lane_start(1) + [waypoint] + waypoint.next_until_lane_end(1)
+        return waypoints
     
     def get_lane_ids(self, waypoints):
         '''Given a list of waypoints, returns unique lane ids'''

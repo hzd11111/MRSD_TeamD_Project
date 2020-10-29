@@ -24,6 +24,7 @@ from grasp_controller import GRASPPIDController
 from scenario_manager import CustomScenario
 from intersection_scenario_manager import IntersectionScenario
 from lane_following_scenario_manager import LaneFollowingScenario
+from lane_switching_scenario_manager import LaneSwitchingScenario
 from grasp_path_planner.srv import SimService, SimServiceResponse
 from agents.tools.misc import get_speed
 
@@ -538,8 +539,42 @@ class CarlaManager:
             crossing_pedestrain=[],
             origin_global_pose=lane_origin
             )
-        lane_cur = copy.copy(self.lane_cur)
         draw_string(location=carla.Location(x=lane_origin.x,y=lane_origin.y,z=2), text='8')
+        
+        self.adjacent_lanes = []
+        lane_left = ParallelLane(
+            lane_vehicles=actors_in_left_lane,
+            lane_points=left_lane_waypoints,
+            same_direction=True,
+            left_to_the_current=True,
+            adjacent_lane=True,
+            lane_distance=lane_distance,
+            origin_global_pose=left_lane_waypoints[0].global_pose
+            if len(left_lane_waypoints) != 0
+            else Pose2D(),
+            left_turning_lane=True,
+            right_turning_lane=False,
+        )     
+        self.adjacent_lanes.append(lane_left) 
+        
+        lane_right = ParallelLane(
+            lane_vehicles=actors_in_right_lane,
+            lane_points=right_lane_waypoints,
+            same_direction=True,
+            left_to_the_current=False,
+            adjacent_lane=True,
+            lane_distance=lane_distance,
+            origin_global_pose=right_lane_waypoints[0].global_pose
+            if len(right_lane_waypoints) != 0
+            else Pose2D(),
+            left_turning_lane=False,
+            right_turning_lane=True,
+        )    
+        self.adjacent_lanes.append(lane_right) 
+
+        lane_cur = copy.copy(self.lane_cur)
+        adjacent_lanes = copy.copy(self.adjacent_lanes)
+    
         '''
         Update Frenet Values
         '''
@@ -549,6 +584,18 @@ class CarlaManager:
 
         ### Update the ego_offset for current lane
         lane_cur.ego_offset = ego_vehicle_frenet_pose.x
+        
+        ### Update the ego offsets for parallel lanes
+        for i in range(len(adjacent_lanes)):
+            if adjacent_lanes[i].same_direction:
+                adjacent_lanes[i].ego_offset = ego_vehicle_frenet_pose.x
+            else:
+                adjacent_lanes[i].ego_offset = (
+                    adjacent_lanes[i].linestring.length - ego_vehicle_frenet_pose.x
+                )
+                
+        ### Update lane distances for adjacent lanes.
+        self.update_lane_distance(lane_cur, adjacent_lanes)
         
         ### Update frenet for ego vehicle (will be (0,x,x))
         ego_vehicle.location_frenet = lane_cur.GlobalToFrenet(
@@ -561,12 +608,26 @@ class CarlaManager:
                 lane_cur.lane_vehicles[i].location_global
             )
             
+        ### Update frenet for vehicles on adjacent lanes
+        # Update frenet after adjusting origin for the lane
+        for i in range(len(adjacent_lanes)):
+            for j in range(len(adjacent_lanes[i].lane_vehicles)):
+                adjacent_lanes[i].lane_vehicles[j].location_frenet = adjacent_lanes[
+                    i
+                ].GlobalToFrenet(adjacent_lanes[i].lane_vehicles[j].location_global)
+            
         ### Update all waypoint frenet coordinates.
         # Update current lane points
         for i in range(len(lane_cur.lane_points)):
             lane_cur.lane_points[i].frenet_pose = lane_cur.GlobalToFrenet(
                 lane_cur.lane_points[i].global_pose
             )
+        # Update points for adjacent lanes.
+        for i in range(len(adjacent_lanes)):
+            for j in range(len(adjacent_lanes[i].lane_points)):
+                adjacent_lanes[i].lane_points[j].frenet_pose = adjacent_lanes[
+                    i
+                ].GlobalToFrenet(adjacent_lanes[i].lane_points[j].global_pose)
         
         '''
         Part 3: Create ROS msg objects and ship it!
@@ -589,7 +650,7 @@ class CarlaManager:
         env_desc.cur_vehicle_state = ego_vehicle
         env_desc.current_lane = lane_cur
         # env_desc.next_intersection = []
-        # env_desc.adjacent_lanes = []
+        env_desc.adjacent_lanes = adjacent_lanes
         env_desc.speed_limit = self.speed_limit
         env_desc.reward_info = reward_info
         env_desc.global_path = self.global_path_in_intersection
@@ -665,7 +726,7 @@ class CarlaManager:
                     self.ego_vehicle,
                     self.vehicles_list,
                     self.global_path_in_intersection #TODO: change variable name
-                ) = self.tm.reset()
+                ) = self.tm.reset(warm_start_duration=4)
 
 
                 self.global_path_in_intersection = [
@@ -743,7 +804,9 @@ class CarlaManager:
         # self.tm = CustomScenario(self.client, self.carla_handler)
 
         # self.tm = IntersectionScenario(self.client)
-        self.tm = LaneFollowingScenario(self.client, self.carla_handler)
+        #self.tm = LaneFollowingScenario(self.client, self.carla_handler)
+        self.tm = LaneSwitchingScenario(self.client, self.carla_handler)
+
 
         # Reset Environment
         self.resetEnv()
@@ -777,6 +840,8 @@ class CarlaManager:
         Calculate the lane_distance parameter for adjacent lanes.
         """
         for i in range(len(adjacent_lanes)):
+            if(len(adjacent_lanes[i].lane_points) == 0):
+                continue
             num_wps_in_lane = len(adjacent_lanes[i].lane_points)
             middle_lane_point = adjacent_lanes[i].lane_points[num_wps_in_lane // 2]
             middle_lane_point_global_pose = middle_lane_point.global_pose

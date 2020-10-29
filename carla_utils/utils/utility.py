@@ -53,7 +53,7 @@ class PathPlan(object):
         end_of_action=False,
         action_progress=0.0,
         auto_pilot=False,
-        scenario_chosen=None,
+        scenario_chosen=0,
     ):
         self.tracking_pose = tracking_pose
         self.future_poses = future_poses
@@ -89,7 +89,7 @@ class PathPlan(object):
         msg.end_of_action = self.end_of_action
         msg.action_progress = self.action_progress
         msg.auto_pilot = self.auto_pilot
-        msg.scenario_chosen = self.scenario_chosen.value
+        msg.scenario_chosen = self.scenario_chosen
         return msg
 
 

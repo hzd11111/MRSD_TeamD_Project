@@ -159,7 +159,7 @@ class StateManager:
                                    1]
 
         if back_vehicle is None:
-            back_vehicle = dummy_vehicle
+            back_vehicle_state = dummy_vehicle
         else:
             back_vehicle_state = [back_vehicle.location_frenet.x,
                                   back_vehicle.location_frenet.y,

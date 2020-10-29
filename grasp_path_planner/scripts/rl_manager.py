@@ -110,7 +110,7 @@ class GeneralRLManager:
         if event == Scenario.SWITCH_LANE_LEFT:
             return self.convertDecisionSwitchLaneLeft(action)
         if event == Scenario.SWITCH_LANE_RIGHT:
-            return self.convertDecisionRightTurn(action)
+            return self.convertDecisionSwitchLaneRight(action)
         if event == Scenario.LEFT_TURN or \
             event == Scenario.RIGHT_TURN or \
                 event == Scenario.GO_STRAIGHT:
@@ -206,7 +206,7 @@ class RLManager(GeneralRLManager):
         if self.event == Scenario.SWITCH_LANE_LEFT:
             return self.convertDecisionSwitchLaneLeft(action)
         if self.event == Scenario.SWITCH_LANE_RIGHT:
-            return self.convertDecisionRightTurn(action)
+            return self.convertDecisionSwitchLaneRight(action)
         if self.event == Scenario.LEFT_TURN or \
             self.event == Scenario.RIGHT_TURN or \
                 self.event == Scenario.GO_STRAIGHT:
