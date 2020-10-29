@@ -53,6 +53,8 @@ from functional_utility import Pose2D, Frenet
 
 from actors import Actor, Vehicle, Pedestrian
 
+sys.path.append("../../grasp_path_planner/scripts/")
+from settings import *
 #######################################################################################
 
 NODE_NAME = "carla_bridge"
@@ -83,7 +85,7 @@ class CarlaManager:
         self.collision_sensor = None
         self.tm = None
 
-        self.simulation_sync_timestep = 0.05
+        self.simulation_sync_timestep = FIXED_DELTA_SECONDS
         self.first_frame_generated = False
         self.path_planner_terminate = False
 
@@ -106,7 +108,7 @@ class CarlaManager:
         self.road_lane_to_orientation = None
         self.all_vehicles = None
 
-    def ol_pathRequest(self, data):
+    def intersection_pathRequest(self, data):
 
         ##########################################
         # APPLY CONTROL BLOCK
@@ -412,7 +414,7 @@ class CarlaManager:
 
         return SimServiceResponse(env_desc.toRosMsg())
 
-    def pathRequest(self, data):
+    def lane_following_pathRequest(self, data):
         '''
             Path request method gets called by the path planner at each timestep. 
             It accepts the path plan ROS msg from the path planner with the info
@@ -596,6 +598,7 @@ class CarlaManager:
         
         return SimServiceResponse(env_desc.toRosMsg())
 
+
     def destroy_actors_and_sensors(self):
 
         if self.collision_sensor is not None:
@@ -621,6 +624,39 @@ class CarlaManager:
 
         return Pose2D(x=x, y=y, theta=theta)
 
+    def apply_control_after_reset(self):
+        del self.collision_sensor
+        self.collision_sensor = self.carla_handler.world.spawn_actor(
+            self.carla_handler.world.get_blueprint_library().find(
+                "sensor.other.collision"
+            ),
+            carla.Transform(),
+            attach_to=self.ego_vehicle,
+        )
+
+        self.collision_sensor.listen(lambda event: self.collision_handler(event))
+        self.vehicle_controller = GRASPPIDController(
+            self.ego_vehicle,
+            args_lateral={
+                "K_P": 0.5,
+                "K_D": 0,
+                "K_I": 0,
+                "dt": self.simulation_sync_timestep,
+            },
+            args_longitudinal={
+                "K_P": 0.5,
+                "K_D": 0,
+                "K_I": 0.1,
+                "dt": self.simulation_sync_timestep,
+            },
+        )
+        self.ego_vehicle.apply_control(
+            carla.VehicleControl(manual_gear_shift=True, gear=1)
+        )
+        self.ego_vehicle.apply_control(
+            carla.VehicleControl(manual_gear_shift=False)
+        )
+
     def resetEnv(self):
 
         self.destroy_actors_and_sensors()
@@ -630,7 +666,7 @@ class CarlaManager:
         self.speed_limit = 25
 
         try:
-            if False:
+            if CURRENT_SCENARIO in INTERSECTION_SCENARIOS:
                 (
                     self.ego_vehicle,
                     self.vehicles_list,
@@ -660,7 +696,7 @@ class CarlaManager:
                 )
 
                 self.draw_global_path(self.global_path_in_intersection)
-            else: # for Lane Follow
+            elif CURRENT_SCENARIO in LANE_SCENARIOS:
                 (
                     self.ego_vehicle,
                     self.vehicles_list,
@@ -680,52 +716,21 @@ class CarlaManager:
                 )
 
             ## Handing over control
-            del self.collision_sensor
-            self.collision_sensor = self.carla_handler.world.spawn_actor(
-                self.carla_handler.world.get_blueprint_library().find(
-                    "sensor.other.collision"
-                ),
-                carla.Transform(),
-                attach_to=self.ego_vehicle,
-            )
-
-            self.collision_sensor.listen(lambda event: self.collision_handler(event))
-            self.vehicle_controller = GRASPPIDController(
-                self.ego_vehicle,
-                args_lateral={
-                    "K_P": 0.5,
-                    "K_D": 0,
-                    "K_I": 0,
-                    "dt": self.simulation_sync_timestep,
-                },
-                args_longitudinal={
-                    "K_P": 0.5,
-                    "K_D": 0,
-                    "K_I": 0.1,
-                    "dt": self.simulation_sync_timestep,
-                },
-            )
-            self.ego_vehicle.apply_control(
-                carla.VehicleControl(manual_gear_shift=True, gear=1)
-            )
-            self.ego_vehicle.apply_control(
-                carla.VehicleControl(manual_gear_shift=False)
-            )
+            self.apply_control_after_reset()
+            
         except rospy.ROSInterruptException:
             print("failed....")
             pass
+    
+    def resetEnv_P2P(self):
+        self.resetEnv()
+        # TODO: FIX THIS EVENTUALLY, SPAWN NPCs, has its own tm.
+        # need to formalize p2p traffic manager
+        pass
 
     def initialize(self, synchronous_mode=True):
-        # initialize node
-        rospy.init_node(NODE_NAME, anonymous=True)
-
-        # initialize service
-        self.planner_service = rospy.Service(
-            SIM_SERVICE_NAME, SimService, self.pathRequest
-        )
 
         # Start Client. Make sure Carla server is running before starting.
-
         client = carla.Client("localhost", 2000)
         client.set_timeout(2.0)
         print("Connection to CARLA server established!")
@@ -740,13 +745,34 @@ class CarlaManager:
             settings.fixed_delta_seconds = self.simulation_sync_timestep
             self.carla_handler.world.apply_settings(settings)
 
-        # self.tm = CustomScenario(self.client, self.carla_handler)
+        # initialize node
+        rospy.init_node(NODE_NAME, anonymous=True)
 
-        # self.tm = IntersectionScenario(self.client)
-        self.tm = LaneFollowingScenario(self.client, self.carla_handler)
+        if CURRENT_SCENARIO in LANE_SCENARIOS: 
+            self.tm = LaneFollowingScenario(self.client, self.carla_handler)
+        elif CURRENT_SCENARIO in INTERSECTION_SCENARIOS: 
+            self.tm = IntersectionScenario(self.client)
+        
+        # initialize service
+        self.planner_service = rospy.Service(
+            SIM_SERVICE_NAME, SimService, self.pathRequest_selector
+        )
 
         # Reset Environment
-        self.resetEnv()
+        if CURRENT_MODE == Mode.TRAIN:
+            self.resetEnv()
+        elif CURRENT_MODE == Mode.TEST:
+            self.resetEnv_P2P()
+
+    def pathRequest_selector(self, data):
+        
+        plan = PathPlan.fromRosMsg(data.path_plan)
+        scenario = data.scenario_chosen
+        
+        if scenario in LANE_SCENARIOS: 
+            return self.lane_following_pathRequest(data)
+        elif scenario in INTERSECTION_SCENARIOS: 
+            return self.intersection_pathRequest(data)
 
     def spin(self):
         print("Start Ros Spin")
