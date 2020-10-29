@@ -595,7 +595,7 @@ class CarlaHandler:
             vehicle_nearest_waypoint = self.world_map.get_waypoint(
                 vehicle.get_location(), project_to_road=True
             )
-            if(vehicle_nearest_waypoint.is_junction and vehicle_nearest_waypoint.get_junction().id == intersection_id and vehicle.id is not ego_vehicle_id):
+            if(vehicle_nearest_waypoint.is_junction and vehicle_nearest_waypoint.get_junction().id == intersection_id and (vehicle.id != ego_vehicle_id)):
                 intersection_vehicles.append(Vehicle(self.world, vehicle.id))
                 
         return intersection_vehicles
