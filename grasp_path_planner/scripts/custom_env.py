@@ -87,7 +87,7 @@ class CustomEnv(gym.Env):
             end_of_action = end_of_action or done
         env_state = self.rl_manager.makeStateVector(env_copy)
         reward = None
-        reward = self.rl_manager.reward_manager.get_reward(env_copy, action)
+        reward = self.rl_manager.reward_manager.get_reward(env_copy, decision)
         # for sending success signal during testing
         success = not (
             env_desc.reward_info.collision
@@ -102,6 +102,7 @@ class CustomEnv(gym.Env):
         """
         Resets the environment
         """
+        print("####################################")
         self.rl_manager.reward_manager.reset()
         env_desc = self.path_planner.resetSim()
         env_copy = env_desc

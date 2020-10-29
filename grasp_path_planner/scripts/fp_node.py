@@ -5,7 +5,7 @@ print(sys.path)
 import os
 homedir = os.getenv("HOME")
 distro = os.getenv("ROS_DISTRO")
-os.environ["WANDB_MODE"] = "dryrun"
+# os.environ["WANDB_MODE"] = "dryrun"
 sys.path.remove("/opt/ros/" + distro + "/lib/python2.7/dist-packages")
 sys.path.append("/opt/ros/" + distro + "/lib/python2.7/dist-packages")
 import rospy
@@ -41,7 +41,7 @@ class FullPlannerManager:
         self.path_planner.initialize()
 
     def run_train(self):
-        wandb.init(entity="rsp2020", project="grasp", config=tf.flags.FLAGS, sync_tensorboard=True)
+        wandb.init(entity="grasp", project="grasp_runs", config=tf.flags.FLAGS, sync_tensorboard=True)
         checkpoint_callback = CheckpointCallback(save_freq=1000, save_path=wandb.run.dir, name_prefix='rl_model')
         env = CustomEnv(self.path_planner, self.behavior_planner, event)
         env = make_vec_env(lambda: env, n_envs=1)
@@ -77,6 +77,7 @@ class FullPlannerManager:
                         target_network_update_freq=100,
                         tensorboard_log=wandb.run.dir, gamma=0.93, learning_rate=0.0001)
 
+        print(wandb.run.dir)
         wandb.save("./*.py")
         wandb.save("./*.md")
         model.learn(total_timesteps=20000, callback=checkpoint_callback)

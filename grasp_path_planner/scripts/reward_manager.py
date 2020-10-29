@@ -250,16 +250,16 @@ class LaneChangeReward(Reward):
         """
         Implementing interface
         """
-        if action == RLDecision.SWITCH_LANE.value:
+        if action == RLDecision.SWITCH_LANE:
             # call lane change reward function
             return self.lane_change_reward(desc, action)
-        elif action == RLDecision.CONSTANT_SPEED.value:
+        elif action == RLDecision.CONSTANT_SPEED:
             # call constant speed reward functon
             return self.speed_reward(desc, action)
-        elif action == RLDecision.ACCELERATE.value:
+        elif action == RLDecision.ACCELERATE:
             # call accelerate reward function
             return self.speed_reward(desc, action)
-        elif action == RLDecision.DECELERATE.value:
+        elif action == RLDecision.DECELERATE:
             # call decelerate reward function
             return self.speed_reward(desc, action)
 
@@ -401,13 +401,13 @@ class PedestrianReward(Reward):
         """
         Implementing Interface
         """
-        if action == RLDecision.CONSTANT_SPEED.value:
+        if action == RLDecision.CONSTANT_SPEED:
             # call constant speed reward functon
             return self.speed_reward(desc, action)
-        elif action == RLDecision.ACCELERATE.value:
+        elif action == RLDecision.ACCELERATE:
             # call accelerate reward function
             return self.speed_reward(desc, action)
-        elif action == RLDecision.DECELERATE.value:
+        elif action == RLDecision.DECELERATE:
             # call decelerate reward function
             return self.speed_reward(desc, action)
         # reset closest distance at each action end
@@ -467,8 +467,50 @@ class PlainReward(Reward):
         return
 
 
+# Plain Lane switch reward
+class PlainLaneChange(Reward):
+    '''
+    Implements positional costs and basic required interfaces for all rewards
+    '''
+
+    def __init__(self):
+        super().__init__()
+        self.max_reward = 1
+
+    def update(self, desc, action):
+        """
+        Meant to update costs and other intermediate variables
+        """
+        return
+
+    def get_reward(self, desc, action):
+        """
+        Gives the cost of taking action
+        """
+        reward = 0
+        if desc.reward_info.collision or \
+                (desc.reward_info.time_elapsed > 80):
+            reward = reward - 1
+        elif desc.reward_info.path_planner_terminate and \
+                action is RLDecision.SWITCH_LANE_LEFT or action is RLDecision.SWITCH_LANE_RIGHT:
+            reward += desc.reward_info.action_progress
+        elif desc.reward_info.path_planner_terminate:
+            reward = -1
+        print("Reward is ", reward)
+        return reward
+
+    def reset(self):
+        """
+        Resets environment
+        """
+        return
+
+
 def reward_selector(event):
     """
     Select reward manager based on event
     """
-    return PlainReward()
+    if event is Scenario.SWITCH_LANE_RIGHT or event is Scenario.SWITCH_LANE_LEFT:
+        return PlainLaneChange()
+    else:
+        return PlainReward()

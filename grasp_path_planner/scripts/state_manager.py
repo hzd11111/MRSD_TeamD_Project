@@ -82,22 +82,14 @@ class StateManager:
             np.sin(env_desc.cur_vehicle_state.location_frenet.theta),
             env_desc.cur_vehicle_state.speed,
             env_desc.cur_vehicle_state.acceleration]
+        adj_lane_vehs = []
 
         for lane in env_desc.adjacent_lanes:
             if self.selectLane(lane, left):
                 # Add relevant vehicles
                 for vehicle in lane.lane_vehicles:
-                    vehicle_in_ego = vehicle.fromControllingVehicle(
-                        env_desc.cur_vehicle_state.location_frenet,
-                        lane)
-                    vehicle_state = [vehicle_in_ego.x,
-                                     vehicle_in_ego.y,
-                                     np.cos(vehicle_in_ego.theta),
-                                     np.sin(vehicle_in_ego.theta),
-                                     vehicle.speed,
-                                     vehicle.acceleration,
-                                     1]
-                    adj_lane_vehicles_states.append(vehicle_state)
+                    adj_lane_vehs.append([vehicle, lane])
+                    
                 # Add relevant pedestrians
                 for pedestrian in lane.crossing_pedestrain:
                     pedestrian_in_ego = pedestrian.fromControllingVehicle(
@@ -114,6 +106,24 @@ class StateManager:
                 # Get the lane distance
                 lane_distance = lane.lane_distance
                 break
+
+        if len(adj_lane_vehs) > 5:
+            adj_lane_vehs = sorted(
+                lambda item: item[0].location_global.distance(env_desc.cur_vehicle_state.location_global),
+                adj_lane_vehs)[:5]
+
+        for vehicle, lane in adj_lane_vehs:
+            vehicle_in_ego = vehicle.fromControllingVehicle(
+                env_desc.cur_vehicle_state.location_frenet,
+                lane)
+            vehicle_state = [vehicle_in_ego.x,
+                             vehicle_in_ego.y,
+                             np.cos(vehicle_in_ego.theta),
+                             np.sin(vehicle_in_ego.theta),
+                             vehicle.speed,
+                             vehicle.acceleration,
+                             1]
+            adj_lane_vehicles_states.append(vehicle_state)
 
         if len(adj_lane_vehicles_states) < 5:
             dummy_vehicles = list(itertools.repeat(
@@ -175,8 +185,10 @@ class StateManager:
             front_vehicle_state + \
             back_vehicle_state + \
             [coord for state in pedestrian_states for coord in state] + [lane_distance]
-
-        assert(len(entire_state) == 77)
+        try:
+            assert(len(entire_state) == 77)
+        except e:
+            import ipdb; ipdb.set_trace()
         return np.array(entire_state)
 
     def createLaneFollowingState(self, env_desc):
