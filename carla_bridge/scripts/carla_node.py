@@ -767,7 +767,8 @@ class CarlaManager:
     def pathRequest_selector(self, data):
         
         plan = PathPlan.fromRosMsg(data.path_plan)
-        scenario = data.scenario_chosen
+        scenario = plan.scenario_chosen
+        scenario = CURRENT_SCENARIO
         
         if scenario in LANE_SCENARIOS: 
             return self.lane_following_pathRequest(data)
