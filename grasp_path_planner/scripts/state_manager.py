@@ -584,7 +584,7 @@ class StateManager:
             if lane.is_misc is True:
                 for vehicle in lane.lane_vehicles:
                     if vehicle.location_global.distance(
-                        env_desc.cur_vehicle_state.location_global) < 20.0:
+                        env_desc.cur_vehicle_state.location_global) < 70.0:
                         intersection_vehs.append(vehicle)
 
         # if number of vehicles in intersection are more then 3 then take 3 closest
@@ -644,7 +644,7 @@ class StateManager:
             [coord for state in parallel_lane_vehs_in_ego for coord in state] + \
             [coord for state in intersection_vehs_in_ego for coord in state]
 
-        print(len(entire_state))
+        # print(len(entire_state))
         assert(len(entire_state) == 294)  # TODO: Update this after adding lights
         return np.array(entire_state)
 

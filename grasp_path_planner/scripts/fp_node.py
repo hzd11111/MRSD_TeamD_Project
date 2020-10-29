@@ -79,7 +79,7 @@ class FullPlannerManager:
 
         wandb.save("./*.py")
         wandb.save("./*.md")
-        model.learn(total_timesteps=20000, callback=checkpoint_callback)
+        model.learn(total_timesteps=40000, callback=checkpoint_callback)
         model.save(MODEL_SAVE_PATH)
         wandb.save(MODEL_SAVE_PATH + ".zip")
 

@@ -457,7 +457,7 @@ class PlainReward(Reward):
             reward = reward - 1
         elif desc.reward_info.path_planner_terminate:
             reward += desc.reward_info.action_progress
-        print("Reward is ", reward)
+        # print("Reward is ", reward)
         return reward
 
     def reset(self):
