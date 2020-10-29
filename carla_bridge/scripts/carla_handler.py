@@ -427,6 +427,8 @@ class CarlaHandler:
             vehicle_nearest_waypoint = self.world_map.get_waypoint(
                 vehicle.get_location(), project_to_road=True
             )
+            # if(vehicle_nearest_waypoint.is_junction):
+            #     continue
             key = (vehicle_nearest_waypoint.road_id, vehicle_nearest_waypoint.lane_id)
             if key in road_lane_to_vehicle_id:
                 road_lane_to_vehicle_id[key].append(vehicle.id)
@@ -514,17 +516,6 @@ class CarlaHandler:
                     ]
                 )
 
-        # ## Get unallocated actor ids
-        # unallocated_actor_ids = [
-        #     vehicle.id
-        #     for vehicle in all_vehicles
-        #     if vehicle.id not in allocated_actor_ids
-        # ]
-
-        # misc_vehicles = [
-        #     Vehicle(self.world, vehicle_id) for vehicle_id in unallocated_actor_ids
-        # ]
-
         return full_info, ego_lane_info, allocated_actor_ids
 
     def get_lane_info_only_actors(self, all_vehicles, lane_list, ego_road_lane_ID_pair):
@@ -541,6 +532,8 @@ class CarlaHandler:
             vehicle_nearest_waypoint = self.world_map.get_waypoint(
                 vehicle.get_location(), project_to_road=True
             )
+            # if(vehicle_nearest_waypoint.is_junction):
+            #     continue
             key = (vehicle_nearest_waypoint.road_id, vehicle_nearest_waypoint.lane_id)
             if key in road_lane_to_vehicle_id:
                 road_lane_to_vehicle_id[key].append(vehicle.id)
@@ -594,19 +587,18 @@ class CarlaHandler:
                     [this_connection_actors, [], this_connection_road_lanes]
                 )
 
-        # ## Get unallocated actor ids
-        # unallocated_actor_ids = [
-        #     vehicle.id
-        #     for vehicle in all_vehicles
-        #     if vehicle.id not in allocated_actor_ids
-        # ]
-        # print("Allocated:", allocated_actor_ids, "Unallocated:", unallocated_actor_ids)
-
-        # misc_vehicles = [
-        #     Vehicle(self.world, vehicle_id) for vehicle_id in unallocated_actor_ids
-        # ]
-
         return full_info, ego_lane_info, allocated_actor_ids
+    
+    def get_intersection_vehicles(self, all_vehicles, intersection_id, ego_vehicle_id):
+        intersection_vehicles = []
+        for vehicle in all_vehicles:
+            vehicle_nearest_waypoint = self.world_map.get_waypoint(
+                vehicle.get_location(), project_to_road=True
+            )
+            if(vehicle_nearest_waypoint.is_junction and vehicle_nearest_waypoint.get_junction().id == intersection_id and (vehicle.id != ego_vehicle_id)):
+                intersection_vehicles.append(Vehicle(self.world, vehicle.id))
+                
+        return intersection_vehicles
 
     def get_state_information_intersection(
         self,
@@ -616,6 +608,7 @@ class CarlaHandler:
         intersection_topology=None,
         road_lane_to_orientation=None,
         only_actors=False,
+        intersection_id=53,
     ):
 
         (
@@ -661,9 +654,12 @@ class CarlaHandler:
                 for vehicle in all_vehicles
                 if vehicle.id not in all_allocated_vehicle_ids
             ]
-            all_misc_vehicles = [
-                Vehicle(self.world, vehicle_id) for vehicle_id in unallocated_actor_ids
-            ]
+            # all_misc_vehicles = [
+            #     Vehicle(self.world, vehicle_id) for vehicle_id in unallocated_actor_ids
+            # ]
+            all_misc_vehicles = self.get_intersection_vehicles(all_vehicles, intersection_id, ego_vehicle.id)
+            print("Intersection Actors:", [v.actor_id for v in all_misc_vehicles])
+
 
             return (
                 intersecting_left_info,
@@ -710,15 +706,12 @@ class CarlaHandler:
                 for vehicle in all_vehicles
                 if vehicle.id not in all_allocated_vehicle_ids
             ]
-            print(
-                "Allocated:",
-                all_allocated_vehicle_ids,
-                "Unallocated:",
-                unallocated_actor_ids,
-            )
-            all_misc_vehicles = [
-                Vehicle(self.world, vehicle_id) for vehicle_id in unallocated_actor_ids
-            ]
+            
+            # all_misc_vehicles = [
+            #     Vehicle(self.world, vehicle_id) for vehicle_id in unallocated_actor_ids
+            # ]
+            all_misc_vehicles = self.get_intersection_vehicles(all_vehicles, intersection_id, ego_vehicle.id)
+            print("Intersection Actors:", [v.actor_id for v in all_misc_vehicles])
 
             return (
                 intersecting_left_info,
