@@ -688,11 +688,11 @@ class CarlaHandler:
         ) = self.sort_parallel_actors_by_lane(ego_vehicle, as_Vehicle=True)
 
         # also get actors directly in front and rear. 
-        (
-            front_vehicle,
-            rear_vehicle
-        ) = self.get_closest_front_and_back_actors(ego_vehicle,
-                actors_in_current_lane=actors_in_current_lane, as_Vehicle=True)
+        # (
+        #     front_vehicle,
+        #     rear_vehicle
+        # ) = self.get_closest_front_and_back_actors(ego_vehicle,
+        #         actors_in_current_lane=actors_in_current_lane, as_Vehicle=True)
         
         # find the lane width
         lane_distance = self.get_nearest_waypoint(ego_vehicle).lane_width
@@ -708,8 +708,8 @@ class CarlaHandler:
             current_lane_waypoints,
             left_lane_waypoints,
             right_lane_waypoints,
-            front_vehicle,
-            rear_vehicle,
+            None,
+            None,
             actors_in_current_lane,
             actors_in_left_lane,
             actors_in_right_lane,
@@ -749,13 +749,13 @@ class CarlaHandler:
                 nearest_waypoint.lane_id
             )
             
-        if(left_waypoint.lane_type == carla.LaneType.Driving):
+        if(left_waypoint is not None and left_waypoint.lane_type == carla.LaneType.Driving):
             left_lane_waypoints = self.filter_waypoints(
                 self.all_waypoints,
                 left_waypoint.road_id,
                 left_waypoint.lane_id,
             )
-        if(right_waypoint.lane_type == carla.LaneType.Driving):
+        if(right_waypoint is not None and right_waypoint.lane_type == carla.LaneType.Driving):
             right_lane_waypoints = self.filter_waypoints(
                 self.all_waypoints,
                 right_waypoint.road_id,
@@ -763,13 +763,13 @@ class CarlaHandler:
             )
             
         if(nearest_waypoint.lane_id > 0):
-            current_lane_waypoints = current_lane_waypoints[::-1]
+            current_lane_waypoints.reverse()
         
         if(left_waypoint.lane_id > 0):
-            left_lane_waypoints = left_lane_waypoints[::-1]
+            left_lane_waypoints.reverse()
             
         if(right_waypoint.lane_id > 0):
-            right_lane_waypoints = right_lane_waypoints[::-1]
+            right_lane_waypoints.reverse()
         
 
         if as_LanePoint == True:
@@ -834,7 +834,8 @@ class CarlaHandler:
 
         # get all the vehicles in the world
         all_vehicles = self.world.get_actors().filter("vehicle.*")
-
+        
+        current_road_id = self.get_nearest_waypoint(ego_vehicle).road_id
         # loop over all actors to get vehicles in the same, right of left lane
         # as ego vehicles
         for actor in all_vehicles:
@@ -845,13 +846,12 @@ class CarlaHandler:
             
             # get waypoint closest to the actor
             actor_nearest_waypoint = self.get_nearest_waypoint(actor)
-
             # append the actor to the correct lane list based on their lane id
-            if actor_nearest_waypoint.lane_id in left_lane_ids:
+            if actor_nearest_waypoint.lane_id in left_lane_ids and actor_nearest_waypoint.road_id == current_road_id:
                 actors_in_left_lane.append(actor)
-            elif actor_nearest_waypoint.lane_id in right_lane_ids:
+            elif actor_nearest_waypoint.lane_id in right_lane_ids and actor_nearest_waypoint.road_id == current_road_id:
                 actors_in_right_lane.append(actor)
-            else:
+            elif actor_nearest_waypoint.lane_id in current_lane_ids and actor_nearest_waypoint.road_id == current_road_id:
                 actors_in_current_lane.append(actor)
 
         # return as Vehicle object list, instead of carla.Vehicle object list

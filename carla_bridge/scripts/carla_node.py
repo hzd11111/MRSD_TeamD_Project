@@ -540,9 +540,10 @@ class CarlaManager:
             origin_global_pose=lane_origin
             )
         draw_string(location=carla.Location(x=lane_origin.x,y=lane_origin.y,z=2), text='8')
+        print(len(self.lane_cur.lane_vehicles), "KLEN")
         
         self.adjacent_lanes = []
-        lane_left = ParallelLane(
+        self.lane_left = ParallelLane(
             lane_vehicles=actors_in_left_lane,
             lane_points=left_lane_waypoints,
             same_direction=True,
@@ -555,9 +556,10 @@ class CarlaManager:
             left_turning_lane=True,
             right_turning_lane=False,
         )     
-        self.adjacent_lanes.append(lane_left) 
         
-        lane_right = ParallelLane(
+        # self.adjacent_lanes.append(lane_left) 
+        
+        self.lane_right = ParallelLane(
             lane_vehicles=actors_in_right_lane,
             lane_points=right_lane_waypoints,
             same_direction=True,
@@ -570,10 +572,12 @@ class CarlaManager:
             left_turning_lane=False,
             right_turning_lane=True,
         )    
-        self.adjacent_lanes.append(lane_right) 
+        # self.adjacent_lanes.append(lane_right) 
 
         lane_cur = copy.copy(self.lane_cur)
-        adjacent_lanes = copy.copy(self.adjacent_lanes)
+        lane_right = copy.copy(self.lane_right)
+        lane_left = copy.copy(self.lane_left)
+        adjacent_lanes = [lane_left, lane_right]
     
         '''
         Update Frenet Values
