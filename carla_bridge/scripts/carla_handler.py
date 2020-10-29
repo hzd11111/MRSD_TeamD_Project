@@ -761,14 +761,15 @@ class CarlaHandler:
                 right_waypoint.road_id,
                 right_waypoint.lane_id,
             )
+        
             
         if(nearest_waypoint.lane_id > 0):
             current_lane_waypoints.reverse()
         
-        if(left_waypoint.lane_id > 0):
+        if(left_waypoint is not None left_waypoint.lane_id > 0):
             left_lane_waypoints.reverse()
             
-        if(right_waypoint.lane_id > 0):
+        if(right_waypoint is not None and right_waypoint.lane_id > 0):
             right_lane_waypoints.reverse()
         
 
