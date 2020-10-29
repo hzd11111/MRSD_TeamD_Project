@@ -19,7 +19,7 @@ from global_planner import get_global_planner
 town05_city = { "road_ids": [6, 7, 8], 
                 "distance_bwn_waypoints":1,
                 "total_non_ego_vehicles":3,
-                "total_non_ego_lane_vehicles":5, #non ego vehicles in other lane
+                "total_non_ego_lane_vehicles":10, #non ego vehicles in other lane
                 "max_vehicles_in_front":2,
                 "target_speed":1,
                 "max_dist_bwn_veh":5,

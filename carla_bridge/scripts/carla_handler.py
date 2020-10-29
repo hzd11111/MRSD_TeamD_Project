@@ -754,17 +754,14 @@ class CarlaHandler:
         # )
 
         if as_LanePoint == True:
-            print("A")
             current_lane_waypoints = [
                 LanePoint(global_pose=self.waypoint_to_pose2D(wp))
                 for wp in current_lane_waypoints
             ]
-            print("B")
             left_lane_waypoints = [
                 LanePoint(global_pose=self.waypoint_to_pose2D(wp))
                 for wp in left_lane_waypoints
             ]
-            print("C")
             right_lane_waypoints = [
                 LanePoint(global_pose=self.waypoint_to_pose2D(wp))
                 for wp in right_lane_waypoints
@@ -781,7 +778,6 @@ class CarlaHandler:
         if(waypoint is None):
             return []
         if(waypoint.lane_type != carla.LaneType.Driving):
-            print("OLO")
             return []
         
         waypoints =  waypoint.previous_until_lane_start(1) + [waypoint] + waypoint.next_until_lane_end(1)
