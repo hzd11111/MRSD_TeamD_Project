@@ -734,24 +734,43 @@ class CarlaHandler:
         )
         # else:
         #     nearest_waypoint = self.spawn_ego_point
+        left_waypoint = nearest_waypoint.get_left_lane()
+        right_waypoint = nearest_waypoint.get_right_lane()
 
+        current_lane_waypoints = []
+        left_lane_waypoints = []
+        right_lane_waypoints = []
+        
         # filter current_lane, right_lane, left lane waypoints
-        current_lane_waypoints = self.get_full_lane_waypoints(nearest_waypoint)#self.filter_waypoints(
-        #     self.all_waypoints, 
-        #     nearest_waypoint.road_id, 
-        #     nearest_waypoint.lane_id
-        # )
-        left_lane_waypoints = self.get_full_lane_waypoints(nearest_waypoint.get_left_lane())#self.filter_waypoints(
-        #     self.all_waypoints,
-        #     nearest_waypoint.get_left_lane().road_id,
-        #     nearest_waypoint.get_left_lane().lane_id,
-        # )
-
-        right_lane_waypoints = self.get_full_lane_waypoints(nearest_waypoint.get_right_lane())#self.filter_waypoints(
-        #     self.all_waypoints,
-        #     nearest_waypoint.get_right_lane().road_id,
-        #     nearest_waypoint.get_right_lane().lane_id,
-        # )
+        if(nearest_waypoint.lane_type == carla.LaneType.Driving):
+            current_lane_waypoints = self.filter_waypoints(
+                self.all_waypoints, 
+                nearest_waypoint.road_id, 
+                nearest_waypoint.lane_id
+            )
+            
+        if(left_waypoint.lane_type == carla.LaneType.Driving):
+            left_lane_waypoints = self.filter_waypoints(
+                self.all_waypoints,
+                left_waypoint.road_id,
+                left_waypoint.lane_id,
+            )
+        if(right_waypoint.lane_type == carla.LaneType.Driving):
+            right_lane_waypoints = self.filter_waypoints(
+                self.all_waypoints,
+                right_waypoint.road_id,
+                right_waypoint.lane_id,
+            )
+            
+        if(nearest_waypoint.lane_id > 0):
+            current_lane_waypoints = current_lane_waypoints[::-1]
+        
+        if(left_waypoint.lane_id > 0):
+            left_lane_waypoints = left_lane_waypoints[::-1]
+            
+        if(right_waypoint.lane_id > 0):
+            right_lane_waypoints = right_lane_waypoints[::-1]
+        
 
         if as_LanePoint == True:
             current_lane_waypoints = [
