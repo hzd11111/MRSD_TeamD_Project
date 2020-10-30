@@ -24,6 +24,8 @@ from grasp_controller import GRASPPIDController
 from scenario_manager import CustomScenario
 from intersection_scenario_manager import IntersectionScenario
 from lane_following_scenario_manager import LaneFollowingScenario
+from lane_switching_scenario_manager import LaneSwitchingScenario
+
 from grasp_path_planner.srv import SimService, SimServiceResponse
 from agents.tools.misc import get_speed
 
@@ -747,9 +749,12 @@ class CarlaManager:
 
         # initialize node
         rospy.init_node(NODE_NAME, anonymous=True)
-
-        if CURRENT_SCENARIO in LANE_SCENARIOS: 
+        LANE_SCENARIOS = [Scenario.LANE_FOLLOWING, Scenario.SWITCH_LANE_RIGHT,
+                                        Scenario.SWITCH_LANE_LEFT]
+        if CURRENT_SCENARIO == Scenario.LANE_FOLLOWING: 
             self.tm = LaneFollowingScenario(self.client, self.carla_handler)
+        if CURRENT_SCENARIO in [Scenario.SWITCH_LANE_RIGHT, Scenario.SWITCH_LANE_LEFT]:
+            self.tm = LaneSwitchingScenario(self.client, self.carla_handler)
         elif CURRENT_SCENARIO in INTERSECTION_SCENARIOS: 
             self.tm = IntersectionScenario(self.client)
         
