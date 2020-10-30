@@ -41,7 +41,7 @@ class FullPlannerManager:
         self.path_planner.initialize()
 
     def run_train(self):
-        wandb.init(entity="rsp2020", project="grasp", config=tf.flags.FLAGS, sync_tensorboard=True)
+        wandb.init(entity="grasp", project="grasp_runs", config=tf.flags.FLAGS, sync_tensorboard=True)
         checkpoint_callback = CheckpointCallback(save_freq=1000, save_path=wandb.run.dir, name_prefix='rl_model')
         env = CustomEnv(self.path_planner, self.behavior_planner, event)
         env = make_vec_env(lambda: env, n_envs=1)

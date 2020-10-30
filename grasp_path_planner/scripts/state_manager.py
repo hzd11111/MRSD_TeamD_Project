@@ -63,7 +63,7 @@ class StateManager:
         elif stop_line is StopLineStatus.RIGHT_TURN_STOP:
             return [0, 0, 0, 1]
 
-    def createEuclidDistanceVec(vehicle1, vehicle2):
+    def createEuclidDistanceVec(self, vehicle1, vehicle2):
         """
         Create a vector with one element containing distance, as a replacement for traffic lights
         """
@@ -460,7 +460,7 @@ class StateManager:
         """
         Create a state for intersection when taking a left turn
         """
-        dummy_vehicle = [1000, 1000, np.cos(0), np.sin(0), 0, 0] + [0, 0, 1000] + [0]
+        dummy_vehicle = [1000, 1000, np.cos(0), np.sin(0), 0, 0] + [1000, 0, 0] + [0]
         dummy_ped = [1000, 1000, np.cos(0), np.sin(0), 0, 0] + [0, 1] + [0]
         pedestrian_states = []
         ego_vehicle_state = [
@@ -551,7 +551,7 @@ class StateManager:
                                                    vehicle.speed,
                                                    vehicle.acceleration] +
                                                   self.createEuclidDistanceVec(vehicle,
-                                                      env_desc.cur_vehicle_state) + [1]
+                                                      env_desc.cur_vehicle_state) + [1])
 
         if len(perpendicular_lane_vehs_in_ego) > 10:
             perpendicular_lane_vehs_in_ego = sorted(
@@ -575,7 +575,7 @@ class StateManager:
                                               vehicle.speed,
                                               vehicle.acceleration] +
                                              self.createEuclidDistanceVec(vehicle,
-                                                env_desc.cur_vehicle_state) + [1]
+                                                env_desc.cur_vehicle_state) + [1])
 
         # filter out vehicles with negative x frenet
         parallel_lane_vehs_in_ego = list(filter(lambda item: item[0] >= 0, parallel_lane_vehs_in_ego))
@@ -614,7 +614,7 @@ class StateManager:
                                              vehicle.speed,
                                              vehicle.acceleration] +
                                              self.createEuclidDistanceVec(vehicle,
-                                                env_desc.cur_vehicle_state) + [1]
+                                                env_desc.cur_vehicle_state) + [1])
 
         # if number of vehicles in intersection are less than 3 then add dummies
         if len(intersection_vehs_in_ego) < 3:
