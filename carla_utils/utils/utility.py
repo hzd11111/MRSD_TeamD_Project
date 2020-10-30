@@ -419,6 +419,7 @@ class RewardInfo(object):
         "action_progress",
         "current_action",
         "path_planner_terminate",
+        "lane_switch_failure_terminate"
     ]
 
     def __init__(
@@ -430,6 +431,7 @@ class RewardInfo(object):
         action_progress=0.0,
         current_action=None,
         path_planner_terminate=False,
+        lane_switch_failure_terminate=False
     ):
         self.collision = collision
         self.time_elapsed = time_elapsed
@@ -438,6 +440,7 @@ class RewardInfo(object):
         self.action_progress = action_progress
         self.current_action = current_action
         self.path_planner_terminate = path_planner_terminate
+        self.lane_switch_failure_terminate = lane_switch_failure_terminate
         if self.current_action is None:
             self.current_action = RLDecision.NO_ACTION
 
@@ -451,6 +454,7 @@ class RewardInfo(object):
         obj.action_progress = msg.action_progress
         obj.current_action = RLDecision(msg.current_action)
         obj.path_planner_terminate = msg.path_planner_terminate
+        obj.lane_switch_failure_terminate = msg.lane_switch_failure_terminate
         return obj
 
     def toRosMsg(self):
@@ -462,6 +466,7 @@ class RewardInfo(object):
         msg.action_progress = self.action_progress
         msg.current_action = self.current_action.value
         msg.path_planner_terminate = self.path_planner_terminate
+        msg.lane_switch_failure_terminate = self.lane_switch_failure_terminate
         return msg
 
 
