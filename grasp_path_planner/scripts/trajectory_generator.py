@@ -46,11 +46,17 @@ class TrajGenerator:
 
         # plan trajectory switch cases
         if action_to_perform == RLDecision.CONSTANT_SPEED:
-            return self.constSpeedTraj(env_desc).toRosMsg()
+            msg_obj = self.constSpeedTraj(env_desc)
+            print("path plan terminate signal in traj gen constant speed", msg_obj.path_planner_terminate)
+            return msg_obj.toRosMsg()
         elif action_to_perform == RLDecision.ACCELERATE:
-            return self.accelerateTraj(env_desc).toRosMsg()
+            msg_obj = self.constSpeedTraj(env_desc)
+            print("path plan terminate signal in traj gen acc", msg_obj.path_planner_terminate)
+            return msg_obj.toRosMsg()
         elif action_to_perform == RLDecision.DECELERATE:
-            return self.decelerateTraj(env_desc).toRosMsg()
+            msg_obj = self.constSpeedTraj(env_desc)
+            print("path plan terminate signal in traj gen dec", msg_obj.path_planner_terminate)
+            return msg_obj.toRosMsg()
         elif (action_to_perform == RLDecision.SWITCH_LANE_LEFT) or \
                 (action_to_perform == RLDecision.SWITCH_LANE_RIGHT):
             return self.laneChangeTraj(env_desc, rl_decision).toRosMsg()
@@ -272,8 +278,8 @@ class TrajGenerator:
 
     def constSpeedTraj(self, sim_data):
         # check if this is a new action
-        if not self.current_action == RLDecision.GLOBAL_PATH_CONSTANT_SPEED:
-            self.reset(RLDecision.GLOBAL_PATH_CONSTANT_SPEED,
+        if not self.current_action == RLDecision.CONSTANT_SPEED:
+            self.reset(RLDecision.CONSTANT_SPEED,
                        sim_data.cur_vehicle_state.speed,
                        sim_data.reward_info.time_elapsed)
 
