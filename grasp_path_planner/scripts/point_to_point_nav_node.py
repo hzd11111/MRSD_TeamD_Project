@@ -38,6 +38,7 @@ class Point2PointPlanner:
         self.nn_manager = NNManager()
         self.traj_generator = TrajGenerator(TRAJ_PARAM)
 
+
     def initialize(self):
         self.nn_manager.initialize({}) #ToDo: Fillin the paths
         rospy.init_node("Point2PointPlanner", anonymous=True)

@@ -44,6 +44,7 @@ class NNManager:
 class NeuralNetworkSelector:
     def __init__(self):
         self.global_path_pointer = 0
+        self.prev_lane_change_pointer = 0
 
     def updateGlobalPathProgress(self, global_path, curr_vehicle_global_pose):
         while self.global_path_pointer < len(global_path.path_points):
@@ -162,8 +163,10 @@ class NeuralNetworkSelector:
                 cul_distance < 50:
             if env_desc.global_path.path_points[temp_global_path_pointer].action == GlobalPathAction.SWITCH_LANE_LEFT:
                 #print("Left Lane CHange Found")
-                lane_change_action_found = True
-                break
+                if temp_global_path_pointer >= self.prev_lane_change_pointer:
+                    self.prev_lane_change_pointer = temp_global_path_pointer
+                    lane_change_action_found = True
+                    break
             if env_desc.global_path.path_points[temp_global_path_pointer].action == GlobalPathAction.LEFT_TURN or\
                 env_desc.global_path.path_points[temp_global_path_pointer].action == GlobalPathAction.RIGHT_TURN:
                 return False
@@ -182,8 +185,10 @@ class NeuralNetworkSelector:
                 cul_distance < 50:
             if env_desc.global_path.path_points[temp_global_path_pointer].action == GlobalPathAction.SWITCH_LANE_RIGHT:
                 #print("Right Lane CHange Found")
-                lane_change_action_found = True
-                break
+                if temp_global_path_pointer >= self.prev_lane_change_pointer:
+                    self.prev_lane_change_pointer = temp_global_path_pointer
+                    lane_change_action_found = True
+                    break
             if env_desc.global_path.path_points[temp_global_path_pointer].action == GlobalPathAction.LEFT_TURN or\
                 env_desc.global_path.path_points[temp_global_path_pointer].action == GlobalPathAction.RIGHT_TURN:
                 return False
@@ -199,6 +204,9 @@ class NeuralNetworkSelector:
     def selectNeuralNetwork(self, env_desc, prev_state_exited, current_state=None):
         # priority of the current state
         current_state_priority = 10
+        if prev_state_exited and (current_state == Scenario.SWITCH_LANE_LEFT or
+            current_state == Scenario.SWITCH_LANE_RIGHT):
+            self.prev_lane_change_pointer += 1
         if current_state and (not prev_state_exited):
             current_state_priority = self.priorityDeterminatoin(current_state)
 
