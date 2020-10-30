@@ -5,3 +5,4 @@ bool end_of_action
 float64 action_progress
 int64 current_action
 bool path_planner_terminate
+bool lane_switch_failure_terminate

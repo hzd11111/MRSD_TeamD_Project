@@ -1,6 +1,8 @@
 import os
 from enum import Enum
 from options import Scenario
+import carla
+import numpy as np
 
 dir_path = os.path.dirname(os.path.realpath(__file__))
 
@@ -11,12 +13,13 @@ class Mode(Enum):
 
 
 ############ Mode and Model Selection ##############################
-CURRENT_SCENARIO = Scenario.SWITCH_LANE_RIGHT
-CURRENT_MODE = Mode.TRAIN
+CURRENT_SCENARIO = Scenario.RIGHT_TURN
+CURRENT_MODE = Mode.TEST
 
 if CURRENT_SCENARIO == Scenario.LANE_FOLLOWING:
     MODEL_SAVE_PATH = dir_path + "/Models/DQN_Lane_Following"
-    MODEL_LOAD_PATH = dir_path + "/Models/DQN_Model_Lane_Following"
+    # MODEL_LOAD_PATH = dir_path + "/Models/DQN_Model_Lane_Following"
+    MODEL_LOAD_PATH = dir_path + "/Models/DQN_Lane_Following_model_18000_steps.zip"
     MODEL_CP_PATH = dir_path + "/Models/Lane_Following_CP"
 elif CURRENT_SCENARIO == Scenario.SWITCH_LANE_LEFT:
     MODEL_SAVE_PATH = dir_path + "/Models/DQN_Lane_Switch_Left"
@@ -39,28 +42,64 @@ elif CURRENT_SCENARIO == Scenario.LEFT_TURN:
     MODEL_LOAD_PATH = dir_path + "/Models/DQN_Left_Turn"
     MODEL_CP_PATH = dir_path + "/Models/Left_Turn_CP"
 
+INTERSECTION_SCENARIOS = [Scenario.GO_STRAIGHT, Scenario.RIGHT_TURN, 
+                                                Scenario.LEFT_TURN]
+LANE_SCENARIOS = [Scenario.LANE_FOLLOWING, Scenario.SWITCH_LANE_RIGHT,
+                                        Scenario.SWITCH_LANE_LEFT]
+
+################ CARLA Settings Arguments ##################
+MAP = 'Town05'
+WEATHER = 'ClearNoon'
+SYNCHRONOUS = True
+FIXED_DELTA_SECONDS = 0.05
+NO_RENDER_MODE = False
+
+# TRAFFIC MANAGER SETTINGS
+TM_PORT = 8000
+AUTO_LANE_CHANGE = None
+DISTANCE_TO_LEADING_VEHICLES = 2
+TARGET_SPEED = 30
+HYBRID_PHYSICS_MODE = None 
+HYBRID_PHYSICS_RADIUS = 20
+IGNORE_LIGHTS_PERCENTAGE = 100
+IGNORE_SIGNS_PERCENTAGE = 100
+ACTOR_SIMULATE_PHYSICS = False
+
+# EGO VEHICLE PROPS
+EGO_VEHICLE_MODEL = 'vehicle.tesla.model3'
+NON_EGO_VEHICLE_MODEL = 'vehicle.mustang.mustang'
+
+
+################## Global Scenario Params #################
+DISTANCE_TO_INTERSECTION_FOR_SCENARIO_CHANGE = 20
+
+
 ################## Test Mode Arguments ######################
 if CURRENT_SCENARIO == Scenario.LANE_FOLLOWING:
-    TOWN_ID = "Town01"
 
-    ROAD_IDs = [12]
-    LEFT_LANE_ID = 4  # Not required for this scenario
-    RIGHT_LANE_ID = -1
+    # add town params? or assume we are only working with Town05
+    TOWN_ID = "Town05"
 
-    EGO_INIT_SPEED = 48.5  # 46.5 for road 40, #44.5 for road 37
-    NPC_INIT_SPEED = 20  # Not required for this scenario
+    SPAWN_LOCS_VEC = [(53, 205, 0.1)] #list of potential spawn points, randomize?
+    
+    LANE_FOLLOWING_CONFIG = {
+                    "distance_bwn_waypoints":1,
+                    "target_speed":15,
+                    "warm_start":True,
+                    "warm_start_duration":2,
+                    # configure non-ego veh count
+                    "min_non_ego_veh":1,
+                    "max_non_ego_veh":6, # also update max_q_pos
+                    # distance between variables
+                    "max_dist_bwn_veh":15,
+                    "min_dist_bwn_veh":3,
+                    "average_car_length":5,
+                    # scenario variables
+                    "goal_distance_to_travel":30,          
+                    }
+    spectator_trans = carla.Transform(carla.Location(x=53, y=205, z=50), \
+                                    carla.Rotation(pitch=-39, yaw=41, roll=0))
 
-    EGO_SPAWN_IDX = 80
-    EGO_VEHICLE_MAKE = "tt"
-
-    WALKER_MAX_SPEED = 1.2
-    WALKER_SAMPLE_SPEED = True
-    WALKER_SPAWN_DIST_MIN = 16
-    WALKER_SPAWN_DIST_MAX = 25
-
-    NPC_SPAWN_POINT_GAP_LOW = 15  # Not required for this scenario
-    NPC_SPAWN_POINT_GAP_HIGH = 30  # Not required for this scenario
-    LIVES_MATTER = False  # Not required for this scenario
 
 elif CURRENT_SCENARIO == Scenario.SWITCH_LANE_LEFT:
     TOWN_ID = "Town05"
