@@ -16,6 +16,7 @@ import time
 import math
 import sys
 from collections import defaultdict
+from typing import Text
 
 
 import numpy as np
@@ -95,8 +96,8 @@ class CarlaHandler:
         return filtered_waypoints
 
     def draw_waypoints(
-        self, waypoints, road_id=None, section_id=None, life_time=50.0, color=False
-        ):
+        self, waypoints, road_id=None, section_id=None, life_time=50.0, 
+        color=False, text="O"):
         if color:
             b = 255
         else:
@@ -107,7 +108,7 @@ class CarlaHandler:
             if waypoint.road_id == road_id or road_id == None:
                 self.world.debug.draw_string(
                     waypoint.transform.location,
-                    "O",
+                    text,
                     draw_shadow=False,
                     color=carla.Color(r=0, g=255, b=b),
                     life_time=life_time,
@@ -944,3 +945,11 @@ class CarlaHandler:
         Pose2D object for it'''
 
         waypoint = self.world_map.get_waypoint()
+
+    def get_distance_to_lane_end(self, vehicle):
+        carla_vehicle = self.world.get_actor(vehicle.actor_id)
+        nearest_waypoint = self.get_nearest_waypoint(carla_vehicle)
+
+        waypoints_to_end_of_lane = nearest_waypoint.next_until_lane_end(1)
+
+        return len(waypoints_to_end_of_lane)
