@@ -55,6 +55,7 @@ class TrafficLightManager():
         tl = self.get_actor_to_traffic_light(carla_actor)
         
         if tl is None:
+            print("tl is none for some reason")
             actor.traffic_light_status = TrafficLightStatus.GREEN
             return
 
