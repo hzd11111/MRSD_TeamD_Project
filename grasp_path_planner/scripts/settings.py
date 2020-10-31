@@ -13,7 +13,7 @@ class Mode(Enum):
 
 
 ############ Mode and Model Selection ##############################
-CURRENT_SCENARIO = Scenario.SWITCH_LANE_RIGHT
+CURRENT_SCENARIO = Scenario.SWITCH_LANE_LEFT
 CURRENT_MODE = Mode.TRAIN
 
 if CURRENT_SCENARIO == Scenario.LANE_FOLLOWING:

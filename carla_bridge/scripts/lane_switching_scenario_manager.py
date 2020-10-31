@@ -275,7 +275,7 @@ class LaneSwitchingScenario:
         return global_path_wps
     
 
-    def reset(self, warm_start=True, warm_start_duration=2):
+    def reset(self, warm_start=True, warm_start_duration=2, switching_left=False):
         # reset camera view
         # self.spectator.set_transform(spectator_trans)
 
@@ -288,7 +288,7 @@ class LaneSwitchingScenario:
         self.destroy_all_actors()
 
         # spawn vehicles
-        self.spawn(self.config["distance_bwn_waypoints"],self.config["swithching_left"])
+        self.spawn(self.config["distance_bwn_waypoints"],switching_left)
         # self.tick()
 
         global_path = self.get_global_path()
