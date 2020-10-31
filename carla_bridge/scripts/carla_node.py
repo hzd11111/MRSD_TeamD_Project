@@ -643,6 +643,15 @@ class CarlaManager:
                 ].GlobalToFrenet(adjacent_lanes[i].lane_points[j].global_pose)
         
         '''
+        Check for Lane Switching Path Terminate condition
+        '''
+        if CURRENT_SCENARIO in [Scenario.SWITCH_LANE_RIGHT, Scenario.SWITCH_LANE_LEFT]:
+            dist = self.carla_handler.get_distance_to_lane_end(ego_vehicle)
+            lane_switch_failure_terminate = (dist < 5)  
+        else:
+            lane_switch_failure_terminate = False
+        
+        '''
         Part 3: Create ROS msg objects and ship it!
         '''
         self.end_of_action = plan.end_of_action
@@ -657,6 +666,7 @@ class CarlaManager:
         reward_info.action_progress = self.action_progress
         reward_info.end_of_action = self.end_of_action
         reward_info.path_planner_terminate = self.path_planner_terminate
+        reward_info.lane_switch_failure_terminate = lane_switch_failure_terminate
 
         # EnvDesc Object 
         env_desc = EnvDesc()
