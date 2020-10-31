@@ -38,7 +38,7 @@ class TrajGenerator:
             return rl_decision
         return self.current_action
 
-    def trajPlan(self, rl_decision, env_desc):
+    def trajPlan(self, rl_decision, env_desc, chosen_scenario = None):
         # check the validity of env_desc
         # import ipdb; ipdb.set_trace()
         # continue the previous action if it hasn't ended
@@ -46,28 +46,100 @@ class TrajGenerator:
 
         # plan trajectory switch cases
         if action_to_perform == RLDecision.CONSTANT_SPEED:
-            msg_obj = self.constSpeedTraj(env_desc)
-            print("path plan terminate signal in traj gen constant speed", msg_obj.path_planner_terminate)
-            return msg_obj.toRosMsg()
+            path_plan = self.constSpeedTraj(env_desc)
+            if chosen_scenario is not None:
+                path_plan.scenario_chosen = chosen_scenario
+            return path_plan.toRosMsg()
         elif action_to_perform == RLDecision.ACCELERATE:
-            msg_obj = self.constSpeedTraj(env_desc)
-            print("path plan terminate signal in traj gen acc", msg_obj.path_planner_terminate)
-            return msg_obj.toRosMsg()
+            path_plan = self.accelerateTraj(env_desc)
+            if chosen_scenario is not None:
+                path_plan.scenario_chosen = chosen_scenario
+            return path_plan.toRosMsg()
         elif action_to_perform == RLDecision.DECELERATE:
-            msg_obj = self.constSpeedTraj(env_desc)
-            print("path plan terminate signal in traj gen dec", msg_obj.path_planner_terminate)
-            return msg_obj.toRosMsg()
+            path_plan = self.decelerateTraj(env_desc)
+            if chosen_scenario is not None:
+                path_plan.scenario_chosen = chosen_scenario
+            return path_plan.toRosMsg()
         elif (action_to_perform == RLDecision.SWITCH_LANE_LEFT) or \
                 (action_to_perform == RLDecision.SWITCH_LANE_RIGHT):
-            return self.laneChangeTraj(env_desc, rl_decision).toRosMsg()
+            path_plan = self.laneChangeTraj(env_desc, rl_decision)
+            if chosen_scenario is not None:
+                path_plan.scenario_chosen = chosen_scenario
+            return path_plan.toRosMsg()
         elif action_to_perform == RLDecision.GLOBAL_PATH_CONSTANT_SPEED:
-            return self.globalConstSpeedTraj(env_desc).toRosMsg()
+            path_plan = self.globalConstSpeedTraj(env_desc)
+            if chosen_scenario is not None:
+                path_plan.scenario_chosen = chosen_scenario
+            return path_plan.toRosMsg()
         elif action_to_perform == RLDecision.GLOBAL_PATH_ACCELERATE:
-            return self.globalAccelerateTraj(env_desc).toRosMsg()
+            path_plan = self.globalAccelerateTraj(env_desc)
+            if chosen_scenario is not None:
+                path_plan.scenario_chosen = chosen_scenario
+            return path_plan.toRosMsg()
         elif action_to_perform == RLDecision.GLOBAL_PATH_DECELERATE:
-            return self.globalDecelerateTraj(env_desc).toRosMsg()
+            path_plan = self.globalDecelerateTraj(env_desc)
+            if chosen_scenario is not None:
+                path_plan.scenario_chosen = chosen_scenario
+            return path_plan.toRosMsg()
+        elif action_to_perform == RLDecision.STOP:
+            path_plan = self.stop(env_desc)
+            if chosen_scenario is not None:
+                path_plan.scenario_chosen = chosen_scenario
+            return path_plan.toRosMsg()
         else:
             print("RLDecision ERROR:", action_to_perform)
+
+    def stop(self, sim_data):
+        if not self.current_action == RLDecision.STOP:
+            self.reset(RLDecision.STOP, sim_data.cur_vehicle_state.speed,
+                       sim_data.reward_info.time_elapsed)
+        # current vehicle state
+        curr_vehicle = sim_data.cur_vehicle_state
+        curr_vehicle_global_pose = curr_vehicle.location_global
+
+        # determine the closest next pose in the global path
+        global_path = sim_data.global_path
+        global_path_points = global_path.path_points
+        tracking_pose = False
+        tracking_pose_ind = False
+        for point_ind, path_point in enumerate(global_path_points):
+            single_pose = path_point.global_pose
+            if single_pose.isInfrontOf(curr_vehicle_global_pose) and \
+                   single_pose.distance(curr_vehicle_global_pose) > TrajGenerator.SAME_POSE_LOWER_THRESHOLD and \
+                single_pose.distance(curr_vehicle_global_pose) < 1.5:
+                tracking_pose = single_pose
+                tracking_pose_ind = point_ind
+                break
+
+        # determine the speed needed
+        action_end = not (tracking_pose and not tracking_pose_ind >= len(global_path_points) - 1)
+        if not action_end:
+            # determine the distance till the end of path
+            distance = curr_vehicle_global_pose.distance(global_path_points[-1].global_pose)
+            target_speed = 20 - 20 / distance
+            target_pose = tracking_pose
+        else:
+            target_speed = 0
+            next_point_frenet = Frenet()
+            next_point_frenet.x = 1.
+            target_pose = sim_data.current_lane.frenetToGlobal(next_point_frenet)
+
+        new_path_plan = PathPlan()
+        new_path_plan.tracking_pose = target_pose
+        new_path_plan.reset_sim = False
+        new_path_plan.tracking_speed = target_speed
+        new_path_plan.end_of_action = action_end
+        new_path_plan.action_progress = 1 - target_speed/self.start_speed
+        new_path_plan.path_planner_terminate = action_end
+
+        # add future poses ToDo
+        new_path_plan.future_poses = []
+
+        if new_path_plan.end_of_action:
+            self.reset()
+        return new_path_plan
+
+
 
     # find the next lane point of the current vehicle
     def findNextLanePose(self, curr_vehicle, lane_point_array):
@@ -119,7 +191,7 @@ class TrajGenerator:
             action_progress = 1.
             
         path_planner_terminate = False
-        if self.global_path_pointer >= len(global_path_points)-1:
+        if self.global_path_pointer >= len(global_path_points):
             tracking_pose = global_path_points[-1].global_pose
             action_progress = 1.
             end_of_action = True
@@ -182,7 +254,7 @@ class TrajGenerator:
             action_progress = 1.
             
         path_planner_terminate = False
-        if self.global_path_pointer >= len(global_path_points)-1:
+        if self.global_path_pointer >= len(global_path_points):
             tracking_pose = global_path_points[-1].global_pose
             action_progress = 1.
             end_of_action = True
@@ -248,7 +320,7 @@ class TrajGenerator:
             action_progress = 1.
             
         path_planner_terminate = False
-        if self.global_path_pointer >= len(global_path_points)-1:
+        if self.global_path_pointer >= len(global_path_points):
             tracking_pose = global_path_points[-1].global_pose
             action_progress = 1.
             end_of_action = True
