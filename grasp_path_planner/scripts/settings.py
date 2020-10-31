@@ -16,6 +16,8 @@ class Mode(Enum):
 CURRENT_SCENARIO = Scenario.SWITCH_LANE_LEFT
 CURRENT_MODE = Mode.TRAIN
 
+assert !(CURRENT_SCENARIO==Scenario.P2P and CURRENT_MODE==Mode.TRAIN), "P2P Cannot be called in train mode"
+
 if CURRENT_SCENARIO == Scenario.LANE_FOLLOWING:
     MODEL_SAVE_PATH = dir_path + "/Models/DQN_Lane_Following"
     # MODEL_LOAD_PATH = dir_path + "/Models/DQN_Model_Lane_Following"
