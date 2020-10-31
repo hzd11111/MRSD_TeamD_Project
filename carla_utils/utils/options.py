@@ -34,6 +34,7 @@ class Scenario(Enum):
     GO_STRAIGHT = 4
     RIGHT_TURN = 5
     PEDESTRIAN = 6  # NEED TO REMOVE THIS. KEPT IT BECAUSE SCENARIO MANAGER IS USING IT
+    P2P = 7
 
 
 @unique

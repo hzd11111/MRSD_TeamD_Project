@@ -14,6 +14,8 @@ import copy
 import carla
 
 import agents.navigation.controller
+from agents.navigation.roaming_agent import RoamingAgent
+from agents.navigation.local_planner import RoadOption
 import numpy as np
 from shapely.geometry import Point
 
@@ -25,6 +27,7 @@ from scenario_manager import CustomScenario
 from intersection_scenario_manager import IntersectionScenario
 from lane_following_scenario_manager import LaneFollowingScenario
 from lane_switching_scenario_manager import LaneSwitchingScenario
+from p2p_scenario_manager import P2PScenario
 from grasp_path_planner.srv import SimService, SimServiceResponse
 from agents.tools.misc import get_speed
 
@@ -37,6 +40,8 @@ from cartesian_to_frenet import (
     get_frenet_from_cartesian,
     get_path_linestring,
 )
+sys.path.append("../../../global_route_planner/")
+from global_planner import get_global_planner
 
 sys.path.append("../../carla_utils/utils")
 from utility import (
@@ -109,6 +114,13 @@ class CarlaManager:
         self.road_lane_to_orientation = None
         self.all_vehicles = None
 
+        ### P2P Placeholders
+        self.global_path_carla_waypoints = None
+        self.autopilot_recompute_flag = 0
+        self.agent = None
+        self.global_planner = None
+
+
     def intersection_pathRequest(self, data):
 
         ##########################################
@@ -123,6 +135,7 @@ class CarlaManager:
             tracking_pose = plan.tracking_pose
             tracking_speed = plan.tracking_speed  # / 3.6
             reset_sim = plan.reset_sim
+            is_autopilot = plan.auto_pilot
 
             self.end_of_action = plan.end_of_action
             self.action_progress = plan.action_progress
@@ -134,12 +147,32 @@ class CarlaManager:
                 self.resetEnv()
             else:
                 self.first_run = 0
+                if not is_autopilot:
+                    self.autopilot_recompute_flag = 0
+                    ### Apply Control signal on the vehicle. Vehicle and controller spawned in resetEnv###
+                    self.ego_vehicle.apply_control(
+                        self.vehicle_controller.run_step(tracking_speed, tracking_pose)
+                    )
+                else:
+                    if self.autopilot_recompute_flag == 0:
+                        destination_location = (
+                            self.global_path_carla_waypoints[-1]
+                            .next(5)[0]
+                            .transform.location
+                        )
+                        ego_vehicle_location = self.ego_vehicle.get_transform().location
 
-                ### Apply Control signal on the vehicle. Vehicle and controller spawned in resetEnv###
-                self.ego_vehicle.apply_control(
-                    self.vehicle_controller.run_step(tracking_speed, tracking_pose)
-                )
-                # self.draw_location(tracking_pose)
+                        tmp_route = self.global_planner.trace_route(
+                            ego_vehicle_location, destination_location
+                        )
+                        self.agent._local_planner.set_global_plan(tmp_route)
+                        self.autopilot_recompute_flag = 1
+                        print("Recomputing autopilot route...")
+
+                    control = self.agent.run_step(debug=True)
+                    self.ego_vehicle.apply_control(control)
+                        
+                    
                 speed = self.ego_vehicle.get_velocity()
                 print("Speed:", np.linalg.norm([speed.x, speed.y, speed.z]) * 3.6)
 
@@ -440,6 +473,7 @@ class CarlaManager:
             # Get requested pose and speed values from agent
             tracking_pose = plan.tracking_pose
             tracking_speed = plan.tracking_speed  # / 3.6
+            is_autopilot = plan.auto_pilot
             
             # draw the tracking pose
             tracking_loc = carla.Location(x=tracking_pose.x,
@@ -448,9 +482,30 @@ class CarlaManager:
             draw_string(location=tracking_loc, text='+', color=(255,0,0))
 
             # apply vehicle control using custom controller
-            control = self.vehicle_controller.run_step(tracking_speed, 
-                                                        tracking_pose)
-            self.ego_vehicle.apply_control(control)
+            if not is_autopilot:
+                
+                control = self.vehicle_controller.run_step(tracking_speed, 
+                                                            tracking_pose)
+                self.ego_vehicle.apply_control(control)
+            else:
+                if(self.autopilot_recompute_flag == 0):
+                    destination_location = (
+                        self.global_path_carla_waypoints[-1]
+                        .next(5)[0]
+                        .transform.location
+                    )
+                    ego_vehicle_location = self.ego_vehicle.get_transform().location
+
+                    tmp_route = self.global_planner.trace_route(
+                        ego_vehicle_location, destination_location
+                    )
+                    self.agent._local_planner.set_global_plan(tmp_route)
+                    self.autopilot_recompute_flag = 1
+                    print("Recomputing autopilot route...")
+
+                control = self.agent.run_step(debug=True)
+                self.ego_vehicle.apply_control(control)               
+                    
 
             # print the speed of the vehicle
             speed = self.ego_vehicle.get_velocity()
@@ -810,6 +865,32 @@ class CarlaManager:
                 self.global_path_in_intersection = GlobalPath(
                     path_points=self.global_path_in_intersection
                 )
+            elif CURRENT_SCENARIO == Scenario.P2P:
+                self.ego_vehicle, self.vehicles_list, self.global_path_carla_waypoints, route = self.tm.reset()
+                
+                self.agent = RoamingAgent(self.ego_vehicle)
+                self.autopilot_recompute_flag = 0
+                
+                global_path_actions = self.get_global_path_actions(route)[:-2] # -2 to end the path slightly before the final point.
+                
+                self.global_path_in_intersection = [
+                    self.waypoint_to_pose2D(wp)
+                    for wp in self.global_path_carla_waypoints[:-2]
+                ]
+
+                self.global_path_in_intersection = [
+                    GlobalPathPoint(
+                        global_pose=self.global_path_in_intersection[i], action=global_path_actions[i]
+                    )
+                    for i in range(len(self.global_path_in_intersection))
+                ]
+
+                self.global_path_in_intersection = GlobalPath(
+                    path_points=self.global_path_in_intersection
+                )
+
+
+
 
             ## Handing over control
             self.apply_control_after_reset()
@@ -845,9 +926,12 @@ class CarlaManager:
         rospy.init_node(NODE_NAME, anonymous=True)
         LANE_SCENARIOS = [Scenario.LANE_FOLLOWING, Scenario.SWITCH_LANE_RIGHT,
                                         Scenario.SWITCH_LANE_LEFT]
-        if CURRENT_SCENARIO == Scenario.LANE_FOLLOWING: 
+        
+        if CURRENT_SCENARIO == Scenario.P2P:
+            self.tm = P2PScenario(self.client)
+        elif CURRENT_SCENARIO == Scenario.LANE_FOLLOWING: 
             self.tm = LaneFollowingScenario(self.client, self.carla_handler)
-        if CURRENT_SCENARIO in [Scenario.SWITCH_LANE_RIGHT, Scenario.SWITCH_LANE_LEFT]:
+        elif CURRENT_SCENARIO in [Scenario.SWITCH_LANE_RIGHT, Scenario.SWITCH_LANE_LEFT]:
             self.tm = LaneSwitchingScenario(self.client, self.carla_handler)
         elif CURRENT_SCENARIO in INTERSECTION_SCENARIOS: 
             self.tm = IntersectionScenario(self.client)
@@ -867,12 +951,12 @@ class CarlaManager:
         
         plan = PathPlan.fromRosMsg(data.path_plan)
         scenario = plan.scenario_chosen
-        scenario = CURRENT_SCENARIO
         
         if scenario in LANE_SCENARIOS: 
             return self.lane_following_pathRequest(data)
         elif scenario in INTERSECTION_SCENARIOS: 
             return self.intersection_pathRequest(data)
+            
 
     def spin(self):
         print("Start Ros Spin")
@@ -914,6 +998,39 @@ class CarlaManager:
             adjacent_lanes[i].lane_distance = abs(
                 middle_point_frenet_relative_to_current_lane.y
             )
+            
+    def get_global_path_actions(self, route):
+
+        global_path_actions = [route[i][1] for i in range(len(route))]
+
+        for i in range(len(global_path_actions) - 1):
+            if global_path_actions[i] == RoadOption.LANEFOLLOW:
+                continue
+            ct = 0
+            curr_action = global_path_actions[i]
+            while global_path_actions[i + ct + 1] == curr_action:
+                ct += 1
+                if i + ct + 1 >= len(global_path_actions):
+                    break
+
+            for j in range(i + 1, i + ct + 1):
+                global_path_actions[j] = RoadOption.LANEFOLLOW
+
+        for i in range(len(global_path_actions)):
+            if global_path_actions[i] == RoadOption.LANEFOLLOW:
+                global_path_actions[i] = GlobalPathAction.NO_ACTION
+            elif global_path_actions[i] == RoadOption.LEFT:
+                global_path_actions[i] = GlobalPathAction.LEFT_TURN
+            elif global_path_actions[i] == RoadOption.RIGHT:
+                global_path_actions[i] = GlobalPathAction.RIGHT_TURN
+            elif global_path_actions[i] == RoadOption.STRAIGHT:
+                global_path_actions[i] = GlobalPathAction.GO_STRAIGHT
+            elif global_path_actions[i] == RoadOption.CHANGELANELEFT:
+                global_path_actions[i] = GlobalPathAction.SWITCH_LANE_LEFT
+            elif global_path_actions[i] == RoadOption.CHANGELANERIGHT:
+                global_path_actions[i] = GlobalPathAction.SWITCH_LANE_RIGHT
+
+        return global_path_actions
 
     def draw(self, vehicle, color=(0, 255, 0)):
 
