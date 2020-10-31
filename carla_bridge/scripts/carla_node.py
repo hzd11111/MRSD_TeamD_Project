@@ -545,10 +545,16 @@ class CarlaManager:
         print(len(self.lane_cur.lane_vehicles), "KLEN")
         
         self.adjacent_lanes = []
+
+        nearest_waypoint = self.carla_handler.get_nearest_waypoint(self.ego_vehicle)
+        left_waypoint = nearest_waypoint.get_left_lane()
+        
+        # Feilds feed with assumption:
+        # only 2 lanes exist on the same direction
         self.lane_left = ParallelLane(
             lane_vehicles=actors_in_left_lane,
             lane_points=left_lane_waypoints,
-            same_direction=True,
+            same_direction= left_waypoint.lane_id * nearest_waypoint.lane_id > 0,
             left_to_the_current=True,
             adjacent_lane=True,
             lane_distance=lane_distance,
@@ -557,6 +563,7 @@ class CarlaManager:
             else Pose2D(),
             left_turning_lane=True,
             right_turning_lane=False,
+            right_most_lane= False,
         )     
         
         # self.adjacent_lanes.append(lane_left) 
@@ -573,6 +580,7 @@ class CarlaManager:
             else Pose2D(),
             left_turning_lane=False,
             right_turning_lane=True,
+            right_most_lane= True,
         )    
         # self.adjacent_lanes.append(lane_right) 
 
