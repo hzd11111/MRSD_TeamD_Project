@@ -47,15 +47,15 @@ class TrajGenerator:
         # plan trajectory switch cases
         if action_to_perform == RLDecision.CONSTANT_SPEED:
             msg_obj = self.constSpeedTraj(env_desc)
-            print("path plan terminate signal in traj gen constant speed", msg_obj.path_planner_terminate)
+            # print("path plan terminate signal in traj gen constant speed", msg_obj.path_planner_terminate)
             return msg_obj.toRosMsg()
         elif action_to_perform == RLDecision.ACCELERATE:
             msg_obj = self.constSpeedTraj(env_desc)
-            print("path plan terminate signal in traj gen acc", msg_obj.path_planner_terminate)
+            # print("path plan terminate signal in traj gen acc", msg_obj.path_planner_terminate)
             return msg_obj.toRosMsg()
         elif action_to_perform == RLDecision.DECELERATE:
             msg_obj = self.constSpeedTraj(env_desc)
-            print("path plan terminate signal in traj gen dec", msg_obj.path_planner_terminate)
+            # print("path plan terminate signal in traj gen dec", msg_obj.path_planner_terminate)
             return msg_obj.toRosMsg()
         elif (action_to_perform == RLDecision.SWITCH_LANE_LEFT) or \
                 (action_to_perform == RLDecision.SWITCH_LANE_RIGHT):

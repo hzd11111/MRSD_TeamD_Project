@@ -489,13 +489,11 @@ class PlainLaneChange(Reward):
         """
         reward = 0
         if desc.reward_info.collision or \
-                (desc.reward_info.time_elapsed > 80):
+                (desc.reward_info.time_elapsed > 80) or \
+                desc.reward_info.lane_switch_failure_terminate:
             reward = reward - 1
-        elif desc.reward_info.path_planner_terminate and \
-                action is RLDecision.SWITCH_LANE_LEFT or action is RLDecision.SWITCH_LANE_RIGHT:
-            reward += desc.reward_info.action_progress
         elif desc.reward_info.path_planner_terminate:
-            reward = -1
+            reward += desc.reward_info.action_progress
         print("Reward is ", reward)
         return reward
 
