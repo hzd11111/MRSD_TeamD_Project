@@ -762,12 +762,25 @@ class CarlaManager:
 
                 self.draw_global_path(self.global_path_in_intersection)
             elif CURRENT_SCENARIO in LANE_SCENARIOS:
-                (
-                    self.ego_vehicle,
-                    self.vehicles_list,
-                    self.global_path_in_intersection #TODO: change variable name
-                ) = self.tm.reset(warm_start_duration=4)
-
+                
+                if(CURRENT_SCENARIO == Scenario.SWITCH_LANE_RIGHT):
+                    (
+                        self.ego_vehicle,
+                        self.vehicles_list,
+                        self.global_path_in_intersection #TODO: change variable name
+                    ) = self.tm.reset(warm_start_duration=4, switching_left=False)
+                elif(CURRENT_SCENARIO == Scenario.SWITCH_LANE_LEFT):
+                    (
+                        self.ego_vehicle,
+                        self.vehicles_list,
+                        self.global_path_in_intersection #TODO: change variable name
+                    ) = self.tm.reset(warm_start_duration=4, switching_left=True)
+                else:
+                    (
+                        self.ego_vehicle,
+                        self.vehicles_list,
+                        self.global_path_in_intersection #TODO: change variable name
+                    ) = self.tm.reset(warm_start_duration=4)
 
                 self.global_path_in_intersection = [
                     self.waypoint_to_pose2D(wp) for wp in self.global_path_in_intersection
