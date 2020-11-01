@@ -1,12 +1,24 @@
 import sys
 import random
 import time
+import numpy as np
 
 import carla
 
 sys.path.append("../../global_route_planner")
-from global_planner import get_global_planner
+from global_planner import get_global_planner, draw_waypoints, destroy_all_actors
 
+'''
+Description of routes:Lane Following is involved in all of them
+0. Left turn at an intersection
+1. Go straight intersection
+2. Right turn intersection
+3. Lane change and right turn
+4. Left Lane Change
+5. Right Lane Change
+'''
+route_start_locations = [(-47.5,-18.8,0.06) ,(-66.5,-91.5,0), (-66.5,-91.5,0), (-131.7,-70.3,0), (-125.1,-17.9,0)]
+route_end_locations = [(-92.1,-91.5,0), (-167.1,-91.6,0), (-120.9,-120.970520,0), (-128.6,-18.8,0), (-121.2,-69.9,0) ]
 
 class P2PScenario:
     def __init__(self, client) -> None:
@@ -138,17 +150,51 @@ class P2PScenario:
             [SetAutopilot(ego_vehicle, False)], synchronous_master
         )
 
-        ego_vehicle_location = ego_vehicle.get_transform().location
+        # ego_vehicle_location = ego_vehicle.get_transform().location
 
-        end_point_location = random.choice(
-            self.world.get_map().get_spawn_points()
-        ).location
+        # end_point_location = random.choice(
+        #     self.world.get_map().get_spawn_points()
+        # ).location
 
-        route = self.global_planner.trace_route(
-            ego_vehicle_location, end_point_location
-        )
-        global_path_wps = [route[i][0] for i in range(len(route))]
+        # route = self.global_planner.trace_route(
+        #     ego_vehicle_location, end_point_location
+        # )
+        # global_path_wps = [route[i][0] for i in range(len(route))]
+
+        route, global_path_wps = self.get_random_route()
 
         print("Control handed to system....")
 
         return ego_vehicle, my_vehicles, global_path_wps, route
+
+    def get_random_route(self):
+        
+        random_ind = np.random.randint(0, len(route_start_locations))
+        start_location = carla.Location(*route_start_locations[random_ind])
+        end_location = carla.Location(*route_end_locations[random_ind])
+
+        grp = self.global_planner
+        # Generate the route using the global route planner object.
+        route = grp.trace_route(start_location, end_location)
+        global_path_wps = [route[i][0] for i in range(len(route))]
+
+        return route, global_path_wps
+
+    def destroy_all_actors(self):
+        world = self.client.get_world()
+        vehicles_list = world.get_actors().filter("vehicle*")
+        for vehicle in vehicles_list:
+            vehicle.destroy()
+
+if __name__ == "__main__":
+    
+    client = carla.Client("localhost", 2000)
+    world = client.get_world()
+    client.set_timeout(10.0)
+
+    p2p_tm = P2PScenario(client)
+    p2p_tm.destroy_all_actors()
+    ego_vehicle, my_vehicles, global_path_wps, route = p2p_tm.reset()
+    draw_waypoints(world, global_path_wps)
+    
+    import ipdb; ipdb.set_trace()
