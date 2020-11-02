@@ -58,12 +58,17 @@ class NeuralNetworkSelector:
         self.prev_lane_change_pointer = 0
 
     def updateGlobalPathProgress(self, global_path, curr_vehicle_global_pose):
+        print("Vehicle Pose:", curr_vehicle_global_pose.x, curr_vehicle_global_pose.y, curr_vehicle_global_pose.theta)
         while self.global_path_pointer < len(global_path.path_points):
             single_pose = global_path.path_points[self.global_path_pointer].global_pose
+            print(single_pose.isInfrontOf(curr_vehicle_global_pose))
+            print(single_pose.distance(curr_vehicle_global_pose))
+            print("Global Path Pose:", single_pose.x, single_pose.y, single_pose.theta)
             if single_pose.isInfrontOf(curr_vehicle_global_pose) and \
                    single_pose.distance(curr_vehicle_global_pose) > 0.2 and \
-                    single_pose.distance(curr_vehicle_global_pose) < 3:
+                    single_pose.distance(curr_vehicle_global_pose) < 15:
                 break
+            print("Next Global Point:",self.global_path_pointer, "/", len(global_path.path_points))
             self.global_path_pointer += 1
 
     def priorityDeterminatoin(self, scenario):
@@ -156,7 +161,7 @@ class NeuralNetworkSelector:
         while temp_global_path_pointer < (len(env_desc.global_path.path_points) - 1) and \
                 cul_distance < 20:
             if env_desc.global_path.path_points[temp_global_path_pointer].action == GlobalPathAction.GO_STRAIGHT:
-                #print("Go Straight Found")
+                print("Go Straight Found")
                 go_straight_action_found = True
                 break
             cul_distance += env_desc.global_path.path_points[temp_global_path_pointer].global_pose.distance(
@@ -173,7 +178,7 @@ class NeuralNetworkSelector:
         while temp_global_path_pointer < (len(env_desc.global_path.path_points) - 1) and \
                 cul_distance < 50:
             if env_desc.global_path.path_points[temp_global_path_pointer].action == GlobalPathAction.SWITCH_LANE_LEFT:
-                #print("Left Lane CHange Found")
+                print("Left Lane Change Found")
                 if temp_global_path_pointer >= self.prev_lane_change_pointer:
                     self.prev_lane_change_pointer = temp_global_path_pointer
                     lane_change_action_found = True
@@ -195,7 +200,7 @@ class NeuralNetworkSelector:
         while temp_global_path_pointer < (len(env_desc.global_path.path_points) - 1) and \
                 cul_distance < 50:
             if env_desc.global_path.path_points[temp_global_path_pointer].action == GlobalPathAction.SWITCH_LANE_RIGHT:
-                #print("Right Lane CHange Found")
+                print("Right Lane Change Found")
                 if temp_global_path_pointer >= self.prev_lane_change_pointer:
                     self.prev_lane_change_pointer = temp_global_path_pointer
                     lane_change_action_found = True
