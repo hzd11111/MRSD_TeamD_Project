@@ -4,15 +4,17 @@ import sys
 print(sys.path)
 import os
 
+
 sys.path.append("../../carla_utils/utils")
-
-
 homedir = os.getenv("HOME")
 distro = os.getenv("ROS_DISTRO")
 sys.path.remove("/opt/ros/" + distro + "/lib/python2.7/dist-packages")
 sys.path.append("/opt/ros/" + distro + "/lib/python2.7/dist-packages")
+
+from stable_baselines import DQN
 import rospy
 from settings import *
+
 from grasp_path_planner.srv import SimService, SimServiceRequest
 from utility import PathPlan, EnvDesc
 from neural_network_manager import NNManager, NeuralNetworkSelector
@@ -49,9 +51,9 @@ class Point2PointPlanner:
         reset_msg = PathPlan()
         reset_msg.reset_sim = True
         reset_msg.end_of_action = True
-        reset_msg.scenario_chosen = Scenario.LANE_FOLLOWING
+        reset_msg.scenario_chosen = 2
         req = SimServiceRequest()
-        req.path_plan = reset_msg.toRosMsg()
+        req.path_plan = reset_msg
         self.prev_env_desc = EnvDesc.fromRosMsg(self.sim_service_interface(req).env)
         return self.prev_env_desc
 
@@ -60,9 +62,9 @@ class Point2PointPlanner:
         if auto_pilot:
             path_plan = PathPlan()
             path_plan.auto_pilot = True
-            path_plan.scenario_chosen = selected_scenario
+            path_plan.scenario_chosen = selected_scenario.value
             req = SimServiceRequest()
-            req.path_plan = path_plan.toRosMsg()
+            req.path_plan = path_plan
             self.prev_env_desc = EnvDesc.fromRosMsg(self.sim_service_interface(req).env)
             return self.prev_env_desc, True, False
 
@@ -87,7 +89,7 @@ class Point2PointPlanner:
 
     def run(self):
         selected_scenario, new_scenario = self.neural_network_selector.selectNeuralNetwork(self.prev_env_desc, True)
-        while not selected_scenario is Scenario.DONE:
+        while selected_scenario is not Scenario.DONE:
             path_planner_terminate = False
             print(selected_scenario)
             if selected_scenario is Scenario.STOP:
