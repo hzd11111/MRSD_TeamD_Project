@@ -56,6 +56,8 @@ from actors import Actor, Vehicle, Pedestrian
 
 sys.path.append("../../grasp_path_planner/scripts/")
 from settings import *
+
+from traffic_light_manager import TrafficLightManager
 #######################################################################################
 
 NODE_NAME = "carla_bridge"
@@ -108,6 +110,7 @@ class CarlaManager:
         self.global_path_in_intersection = None
         self.road_lane_to_orientation = None
         self.all_vehicles = None
+        self.TLManager = None
 
     def intersection_pathRequest(self, data):
 
@@ -319,6 +322,19 @@ class CarlaManager:
         lane_cur = copy.copy(self.lane_cur)
         adjacent_lanes = copy.copy(self.adjacent_lanes)
         next_intersection = copy.copy(self.next_intersection)
+        
+        ### Set traffic light status for all vehicles
+        self.TLManager.set_actor_traffic_light_state(vehicle_ego)
+        print(vehicle_ego.traffic_light_status)        
+        # for i in range(len(lane_cur.lane_vehicles)):
+        #     self.TLManager.set_actor_traffic_light_state(lane_cur.lane_vehicles[i])
+        # for i in range(len(adjacent_lanes)):
+        #     for j in range(len(adjacent_lanes[i].lane_vehicles)):
+        #         self.TLManager.set_actor_traffic_light_state(adjacent_lanes[i].lane_vehicles[j])
+        # for i in range(len(next_intersection)):
+        #     for j in range(len(next_intersection[i].lane_vehicles)):
+        #         self.TLManager.set_actor_traffic_light_state(next_intersection[i].lane_vehicles[j])
+                
 
         ### Get the frenet coordinate of the ego vehicle in the current lane.
         ego_vehicle_frenet_pose = lane_cur.GlobalToFrenet(vehicle_ego.location_global)
@@ -834,6 +850,9 @@ class CarlaManager:
         # Create a CarlaHandler object. CarlaHandler provides some cutom bus\ilt APIs for the Carla Server.
         self.carla_handler = CarlaHandler(client)
         self.client = client
+
+        # Traffic light manager
+        self.TLManager = TrafficLightManager(self.client)
 
         if synchronous_mode:
             settings = self.carla_handler.world.get_settings()
