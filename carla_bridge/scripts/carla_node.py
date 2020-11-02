@@ -119,8 +119,6 @@ class CarlaManager:
         self.global_path_carla_waypoints = None
         self.autopilot_recompute_flag = 0
         self.agent = None
-        self.global_planner = None
-
 
     def intersection_pathRequest(self, data):
 
@@ -738,8 +736,11 @@ class CarlaManager:
         env_desc.reward_info = reward_info
         env_desc.global_path = self.global_path_in_intersection
         
-        return SimServiceResponse(env_desc.toRosMsg())
+        print("x = :", env_desc.cur_vehicle_state.location_global.x)
+        print("y = :", env_desc.cur_vehicle_state.location_global.y)
+        print("z = :", env_desc.cur_vehicle_state.location_global.y)
 
+        return SimServiceResponse(env_desc.toRosMsg())
 
     def destroy_actors_and_sensors(self):
 
@@ -893,7 +894,7 @@ class CarlaManager:
                 self.global_path_in_intersection = GlobalPath(
                     path_points=self.global_path_in_intersection
                 )
-
+                self.draw_global_path(self.global_path_in_intersection)
 
 
 
@@ -957,12 +958,12 @@ class CarlaManager:
         plan = PathPlan.fromRosMsg(data.path_plan)
         scenario = plan.scenario_chosen
         
-        if scenario in LANE_SCENARIOS: 
+        if scenario in LANE_SCENARIOS:
             return self.lane_following_pathRequest(data)
+
         elif scenario in INTERSECTION_SCENARIOS: 
             return self.intersection_pathRequest(data)
             
-
     def spin(self):
         print("Start Ros Spin")
         # spin

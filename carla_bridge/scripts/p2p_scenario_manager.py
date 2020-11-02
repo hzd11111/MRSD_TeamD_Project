@@ -72,8 +72,11 @@ class P2PScenario:
         batch = []
         ego_batch = []
 
+        route, global_path_wps = self.get_random_route()
+        spawn_waypoint = global_path_wps[0]
+        # import pdb; pdb.set_trace()
         # Ego Vehicle
-        for n, transform in enumerate(spawn_points):
+        for n, transform in enumerate([spawn_waypoint.transform]):
             if n >= 1:
                 break
             blueprint = random.choice(ego_blueprints)
@@ -161,7 +164,7 @@ class P2PScenario:
         # )
         # global_path_wps = [route[i][0] for i in range(len(route))]
 
-        route, global_path_wps = self.get_random_route()
+        # route, global_path_wps = self.get_random_route()
 
         print("Control handed to system....")
 
