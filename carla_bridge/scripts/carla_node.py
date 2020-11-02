@@ -163,7 +163,7 @@ class CarlaManager:
                         )
                         ego_vehicle_location = self.ego_vehicle.get_transform().location
 
-                        tmp_route = self.global_planner.trace_route(
+                        tmp_route = self.tm.global_planner.trace_route(
                             ego_vehicle_location, destination_location
                         )
                         self.agent._local_planner.set_global_plan(tmp_route)
@@ -497,7 +497,7 @@ class CarlaManager:
                     )
                     ego_vehicle_location = self.ego_vehicle.get_transform().location
 
-                    tmp_route = self.global_planner.trace_route(
+                    tmp_route = self.tm.global_planner.trace_route(
                         ego_vehicle_location, destination_location
                     )
                     self.agent._local_planner.set_global_plan(tmp_route)
@@ -604,13 +604,16 @@ class CarlaManager:
 
         nearest_waypoint = self.carla_handler.get_nearest_waypoint(self.ego_vehicle)
         left_waypoint = nearest_waypoint.get_left_lane()
-        
+            
         # Feilds feed with assumption:
         # only 2 lanes exist on the same direction
+        # same direction for lane_left should only matter if we have a left lane or nearest_waypoint
+        # 
+        
         self.lane_left = ParallelLane(
             lane_vehicles=actors_in_left_lane,
             lane_points=left_lane_waypoints,
-            same_direction= left_waypoint.lane_id * nearest_waypoint.lane_id > 0,
+            same_direction= left_waypoint.lane_id * nearest_waypoint.lane_id > 0 if left_waypoint is not None else True,
             left_to_the_current=True,
             adjacent_lane=True,
             lane_distance=lane_distance,
@@ -835,6 +838,7 @@ class CarlaManager:
                 )
 
                 self.draw_global_path(self.global_path_in_intersection)
+                
             elif CURRENT_SCENARIO in LANE_SCENARIOS:
                 
                 if(CURRENT_SCENARIO == Scenario.SWITCH_LANE_RIGHT):
