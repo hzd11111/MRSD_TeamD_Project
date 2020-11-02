@@ -15,11 +15,14 @@ class TrafficLightManager():
         self.world = self.client.get_world()
         self.Map = self.world.get_map()
         
+        # a tick is needed to update the actors in the world
+        self.world.tick()
+
         if town is "Town05":
             self.lane_id_to_tl_x_loc_dict = pickle.load(open(LIGHTS_DICT, "rb"))
         else:
             raise NotImplementedError
-        
+
         self.all_traffic_lights = self.world.get_actors().filter("traffic.traffic_light*")
         self.road_to_tl_actor_dict = self.get_road_to_tl_actorid_dict()
 
@@ -37,7 +40,7 @@ class TrafficLightManager():
     def get_actor_to_traffic_light(self, actor: carla.Vehicle):
         # extract the actor's current road_id, and lane_id
         location = actor.get_location()
-        nearest_waypoint = self.Map.get_waypoint(location, )
+        nearest_waypoint = self.Map.get_waypoint(location, project_to_road=True)
         road_id = nearest_waypoint.road_id
         lane_id = nearest_waypoint.lane_id
         
