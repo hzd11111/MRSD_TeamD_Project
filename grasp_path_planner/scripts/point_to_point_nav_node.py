@@ -19,7 +19,7 @@ from grasp_path_planner.srv import SimService, SimServiceRequest
 from utility import PathPlan, EnvDesc
 from neural_network_manager import NNManager, NeuralNetworkSelector
 from trajectory_generator import TrajGenerator
-from options import RLDecision
+from options import RLDecision, Scenario
 
 
 TRAJ_PARAM = {'look_up_distance': 0, \
@@ -51,10 +51,14 @@ class Point2PointPlanner:
         reset_msg = PathPlan()
         reset_msg.reset_sim = True
         reset_msg.end_of_action = True
-        reset_msg.scenario_chosen = 2
+        reset_msg.scenario_chosen = Scenario.LANE_FOLLOWING.value # Default to start LaneFollowing
         req = SimServiceRequest()
         req.path_plan = reset_msg
-        self.prev_env_desc = EnvDesc.fromRosMsg(self.sim_service_interface(req).env)
+        if (self.sim_service_interface(req) is None):
+            print("Getting None from Msg and feed Empty Env")
+            self.prev_env_desc = EnvDesc()            
+        else :
+            self.prev_env_desc = EnvDesc.fromRosMsg(self.sim_service_interface(req).env)
         return self.prev_env_desc
 
     # perform action for a single timestep

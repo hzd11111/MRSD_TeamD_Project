@@ -55,6 +55,7 @@ from utility import (
     GlobalPathPoint,
     GlobalPath,
 )
+from options import GlobalPathAction
 from functional_utility import Pose2D, Frenet
 
 from actors import Actor, Vehicle, Pedestrian
@@ -585,8 +586,8 @@ class CarlaManager:
         ego_vehicle = Vehicle(self.carla_handler.world, self.ego_vehicle.id)
 
         draw_string(ego_vehicle)
-        draw_string(location=self.tm.goal_waypoint.transform.location, text='X',
-                                                            color=(0,0,255))
+        # draw_string(location=self.tm.goal_waypoint.transform.location, text='X', # Removing it for P2P nav
+        #                                                     color=(0,0,255))
         
         lane_origin = current_lane_waypoints[0].global_pose
 

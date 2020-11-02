@@ -13,8 +13,8 @@ class Mode(Enum):
 
 
 ############ Mode and Model Selection ##############################
-CURRENT_SCENARIO = Scenario.SWITCH_LANE_LEFT
-CURRENT_MODE = Mode.TRAIN
+CURRENT_SCENARIO = Scenario.P2P
+CURRENT_MODE = Mode.TEST
 
 #assert !(CURRENT_SCENARIO==Scenario.P2P and CURRENT_MODE==Mode.TRAIN), "P2P Cannot be called in train mode"
 
