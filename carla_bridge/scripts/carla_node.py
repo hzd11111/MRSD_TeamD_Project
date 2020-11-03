@@ -457,6 +457,7 @@ class CarlaManager:
         env_desc.reward_info = reward_info
         env_desc.global_path = self.global_path_in_intersection
         env_desc.intersection_global_path = self.intersection_path_global
+        print(self.intersection_path_global)
         
         
 
@@ -920,7 +921,7 @@ class CarlaManager:
                 self.global_path_in_intersection = GlobalPath(
                     path_points=self.global_path_in_intersection
                 )
-                self.draw_global_path(self.global_path_in_intersection)
+                # self.draw_global_path(self.global_path_in_intersection)
                 
                 
                 ### Process all intersection paths
@@ -935,7 +936,8 @@ class CarlaManager:
                     self.intersection_waypoints_for_each_intersection[i] = GlobalPath(
                         path_points=self.intersection_waypoints_for_each_intersection[i]
                     )
-                
+                    self.draw_global_path(self.intersection_waypoints_for_each_intersection[i])
+
 
 
             ## Handing over control

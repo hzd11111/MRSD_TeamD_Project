@@ -4,4 +4,5 @@ PerpendicularLaneMsg[] next_intersection
 ParallelLaneMsg[] adjacent_lanes
 float64 speed_limit
 RewardInfoMsg reward_info
-GlobalPathMsg global_path 
+GlobalPathMsg global_path
+GlobalPathMsg intersection_global_path

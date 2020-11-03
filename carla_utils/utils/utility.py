@@ -480,6 +480,7 @@ class EnvDesc(object):
         "reward_info",
         "pedestrain",
         "global_path",
+        "intersection_global_path",
     ]
 
     def __init__(
@@ -491,6 +492,7 @@ class EnvDesc(object):
         speed_limit=0.0,
         reward_info=RewardInfo(),
         global_path=GlobalPath(),
+        intersection_global_path=GlobalPath(),
     ):
         self.cur_vehicle_state = cur_vehicle_state
         self.current_lane = current_lane
@@ -499,6 +501,7 @@ class EnvDesc(object):
         self.speed_limit = speed_limit
         self.reward_info = reward_info
         self.global_path = global_path
+        self.intersection_global_path = intersection_global_path
 
     @classmethod
     def fromRosMsg(cls, msg):
@@ -514,6 +517,8 @@ class EnvDesc(object):
         obj.speed_limit = msg.speed_limit
         obj.reward_info = RewardInfo.fromRosMsg(msg.reward_info)
         obj.global_path = GlobalPath.fromRosMsg(msg.global_path)
+        obj.intersection_global_path = GlobalPath.fromRosMsg(msg.intersection_global_path)
+
         return obj
 
     def toRosMsg(self):
@@ -525,6 +530,8 @@ class EnvDesc(object):
         msg.speed_limit = self.speed_limit
         msg.reward_info = self.reward_info.toRosMsg()
         msg.global_path = self.global_path.toRosMsg()
+        msg.intersection_global_path = self.intersection_global_path.toRosMsg()
+
         return msg
 
 

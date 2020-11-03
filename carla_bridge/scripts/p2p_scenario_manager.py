@@ -98,7 +98,7 @@ class P2PScenario:
         ego_batch = []
 
         route, global_path_wps = self.get_random_route()
-        draw_waypoints(self.world, global_path_wps, life_time=100)
+        # draw_waypoints(self.world, global_path_wps, life_time=100)
 
         spawn_waypoint = global_path_wps[0]
         # import pdb; pdb.set_trace()
@@ -316,7 +316,7 @@ class P2PScenario:
     def get_random_route(self):
         
         random_ind = np.random.randint(0, len(route_start_locations))
-        random_ind = 1  # TODO: REMOVE THIS LINE.
+        random_ind = 0  # TODO: REMOVE THIS LINE.
         start_location = carla.Location(*route_start_locations[random_ind])
         end_location = carla.Location(*route_end_locations[random_ind])
 
