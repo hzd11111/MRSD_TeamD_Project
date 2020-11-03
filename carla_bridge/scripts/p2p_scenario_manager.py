@@ -188,6 +188,9 @@ class P2PScenario:
         list_of_intersection_ids_to_pass_in_ordered_sequence = []
         list_of_high_level_actions_to_take_in_ordered_sequence = []
         first_wp_for_each_junction = []
+        
+        
+        
         for global_path_point in global_path_wps[:-2]:
             if(global_path_point.is_junction and global_path_point.get_junction().id not in list_of_intersection_ids_to_pass_in_ordered_sequence):
                 list_of_intersection_ids_to_pass_in_ordered_sequence.append(global_path_point.get_junction().id)
@@ -225,15 +228,58 @@ class P2PScenario:
         intersection_topologies = []
         road_lane_to_orientation_for_each_intersection = []
         incoming_road_lane_id_to_outgoing_lane_id_dict_for_each_intersection = []
+        list_of_intersection_waypoints_for_each_intersection = []
+
         for i,junction in enumerate(list_of_intersection_ids_to_pass_in_ordered_sequence):
 
-            print(junction, "J")
             (
                 road_id_set,
                 incoming_road_lane_id_set,
                 outgoing_road_lane_id_set,
                 incoming_road_lane_id_to_outgoing_lane_id_dict,
             ) = self.get_road_sets(junction)
+            
+            # Get intersection path waypoints
+            current_scenario_setups = self.get_scenario_setups(self.waypoints_finer, junction, incoming_road_lane_id_set, outgoing_road_lane_id_set, incoming_road_lane_id_to_outgoing_lane_id_dict)[list_of_high_level_actions_to_take_in_ordered_sequence[i]]
+            
+            current_road_lane_id = road_and_lane_ids_for_incoming_roads_in_global_path_for_each_intersection[i]
+            for setup in current_scenario_setups:
+                if(setup[0] == current_road_lane_id):
+                    current_setup = setup
+                        
+            incoming_road_lane = current_setup[0]
+            outgoing_road_lane = current_setup[1]
+            incoming_lane_waypoints = [
+                wp
+                for wp in self.waypoints_finer
+                if wp.road_id == incoming_road_lane[0]
+                and wp.lane_id == incoming_road_lane[1]
+            ]
+            incoming_lane_orientation = current_setup[2]
+            if incoming_lane_orientation == 1:
+                incoming_lane_waypoints = incoming_lane_waypoints[::-1]
+
+            outgoing_lane_waypoints = [
+                wp
+                for wp in self.waypoints_finer
+                if wp.road_id == outgoing_road_lane[0]
+                and wp.lane_id == outgoing_road_lane[1]
+            ]
+            outgoing_lane_orientation = current_setup[3]
+            if outgoing_lane_orientation == 1:
+                outgoing_lane_waypoints = outgoing_lane_waypoints[::-1]
+
+            start_location = incoming_lane_waypoints[-1].transform.location  # Start of lane
+            end_location = outgoing_lane_waypoints[
+                10
+            ].transform.location  # 10 m after end of intersection
+
+            route = self.global_planner.trace_route(start_location, end_location)
+            global_path_wps = [route[i][0] for i in range(len(route))]
+            list_of_intersection_waypoints_for_each_intersection.append(global_path_wps)
+            #################################################################################
+            
+            
             
             intersection_topology, road_lane_to_orientation = get_intersection_topology(
                 self.waypoints_finer,
@@ -257,7 +303,6 @@ class P2PScenario:
             incoming_road_lane_id_to_outgoing_lane_id_dict_for_each_intersection.append(incoming_road_lane_id_to_outgoing_lane_id_dict)
 
         
-        
 
         
         print("Control handed to system....")
@@ -266,7 +311,7 @@ class P2PScenario:
         
         
 
-        return ego_vehicle, my_vehicles, global_path_wps, route, global_path_actions, intersection_topologies, incoming_road_lane_id_to_outgoing_lane_id_dict_for_each_intersection, road_lane_to_orientation_for_each_intersection, road_and_lane_ids_for_incoming_roads_in_global_path_for_each_intersection
+        return ego_vehicle, my_vehicles, global_path_wps, route, global_path_actions, intersection_topologies, incoming_road_lane_id_to_outgoing_lane_id_dict_for_each_intersection, road_lane_to_orientation_for_each_intersection, road_and_lane_ids_for_incoming_roads_in_global_path_for_each_intersection, list_of_intersection_waypoints_for_each_intersection
 
     def get_random_route(self):
         

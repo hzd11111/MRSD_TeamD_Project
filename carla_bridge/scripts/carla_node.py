@@ -114,11 +114,14 @@ class CarlaManager:
         self.global_path_in_intersection = None
         self.road_lane_to_orientation = None
         self.all_vehicles = None
+        self.intersection_path_global = None
 
         self.intersection_topology_for_each_intersection = None
         self.intersection_connections_for_each_intersection = None
         self.road_lane_to_orientation_for_each_intersection = None
         self.ego_start_road_lane_pair_for_each_intersection = None
+        self.intersection_waypoints_for_each_intersection = None
+
         self.current_intersection_idx = -1
         self.last_command = Scenario.STOP
 
@@ -453,6 +456,9 @@ class CarlaManager:
         env_desc.speed_limit = self.speed_limit
         env_desc.reward_info = reward_info
         env_desc.global_path = self.global_path_in_intersection
+        env_desc.intersection_global_path = self.intersection_path_global
+        
+        
 
         return SimServiceResponse(env_desc.toRosMsg())
 
@@ -889,7 +895,8 @@ class CarlaManager:
                     self.intersection_topology_for_each_intersection,
                     self.intersection_connections_for_each_intersection,
                     self.road_lane_to_orientation_for_each_intersection,
-                    self.ego_start_road_lane_pair_for_each_intersection
+                    self.ego_start_road_lane_pair_for_each_intersection,
+                    self.intersection_waypoints_for_each_intersection,
                 ) = self.tm.reset()
                 
                 # Reset intersection pointer idx
@@ -914,6 +921,20 @@ class CarlaManager:
                     path_points=self.global_path_in_intersection
                 )
                 self.draw_global_path(self.global_path_in_intersection)
+                
+                
+                ### Process all intersection paths
+                for i in range(len(self.intersection_waypoints_for_each_intersection)):
+                    self.intersection_waypoints_for_each_intersection[i] = [
+                        self.waypoint_to_pose2D(wp) for wp in self.intersection_waypoints_for_each_intersection[i]
+                    ]
+                    self.intersection_waypoints_for_each_intersection[i] = [
+                        GlobalPathPoint(global_pose=pose)
+                        for pose in self.intersection_waypoints_for_each_intersection[i]
+                    ]
+                    self.intersection_waypoints_for_each_intersection[i] = GlobalPath(
+                        path_points=self.intersection_waypoints_for_each_intersection[i]
+                    )
                 
 
 
@@ -989,6 +1010,7 @@ class CarlaManager:
                 self.intersection_topology = self.intersection_topology_for_each_intersection[self.current_intersection_idx]
                 self.road_lane_to_orientation = self.road_lane_to_orientation_for_each_intersection[self.current_intersection_idx]
                 self.intersection_connections = self.intersection_connections_for_each_intersection[self.current_intersection_idx]
+                self.intersection_path_global = self.intersection_waypoints_for_each_intersection[self.current_intersection_idx]
                 self.lane_cur = None
                 self.adjacent_lanes = None
                 self.next_intersection = None
