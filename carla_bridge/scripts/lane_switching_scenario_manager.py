@@ -250,59 +250,6 @@ class LaneSwitchingScenario:
 
         return ego_vehicle, non_ego_vehicle_list
 
-    def spawn_non_ego_lane_vehicles(self, road_id, ego_line_id):
-        config = self.config
-        spawned_vehicles_list = []
-        number_of_non_ego_vehicles = self.config["total_non_ego_lane_vehicles"]
-
-        waypoints = self.world.get_map().generate_waypoints(1)
-        road_waypoints = []
-        for waypoint in waypoints:
-            if(waypoint.road_id == road_id and waypoint.lane_id != ego_line_id):
-                road_waypoints.append(waypoint)
-        number_of_spawn_points = len(road_waypoints)
-        
-        # random.shuffle(road_waypoints)
-        selected_waypoints = []
-        ptr = 0
-        while ptr < len(road_waypoints) and len(selected_waypoints) < number_of_non_ego_vehicles:
-            ptr += np.random.randint(config["min_dist_bwn_veh"], config["max_dist_bwn_veh"])
-            if ptr < len(road_waypoints) : 
-                selected_waypoints.append(road_waypoints[ptr])
-            else:
-                break
-            ptr += config["average_car_length"]
-
-        SpawnActor = carla.command.SpawnActor
-        SetAutopilot = carla.command.SetAutopilot
-        FutureActor = carla.command.FutureActor
-
-        # --------------
-        # Spawn vehicles
-        # --------------
-        batch = []
-        for n, t in enumerate(selected_waypoints):
-            if n >= number_of_non_ego_vehicles:
-                break
-            blueprint = self.non_ego_vehicle_blueprint
-            blueprint.set_attribute('role_name', 'autopilot')
-            transform = t.transform
-            transform.location.z += 2.0
-            batch.append(SpawnActor(blueprint, transform).then(SetAutopilot(FutureActor, True)))
-
-        for response in self.client.apply_batch_sync(batch, False):
-            if response.error:
-                logging.error(response.error)
-            else:
-                spawned_vehicles_list.append(response.actor_id)
-                print('created %s' % response.actor_id)
-        my_vehicles = self.world.get_actors(spawned_vehicles_list)
-        for n, v in enumerate(my_vehicles):
-            traffic_manager = self.traffic_manager
-            traffic_manager.auto_lane_change(v,False)
-        self.non_ego_vehicle_list.extend(spawned_vehicles_list)
-        return spawned_vehicles_list
-
     def destroy_all_actors(self):
         # destroy all old actors
         all_actors = self.world.get_actors().filter("vehicle*")
