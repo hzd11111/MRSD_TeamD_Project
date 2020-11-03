@@ -115,6 +115,13 @@ class CarlaManager:
         self.road_lane_to_orientation = None
         self.all_vehicles = None
 
+        self.intersection_topology_for_each_intersection = None
+        self.intersection_connections_for_each_intersection = None
+        self.road_lane_to_orientation_for_each_intersection = None
+        self.ego_start_road_lane_pair_for_each_intersection = None
+        self.current_intersection_idx = -1
+        self.last_command = Scenario.STOP
+
         ### P2P Placeholders
         self.global_path_carla_waypoints = None
         self.autopilot_recompute_flag = 0
@@ -135,6 +142,7 @@ class CarlaManager:
             tracking_speed = plan.tracking_speed  # / 3.6
             reset_sim = plan.reset_sim
             is_autopilot = plan.auto_pilot
+            print("Autopilot", is_autopilot)
 
             self.end_of_action = plan.end_of_action
             self.action_progress = plan.action_progress
@@ -227,6 +235,7 @@ class CarlaManager:
             parallel_opposite_dir_info,
             ego_lane_info,
         ) = state_information
+                
 
         if self.lane_cur == None:
             # Current Lane
@@ -596,7 +605,6 @@ class CarlaManager:
             origin_global_pose=lane_origin
             )
         draw_string(location=carla.Location(x=lane_origin.x,y=lane_origin.y,z=2), text='8')
-        print(len(self.lane_cur.lane_vehicles), "KLEN")
         
         self.adjacent_lanes = []
 
@@ -872,13 +880,24 @@ class CarlaManager:
                     path_points=self.global_path_in_intersection
                 )
             elif CURRENT_SCENARIO == Scenario.P2P:
-                self.ego_vehicle, self.vehicles_list, self.global_path_carla_waypoints, route = self.tm.reset()
+                (
+                    self.ego_vehicle,
+                    self.all_vehicles,
+                    self.global_path_carla_waypoints,
+                    route,
+                    global_path_actions,
+                    self.intersection_topology_for_each_intersection,
+                    self.intersection_connections_for_each_intersection,
+                    self.road_lane_to_orientation_for_each_intersection,
+                    self.ego_start_road_lane_pair_for_each_intersection
+                ) = self.tm.reset()
+                
+                # Reset intersection pointer idx
+                self.current_intersection_idx = -1
                 
                 self.agent = RoamingAgent(self.ego_vehicle)
                 self.autopilot_recompute_flag = 0
-                
-                global_path_actions = self.get_global_path_actions(route)[:-2] # -2 to end the path slightly before the final point.
-                
+                                
                 self.global_path_in_intersection = [
                     self.waypoint_to_pose2D(wp)
                     for wp in self.global_path_carla_waypoints[:-2]
@@ -895,7 +914,7 @@ class CarlaManager:
                     path_points=self.global_path_in_intersection
                 )
                 self.draw_global_path(self.global_path_in_intersection)
-
+                
 
 
             ## Handing over control
@@ -959,9 +978,23 @@ class CarlaManager:
         scenario = plan.scenario_chosen
         
         if scenario in LANE_SCENARIOS:
+            self.last_command = scenario
             return self.lane_following_pathRequest(data)
 
         elif scenario in INTERSECTION_SCENARIOS: 
+            # print("Last command:", self.last_command, "Current:", scenario)
+            if(self.last_command != scenario):
+                self.current_intersection_idx += 1
+                self.ego_start_road_lane_pair = self.ego_start_road_lane_pair_for_each_intersection[self.current_intersection_idx]
+                self.intersection_topology = self.intersection_topology_for_each_intersection[self.current_intersection_idx]
+                self.road_lane_to_orientation = self.road_lane_to_orientation_for_each_intersection[self.current_intersection_idx]
+                self.intersection_connections = self.intersection_connections_for_each_intersection[self.current_intersection_idx]
+                self.lane_cur = None
+                self.adjacent_lanes = None
+                self.next_intersection = None
+
+            self.last_command = scenario
+                
             return self.intersection_pathRequest(data)
             
     def spin(self):
