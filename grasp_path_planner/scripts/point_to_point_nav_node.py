@@ -73,6 +73,10 @@ class Point2PointPlanner:
             return self.prev_env_desc, True, False
 
         path_plan = self.traj_generator.trajPlan(action, self.prev_env_desc, selected_scenario)
+        dummy_scenario_selection = selected_scenario
+        if selected_scenario is Scenario.STOP:
+            dummy_scenario_selection = Scenario.LANE_FOLLOWING
+        path_plan.scenario_chosen = dummy_scenario_selection.value
         req = SimServiceRequest()
         req.path_plan = path_plan
         # import ipdb; ipdb.set_trace()
