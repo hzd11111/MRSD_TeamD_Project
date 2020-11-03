@@ -109,8 +109,9 @@ class StateManager:
 
         if len(adj_lane_vehs) > 5:
             adj_lane_vehs = sorted(
-                lambda item: item[0].location_global.distance(env_desc.cur_vehicle_state.location_global),
-                adj_lane_vehs)[:5]
+                adj_lane_vehs,
+                lambda item: item[0].location_global.distance(env_desc.cur_vehicle_state.location_global)
+                )[:5]
 
         for vehicle, lane in adj_lane_vehs:
             vehicle_in_ego = vehicle.fromControllingVehicle(

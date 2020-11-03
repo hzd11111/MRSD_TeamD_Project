@@ -50,7 +50,7 @@ class FullPlannerManager:
                 self.event == Scenario.SWITCH_LANE_RIGHT:
             model = DQN(CustomLaneChangePolicy, env, verbose=1,
                         learning_starts=256, batch_size=256,
-                        exploration_fraction=0.9, target_network_update_freq=100,
+                        exploration_fraction=0.9, gamma=0.93, target_network_update_freq=100,
                         tensorboard_log=wandb.run.dir)
 
         if self.event == Scenario.LANE_FOLLOWING:
