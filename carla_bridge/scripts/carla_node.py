@@ -28,6 +28,7 @@ from intersection_scenario_manager import IntersectionScenario
 from lane_following_scenario_manager import LaneFollowingScenario
 from lane_switching_scenario_manager import LaneSwitchingScenario
 from p2p_scenario_manager import P2PScenario
+from traffic_light_manager import TrafficLightManager
 from grasp_path_planner.srv import SimService, SimServiceResponse
 from agents.tools.misc import get_speed
 
@@ -844,7 +845,7 @@ class CarlaManager:
                     self.ego_start_road_lane_pair,
                     self.global_path_in_intersection,
                     self.road_lane_to_orientation,
-                ) = self.tm.reset(num_vehicles=25, junction_id=53, warm_start_duration=2)
+                ) = self.tm.reset(num_vehicles=10, junction_id=53, warm_start_duration=2)
 
                 self.all_vehicles = self.carla_handler.world.get_actors().filter(
                     "vehicle.*"
@@ -1012,7 +1013,12 @@ class CarlaManager:
     def pathRequest_selector(self, data):
         
         plan = PathPlan.fromRosMsg(data.path_plan)
-        scenario = plan.scenario_chosen
+        
+        if(CURRENT_SCENARIO == Scenario.P2P):
+            scenario = plan.scenario_chosen
+        else:
+            scenario = CURRENT_SCENARIO
+        
         
         if scenario in LANE_SCENARIOS:
             self.last_command = scenario
@@ -1020,7 +1026,7 @@ class CarlaManager:
 
         elif scenario in INTERSECTION_SCENARIOS: 
             # print("Last command:", self.last_command, "Current:", scenario)
-            if(self.last_command != scenario):
+            if(CURRENT_SCENARIO == Scenario.P2P and self.last_command != scenario):
                 self.current_intersection_idx += 1
                 self.ego_start_road_lane_pair = self.ego_start_road_lane_pair_for_each_intersection[self.current_intersection_idx]
                 self.intersection_topology = self.intersection_topology_for_each_intersection[self.current_intersection_idx]
