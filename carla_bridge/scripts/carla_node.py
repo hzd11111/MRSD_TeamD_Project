@@ -115,6 +115,8 @@ class CarlaManager:
         self.road_lane_to_orientation = None
         self.all_vehicles = None
         self.intersection_path_global = None
+        self.TLManager = None
+
 
         self.intersection_topology_for_each_intersection = None
         self.intersection_connections_for_each_intersection = None
@@ -363,6 +365,17 @@ class CarlaManager:
         lane_cur = copy.copy(self.lane_cur)
         adjacent_lanes = copy.copy(self.adjacent_lanes)
         next_intersection = copy.copy(self.next_intersection)
+        
+        ### Set traffic light status for all vehicles
+        self.TLManager.set_actor_traffic_light_state(vehicle_ego)
+        for i in range(len(lane_cur.lane_vehicles)):
+            self.TLManager.set_actor_traffic_light_state(lane_cur.lane_vehicles[i])
+        for i in range(len(adjacent_lanes)):
+            for j in range(len(adjacent_lanes[i].lane_vehicles)):
+                self.TLManager.set_actor_traffic_light_state(adjacent_lanes[i].lane_vehicles[j])
+        for i in range(len(next_intersection)):
+            for j in range(len(next_intersection[i].lane_vehicles)):
+                self.TLManager.set_actor_traffic_light_state(next_intersection[i].lane_vehicles[j])
 
         ### Get the frenet coordinate of the ego vehicle in the current lane.
         ego_vehicle_frenet_pose = lane_cur.GlobalToFrenet(vehicle_ego.location_global)
@@ -456,10 +469,8 @@ class CarlaManager:
         env_desc.speed_limit = self.speed_limit
         env_desc.reward_info = reward_info
         env_desc.global_path = self.global_path_in_intersection
-        env_desc.intersection_global_path = self.intersection_path_global
-        print(self.intersection_path_global)
-        
-        
+        if(CURRENT_SCENARIO == Scenario.P2P):     
+            env_desc.intersection_global_path = self.intersection_path_global        
 
         return SimServiceResponse(env_desc.toRosMsg())
 
@@ -963,6 +974,9 @@ class CarlaManager:
         # Create a CarlaHandler object. CarlaHandler provides some cutom bus\ilt APIs for the Carla Server.
         self.carla_handler = CarlaHandler(client)
         self.client = client
+        
+        self.TLManager = TrafficLightManager(self.client)
+
 
         if synchronous_mode:
             settings = self.carla_handler.world.get_settings()
