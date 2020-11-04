@@ -13,17 +13,22 @@ import carla
 import numpy as np
 import logging
 from carla_handler import CarlaHandler
+from collections import defaultdict
+sys.path.append("../../global_route_planner/")
+
 from global_planner import get_global_planner
 
 #CONFIGURATIONS:
 town05_city = { "road_ids": [6, 7, 8], 
                 "distance_bwn_waypoints":1,
-                "total_non_ego_vehicles":3,
-                "total_non_ego_lane_vehicles":10, #non ego vehicles in other lane
+                "total_ego_line_vehicles":3, # non ego vehicles in ego lane
+                "total_non_ego_lane_vehicles":5, #non ego vehicles in other lane
                 "max_vehicles_in_front":2,
                 "target_speed":1,
                 "max_dist_bwn_veh":5,
                 "min_dist_bwn_veh":2,
+                "max_dist_bwn_veh_other_lane":6,
+                "min_dist_bwn_veh_other_lane":3,
                 "average_car_length":5,
                 "swithching_left": False,
                 "goal_distance_to_travel":30,                 
@@ -37,7 +42,20 @@ def filter_waypoints(waypoints, road_id, lane_id):
     for wp in waypoints:
         if wp.road_id == road_id and wp.lane_id==lane_id:
             filtered_waypoints.append(wp) 
-    return filtered_waypoints 
+    return filtered_waypoints
+
+def filter_non_ego_waypoints(waypoints, road_id, lane_id):
+    """
+        Get all the waypoints in specified road_id but with lane_id
+    """
+    non_ego_waypoints_lists = defaultdict(list)
+    for wp in waypoints:
+        if wp.road_id == road_id and wp.lane_id!=lane_id:
+            non_ego_waypoints_lists[wp.lane_id].append(wp)
+    for lane_id in non_ego_waypoints_lists.keys(): 
+        if lane_id > 0:
+            non_ego_waypoints_lists[lane_id].reverse()
+    return non_ego_waypoints_lists
 
 def get_lane_ids(waypoints, road_id, ego_lane_id):
     """
@@ -103,28 +121,38 @@ class LaneSwitchingScenario:
         self.destroy_all_actors()
         left_turning_lane_ids = [2, -2]
         right_turning_lane_ids = [1, -1]
+        
         road_id = random.choice(self.config["road_ids"])
         ego_line_id = random.choice(left_turning_lane_ids) if switching_left else random.choice(right_turning_lane_ids)
+        
         all_waypoints = self.world.get_map().generate_waypoints(1)
         ego_waypoint_list = filter_waypoints(all_waypoints, road_id, ego_line_id)
-
-
         if ego_line_id > 0: ego_waypoint_list.reverse()
         
+        non_ego_waypoints_lists = filter_non_ego_waypoints(all_waypoints, road_id, ego_line_id)
+    
+
         self.current_lane_wps = ego_waypoint_list
         self.goal_waypoint = ego_waypoint_list[self.config["goal_distance_to_travel"]]
-        ego_spawn_point, non_ego_spawn_points = self.get_spawn_points(distance_bwn_waypoints, ego_waypoint_list)
-        self.spawn_ego_lane_vehicles(ego_spawn_point, non_ego_spawn_points)
-        self.spawn_non_ego_lane_vehicles(road_id, ego_line_id)
+        ego_spawn_point, non_ego_spawn_points = self.get_ego_spawn_points(distance_bwn_waypoints, ego_waypoint_list)
+        self.spawn_vehicles_on_selected_lane(ego_spawn_point, non_ego_spawn_points)
+        
+        for non_ego_waypoints_list in non_ego_waypoints_lists.values():
+            self.spawn_vehicles_on_selected_lane(None, self.get_non_ego_spawn_points(non_ego_waypoints_list))
 
-    def get_spawn_points(self, distance_bwn_waypoints, waypoint_list):
+        # self.spawn_non_ego_lane_vehicles(road_id, ego_line_id)
+
+    def get_ego_spawn_points(self, distance_bwn_waypoints, waypoint_list):
         
         config = self.config
         # select waypoints from the list with some randomness
         selected_waypoints = []
         ptr = 0
-        for _ in range(config["total_non_ego_vehicles"]+1):
+        for _ in range(config["total_ego_line_vehicles"]+1):
             ptr += np.random.randint(config["min_dist_bwn_veh"], config["max_dist_bwn_veh"])
+            if ptr >= (len(waypoint_list) - 1):
+                print("This line will not fit the required vehicle num")
+                break
             selected_waypoints.append(waypoint_list[ptr])
             ptr += config["average_car_length"]
 
@@ -132,19 +160,40 @@ class LaneSwitchingScenario:
         spawn_points_list = [item.transform for item in selected_waypoints]
 
         for point in spawn_points_list: point.location.z += 0.2 # prevent collision
-
         # select the position of the ego vehicle
-        ego_veh_int = np.random.randint(0, config["total_non_ego_vehicles"]/2)
+        ego_veh_int = np.random.randint(0, len(selected_waypoints) - 1)
         temp = spawn_points_list.pop(ego_veh_int)
         ego_spawn_point = (temp, temp.get_forward_vector())
-        
         # non-ego vehicle spawn points
         non_ego_spawn_points = [(spawn_points_list[i], spawn_points_list[i].get_forward_vector()) \
-                                for i in range(config["total_non_ego_vehicles"])]
+                                for i in range(len(spawn_points_list))]
         # vectors = [x.get_forward_vector() for x in spawn_points_list[1:5]]
         return ego_spawn_point, non_ego_spawn_points
 
-    def spawn_ego_lane_vehicles(self, ego_spawn_point, non_ego_spawn_points):
+    def get_non_ego_spawn_points(self, waypoint_list):
+        config = self.config
+        # select waypoints from the list with some randomness
+        selected_waypoints = []
+        ptr = 0
+        for _ in range(config["total_non_ego_lane_vehicles"]):
+            ptr += np.random.randint(config["min_dist_bwn_veh_other_lane"], config["max_dist_bwn_veh_other_lane"])
+            if ptr >= (len(waypoint_list) - 1): 
+                print("This line will not fit the required vehicle num")
+                break
+            selected_waypoints.append(waypoint_list[ptr])
+            ptr += config["average_car_length"]
+
+        # convert waypoints to spawn points
+        spawn_points_list = [item.transform for item in selected_waypoints]
+
+        for point in spawn_points_list: point.location.z += 0.2 # prevent collision
+        
+        # non-ego vehicle spawn points
+        non_ego_spawn_points = [(spawn_points_list[i], spawn_points_list[i].get_forward_vector()) \
+                                for i in range(len(spawn_points_list))]
+        return non_ego_spawn_points
+
+    def spawn_vehicles_on_selected_lane(self, ego_spawn_point, non_ego_spawn_points):
 
         # Get vehicle blueprints, mustang for non-ego, tesla for ego :D
         self.non_ego_vehicle_blueprint = self.world.get_blueprint_library().filter('vehicle.mustang.mustang')[0]
@@ -158,7 +207,7 @@ class LaneSwitchingScenario:
 
         # spawning non-ego vehicles
         batch = []
-        for i in range(self.config["total_non_ego_vehicles"]):
+        for i in range(len(non_ego_spawn_points)): 
             batch.append(SpawnActor(self.non_ego_vehicle_blueprint, non_ego_spawn_points[i][0])
                 .then(ApplyVelocity(FutureActor, non_ego_spawn_points[i][1] * self.target_speed))
                 .then(SetAutopilot(FutureActor, True)))
@@ -192,63 +241,14 @@ class LaneSwitchingScenario:
             self.traffic_manager.ignore_signs_percentage(actor, 100)
             actor.set_simulate_physics(True)
 
-        self.ego_vehicle = ego_vehicle
-        self.non_ego_vehicle_list = non_ego_vehicle_list
+        if ego_spawn_point is not None:
+            self.ego_vehicle = ego_vehicle
+        if self.non_ego_vehicle_list is None:
+            self.non_ego_vehicle_list = non_ego_vehicle_list
+        else: 
+            self.non_ego_vehicle_list.extend(non_ego_vehicle_list)
 
         return ego_vehicle, non_ego_vehicle_list
-
-    def spawn_non_ego_lane_vehicles(self, road_id, ego_line_id):
-        config = self.config
-        spawned_vehicles_list = []
-        number_of_non_ego_vehicles = self.config["total_non_ego_lane_vehicles"]
-
-        waypoints = self.world.get_map().generate_waypoints(1)
-        road_waypoints = []
-        for waypoint in waypoints:
-            if(waypoint.road_id == road_id and waypoint.lane_id != ego_line_id):
-                road_waypoints.append(waypoint)
-        number_of_spawn_points = len(road_waypoints)
-        
-        # random.shuffle(road_waypoints)
-        selected_waypoints = []
-        ptr = 0
-        while ptr < len(road_waypoints) and len(selected_waypoints) < number_of_non_ego_vehicles:
-            ptr += np.random.randint(config["min_dist_bwn_veh"], config["max_dist_bwn_veh"])
-            if ptr < len(road_waypoints) : 
-                selected_waypoints.append(road_waypoints[ptr])
-            else:
-                break
-            ptr += config["average_car_length"]
-
-        SpawnActor = carla.command.SpawnActor
-        SetAutopilot = carla.command.SetAutopilot
-        FutureActor = carla.command.FutureActor
-
-        # --------------
-        # Spawn vehicles
-        # --------------
-        batch = []
-        for n, t in enumerate(selected_waypoints):
-            if n >= number_of_non_ego_vehicles:
-                break
-            blueprint = self.non_ego_vehicle_blueprint
-            blueprint.set_attribute('role_name', 'autopilot')
-            transform = t.transform
-            transform.location.z += 2.0
-            batch.append(SpawnActor(blueprint, transform).then(SetAutopilot(FutureActor, True)))
-
-        for response in self.client.apply_batch_sync(batch, False):
-            if response.error:
-                logging.error(response.error)
-            else:
-                spawned_vehicles_list.append(response.actor_id)
-                print('created %s' % response.actor_id)
-        my_vehicles = self.world.get_actors(spawned_vehicles_list)
-        for n, v in enumerate(my_vehicles):
-            traffic_manager = self.traffic_manager
-            traffic_manager.auto_lane_change(v,False)
-        self.non_ego_vehicle_list.extend(spawned_vehicles_list)
-        return spawned_vehicles_list
 
     def destroy_all_actors(self):
         # destroy all old actors
@@ -320,5 +320,8 @@ if __name__== "__main__":
         scenario.reset()
         print(time.time()-st)
     
+
+
+
 
 
