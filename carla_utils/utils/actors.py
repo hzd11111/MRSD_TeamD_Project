@@ -232,7 +232,7 @@ class Vehicle(Actor):
         length=0.0,
         width=0.0,
         traffic_light_status=None,
-        traffic_light_stop_distance=0.0,
+        traffic_light_stop_distance=-1,
     ):
 
         super(Vehicle, self).__init__(
