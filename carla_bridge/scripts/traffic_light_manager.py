@@ -2,6 +2,8 @@ import carla
 import pickle
 import sys
 sys.path.append("../../carla_utils/utils")
+sys.path.append("../../grasp_path_planner/scripts/")
+from settings import STOP_LINE_DISTANCE_FOR_LANE_CHANGE_TERMINATE
 from actors import Vehicle
 from options import TrafficLightStatus
 
@@ -59,6 +61,7 @@ class TrafficLightManager():
         
         if tl is None:
             actor.traffic_light_status = TrafficLightStatus.GREEN
+            actor.traffic_light_stop_distance = -1
         else:
             state = str(tl.get_state())
 
@@ -71,11 +74,9 @@ class TrafficLightManager():
                 actor.traffic_light_status = TrafficLightStatus.GREEN
         
         if is_ego and tl is not None:
-            if state == 'Green':
-                actor.traffic_light_stop_distance = -1
-            else: 
-                dist = len(nearest_waypoint.next_until_lane_end(1))
-                actor.traffic_light_stop_distance = dist
+            dist = len(nearest_waypoint.next_until_lane_end(1)) - STOP_LINE_DISTANCE_FOR_LANE_CHANGE_TERMINATE
+            dist = max(0, dist)
+            actor.traffic_light_stop_distance = dist
 
     def set_traffic_light_for_vehicle(self, vehicle, raise_exception=False):
         carla_actor = self.world.get_actor(vehicle.actor_id)
@@ -129,4 +130,4 @@ if __name__ == "__main__":
             print(ac.toRosMsg())
         except:
             import ipdb; ipdb.set_trace()
-        import time; time.sleep(0.5)
+        import time; time.sleep(0.2)
