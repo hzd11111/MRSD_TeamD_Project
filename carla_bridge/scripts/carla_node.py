@@ -368,7 +368,8 @@ class CarlaManager:
         next_intersection = copy.copy(self.next_intersection)
         
         ### Set traffic light status for all vehicles
-        self.TLManager.set_actor_traffic_light_state(vehicle_ego)
+        self.TLManager.set_actor_traffic_light_state(vehicle_ego, is_ego=True)
+        print(vehicle_ego.traffic_light_status, vehicle_ego.traffic_light_stop_distance, "\n")
         for i in range(len(lane_cur.lane_vehicles)):
             self.TLManager.set_actor_traffic_light_state(lane_cur.lane_vehicles[i])
         for i in range(len(adjacent_lanes)):
@@ -845,7 +846,7 @@ class CarlaManager:
                     self.ego_start_road_lane_pair,
                     self.global_path_in_intersection,
                     self.road_lane_to_orientation,
-                ) = self.tm.reset(num_vehicles=10, junction_id=53, warm_start_duration=2)
+                ) = self.tm.reset(num_vehicles=0, junction_id=53, warm_start_duration=2)
 
                 self.all_vehicles = self.carla_handler.world.get_actors().filter(
                     "vehicle.*"
