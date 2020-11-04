@@ -41,6 +41,11 @@ class TrajGenerator:
     def trajPlan(self, rl_decision, env_desc, chosen_scenario = None):
         # check the validity of env_desc
         # import ipdb; ipdb.set_trace()
+        if rl_decision is None:
+            path_plan = self.tempConstSpeed(env_desc)
+            if chosen_scenario is not None:
+                path_plan.scenario_chosen = chosen_scenario
+            return path_plan.toRosMsg()
         # continue the previous action if it hasn't ended
         action_to_perform = self.newActionType(rl_decision)
 
@@ -169,7 +174,7 @@ class TrajGenerator:
         curr_vehicle_global_pose = curr_vehicle.location_global
 
         # determine the closest next pose in the global path
-        global_path = sim_data.global_path
+        global_path = sim_data.intersection_global_path
         global_path_points = global_path.path_points
         tracking_pose = False
         tracking_pose_ind = False
@@ -232,7 +237,7 @@ class TrajGenerator:
         curr_vehicle_global_pose = curr_vehicle.location_global
 
         # determine the closest next pose in the global path
-        global_path = sim_data.global_path
+        global_path = sim_data.intersection_global_path
         global_path_points = global_path.path_points
         tracking_pose = False
         tracking_pose_ind = False
@@ -295,7 +300,7 @@ class TrajGenerator:
         curr_vehicle_global_pose = curr_vehicle.location_global
 
         # determine the closest next pose in the global path
-        global_path = sim_data.global_path
+        global_path = sim_data.intersection_global_path
         global_path_points = global_path.path_points
         tracking_pose = False
         tracking_pose_ind = False
@@ -346,6 +351,26 @@ class TrajGenerator:
         if end_of_action:
             self.reset()
 
+        return new_path_plan
+
+    def tempConstSpeed(self, sim_data):
+        # determine the closest next pose in the current lane
+        current_lane = sim_data.current_lane
+
+        next_point_frenet = Frenet()
+        next_point_frenet.x = 1.
+        new_path_plan = PathPlan()
+        new_path_plan.tracking_pose = current_lane.frenetToGlobal(next_point_frenet)
+        new_path_plan.reset_sim = False
+        new_path_plan.tracking_speed = max(self.traj_parameters['min_speed'], self.start_speed)
+        new_path_plan.end_of_action = True
+        new_path_plan.action_progress = 1.
+        new_path_plan.path_planner_terminate = False
+
+        # add future poses
+        new_path_plan.future_poses = []
+
+        self.reset()
         return new_path_plan
 
     def constSpeedTraj(self, sim_data):

@@ -85,11 +85,11 @@ class GeneralRLManager:
         RLDecision enum
         """
         if action == 0:
-            return RLDecision.GLOBAL_PATH_CONSTANT_SPEED
+            return RLDecision.CONSTANT_SPEED
         elif action == 1:
-            return RLDecision.GLOBAL_PATH_ACCELERATE
+            return RLDecision.ACCELERATE
         elif action == 2:
-            return RLDecision.GLOBAL_PATH_DECELERATE
+            return RLDecision.DECELERATE
         # if action == 0:
         #     return RLDecision.CONSTANT_SPEED
         # elif action == 1:

@@ -42,7 +42,12 @@ class Point2PointPlanner:
 
 
     def initialize(self):
-        self.nn_manager.initialize({}) #ToDo: Fillin the paths
+        self.nn_manager.initialize({Scenario.LANE_FOLLOWING:"./P2PModel/DQN_Lane_Following_model.zip",
+                                    Scenario.SWITCH_LANE_LEFT:"./P2PModel/DQN_Lane_Switch_Left.zip",
+                                    Scenario.SWITCH_LANE_RIGHT:"./P2PModel/DQN_Lane_Switch_Right.zip",
+                                    Scenario.LEFT_TURN:"./P2PModel/DQN_Left_Turn.zip",
+                                    Scenario.RIGHT_TURN:"./P2PModel/DQN_Right_Turn.zip",
+                                    Scenario.GO_STRAIGHT:"./P2PModel/DQN_Straight.zip"}) #ToDo: Fillin the paths
         rospy.init_node("Point2PointPlanner", anonymous=True)
         rospy.wait_for_service(SIM_SERVICE_NAME)
         self.sim_service_interface = rospy.ServiceProxy(SIM_SERVICE_NAME, SimService)
@@ -104,10 +109,14 @@ class Point2PointPlanner:
                 self.performRLDecision(RLDecision.STOP, selected_scenario)
                 path_planner_terminate = True
             else:
-                path_planner_terminate = self.performRLDecision(None, selected_scenario, True)
-                # call neural network manager
-                #rl_decision = self.nn_manager.makeDecision(self.prev_env_desc, selected_scenario)
-                #path_planner_terminate = self.performRLDecision(rl_decision)
+                #path_planner_terminate = self.performRLDecision(None, selected_scenario, True)
+                if new_scenario:
+                    self.performRLDecision(None, selected_scenario)
+                    path_planner_terminate = False
+                else:
+                    # call neural network manager
+                    rl_decision = self.nn_manager.makeDecision(self.prev_env_desc, selected_scenario)
+                    path_planner_terminate = self.performRLDecision(rl_decision, selected_scenario)
             selected_scenario, new_scenario = self.neural_network_selector.selectNeuralNetwork(self.prev_env_desc,
                                                                                  path_planner_terminate,
                                                                                  selected_scenario)
