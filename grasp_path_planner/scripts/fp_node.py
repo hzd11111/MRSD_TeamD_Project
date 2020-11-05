@@ -5,7 +5,6 @@ print(sys.path)
 import os
 homedir = os.getenv("HOME")
 distro = os.getenv("ROS_DISTRO")
-# os.environ["WANDB_MODE"] = "dryrun"
 sys.path.remove("/opt/ros/" + distro + "/lib/python2.7/dist-packages")
 sys.path.append("/opt/ros/" + distro + "/lib/python2.7/dist-packages")
 import rospy
@@ -24,8 +23,10 @@ from intersection_policy import CustomIntersectionStraight, CustomIntersectionLe
 from lane_following_policy import CustomLaneFollowingPolicy
 from custom_env import CustomEnv
 from options import Scenario, RLDecision
-from settings import Mode
+from settings import Mode, WANDB_DRYRUN
 from settings import MODEL_LOAD_PATH, MODEL_SAVE_PATH, CURRENT_MODE, CURRENT_SCENARIO, MODEL_CP_PATH
+if WANDB_DRYRUN:
+    os.environ["WANDB_MODE"] = "dryrun"
 # -----------------------------------Global------------------------------------------------------#
 dir_path = os.path.dirname(os.path.realpath(__file__))
 # -----------------------------------Code------------------------------------------------------#

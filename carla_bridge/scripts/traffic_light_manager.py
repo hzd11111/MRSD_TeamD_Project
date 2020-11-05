@@ -2,6 +2,8 @@ import carla
 import pickle
 import sys
 sys.path.append("../../carla_utils/utils")
+sys.path.append("../../grasp_path_planner/scripts/")
+from settings import STOP_LINE_DISTANCE_FOR_LANE_CHANGE_TERMINATE
 from actors import Vehicle
 from options import TrafficLightStatus
 
@@ -47,29 +49,34 @@ class TrafficLightManager():
         # get the traffic light from the stored dictionary
         tl = self.get_traffic_light_from_road(road_id=road_id, lane_id=lane_id)
 
-        return tl
+        return tl, nearest_waypoint
 
-    def set_actor_traffic_light_state(self, actor:Vehicle):
+    def set_actor_traffic_light_state(self, actor:Vehicle, is_ego=False):
         '''Set the traffic_light_status parameter for a Vehicle object'''
         # create a carla actor object from the Vehicle class
         carla_actor = self.world.get_actor(actor.actor_id)
         
         # get the traffic light state
-        tl = self.get_actor_to_traffic_light(carla_actor)
+        tl, nearest_waypoint = self.get_actor_to_traffic_light(carla_actor)
         
         if tl is None:
             actor.traffic_light_status = TrafficLightStatus.GREEN
-            return
+            actor.traffic_light_stop_distance = -1
+        else:
+            state = str(tl.get_state())
 
-        state = str(tl.get_state())
-
-        # get the traffic manager 
-        if state == 'Red':
-            actor.traffic_light_status = TrafficLightStatus.RED
-        elif state == 'Yellow':
-            actor.traffic_light_status = TrafficLightStatus.YELLOW
-        elif state == 'Green':
-            actor.traffic_light_status = TrafficLightStatus.GREEN
+            # get the traffic manager 
+            if state == 'Red':
+                actor.traffic_light_status = TrafficLightStatus.RED
+            elif state == 'Yellow':
+                actor.traffic_light_status = TrafficLightStatus.YELLOW
+            elif state == 'Green':
+                actor.traffic_light_status = TrafficLightStatus.GREEN
+        
+        if is_ego and tl is not None:
+            dist = len(nearest_waypoint.next_until_lane_end(1)) - STOP_LINE_DISTANCE_FOR_LANE_CHANGE_TERMINATE
+            dist = max(0, dist)
+            actor.traffic_light_stop_distance = dist
 
     def set_traffic_light_for_vehicle(self, vehicle, raise_exception=False):
         carla_actor = self.world.get_actor(vehicle.actor_id)
@@ -119,8 +126,8 @@ if __name__ == "__main__":
     # keep printing ROS msg for the ego vehicle, check for light status
     while True:
         try:
-            tlm.set_actor_traffic_light_state(ac)
+            tlm.set_actor_traffic_light_state(ac, is_ego=True)
             print(ac.toRosMsg())
         except:
             import ipdb; ipdb.set_trace()
-        import time; time.sleep(0.5)
+        import time; time.sleep(0.2)

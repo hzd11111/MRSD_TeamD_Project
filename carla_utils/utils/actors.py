@@ -232,6 +232,7 @@ class Vehicle(Actor):
         length=0.0,
         width=0.0,
         traffic_light_status=None,
+        traffic_light_stop_distance=-1,
     ):
 
         super(Vehicle, self).__init__(
@@ -247,18 +248,21 @@ class Vehicle(Actor):
         self.traffic_light_status = traffic_light_status
         if self.traffic_light_status is None:
             self.traffic_light_status = TrafficLightStatus.RED
+        self.traffic_light_stop_distance = traffic_light_stop_distance
 
     @classmethod
     def fromRosMsg(cls, msg):
         obj = cls.__new__(cls)
         obj = super(Vehicle, obj).fromRosMsg(msg.actor_msg)
         obj.traffic_light_status = TrafficLightStatus(msg.traffic_light_status)
+        obj.traffic_light_stop_distance = msg.traffic_light_stop_distance
         return obj
 
     def toRosMsg(self):
         msg = VehicleMsg()
         msg.actor_msg = super(Vehicle, self).toRosMsg()
         msg.traffic_light_status = self.traffic_light_status.value
+        msg.traffic_light_stop_distance = self.traffic_light_stop_distance
         return msg
 
     @staticmethod

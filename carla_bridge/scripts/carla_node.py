@@ -28,6 +28,7 @@ from intersection_scenario_manager import IntersectionScenario
 from lane_following_scenario_manager import LaneFollowingScenario
 from lane_switching_scenario_manager import LaneSwitchingScenario
 from p2p_scenario_manager import P2PScenario
+from traffic_light_manager import TrafficLightManager
 from grasp_path_planner.srv import SimService, SimServiceResponse
 from agents.tools.misc import get_speed
 
@@ -115,6 +116,8 @@ class CarlaManager:
         self.road_lane_to_orientation = None
         self.all_vehicles = None
         self.intersection_path_global = None
+        self.TLManager = None
+
 
         self.intersection_topology_for_each_intersection = None
         self.intersection_connections_for_each_intersection = None
@@ -363,6 +366,18 @@ class CarlaManager:
         lane_cur = copy.copy(self.lane_cur)
         adjacent_lanes = copy.copy(self.adjacent_lanes)
         next_intersection = copy.copy(self.next_intersection)
+        
+        ### Set traffic light status for all vehicles
+        self.TLManager.set_actor_traffic_light_state(vehicle_ego, is_ego=True)
+        print(vehicle_ego.traffic_light_status, vehicle_ego.traffic_light_stop_distance, "\n")
+        for i in range(len(lane_cur.lane_vehicles)):
+            self.TLManager.set_actor_traffic_light_state(lane_cur.lane_vehicles[i])
+        for i in range(len(adjacent_lanes)):
+            for j in range(len(adjacent_lanes[i].lane_vehicles)):
+                self.TLManager.set_actor_traffic_light_state(adjacent_lanes[i].lane_vehicles[j])
+        for i in range(len(next_intersection)):
+            for j in range(len(next_intersection[i].lane_vehicles)):
+                self.TLManager.set_actor_traffic_light_state(next_intersection[i].lane_vehicles[j])
 
         ### Get the frenet coordinate of the ego vehicle in the current lane.
         ego_vehicle_frenet_pose = lane_cur.GlobalToFrenet(vehicle_ego.location_global)
@@ -456,10 +471,8 @@ class CarlaManager:
         env_desc.speed_limit = self.speed_limit
         env_desc.reward_info = reward_info
         env_desc.global_path = self.global_path_in_intersection
-        env_desc.intersection_global_path = self.intersection_path_global
-        print(self.intersection_path_global)
-        
-        
+        # if(CURRENT_SCENARIO == Scenario.P2P):     
+        env_desc.intersection_global_path = self.global_path_in_intersection  
 
         return SimServiceResponse(env_desc.toRosMsg())
 
@@ -720,7 +733,7 @@ class CarlaManager:
         '''
         if CURRENT_SCENARIO in [Scenario.SWITCH_LANE_RIGHT, Scenario.SWITCH_LANE_LEFT]:
             dist = self.carla_handler.get_distance_to_lane_end(ego_vehicle)
-            lane_switch_failure_terminate = (dist < 5)  
+            lane_switch_failure_terminate = (dist < STOP_LINE_DISTANCE_FOR_LANE_CHANGE_TERMINATE)  
         else:
             lane_switch_failure_terminate = False
         
@@ -833,7 +846,7 @@ class CarlaManager:
                     self.ego_start_road_lane_pair,
                     self.global_path_in_intersection,
                     self.road_lane_to_orientation,
-                ) = self.tm.reset(num_vehicles=25, junction_id=53, warm_start_duration=2)
+                ) = self.tm.reset(num_vehicles=0, junction_id=53, warm_start_duration=2)
 
                 self.all_vehicles = self.carla_handler.world.get_actors().filter(
                     "vehicle.*"
@@ -963,6 +976,9 @@ class CarlaManager:
         # Create a CarlaHandler object. CarlaHandler provides some cutom bus\ilt APIs for the Carla Server.
         self.carla_handler = CarlaHandler(client)
         self.client = client
+        
+        self.TLManager = TrafficLightManager(self.client)
+
 
         if synchronous_mode:
             settings = self.carla_handler.world.get_settings()
@@ -998,7 +1014,12 @@ class CarlaManager:
     def pathRequest_selector(self, data):
         
         plan = PathPlan.fromRosMsg(data.path_plan)
-        scenario = plan.scenario_chosen
+        
+        if(CURRENT_SCENARIO == Scenario.P2P):
+            scenario = plan.scenario_chosen
+        else:
+            scenario = CURRENT_SCENARIO
+        
         
         if scenario in LANE_SCENARIOS:
             self.last_command = scenario
@@ -1006,7 +1027,7 @@ class CarlaManager:
 
         elif scenario in INTERSECTION_SCENARIOS: 
             # print("Last command:", self.last_command, "Current:", scenario)
-            if(self.last_command != scenario):
+            if(CURRENT_SCENARIO == Scenario.P2P and self.last_command != scenario):
                 self.current_intersection_idx += 1
                 self.ego_start_road_lane_pair = self.ego_start_road_lane_pair_for_each_intersection[self.current_intersection_idx]
                 self.intersection_topology = self.intersection_topology_for_each_intersection[self.current_intersection_idx]

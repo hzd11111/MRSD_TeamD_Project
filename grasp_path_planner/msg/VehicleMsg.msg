@@ -1,2 +1,3 @@
 ActorMsg actor_msg
 int64 traffic_light_status
+float64 traffic_light_stop_distance
