@@ -48,9 +48,11 @@ class NNManager:
         Args:
         :param env_embedding: Embedding of environment information
         """
-        state = self.state_manager.embedState(env_desc, scenario)
+        state = self.state_manager.embedState(env_desc, scenario).reshape(1, -1)
         action, _ = self.neural_nets[scenario].predict(state)
-        return self.decision_maker.convertDecision(action, scenario)
+        action_enum = self.decision_maker.convertDecision(action, scenario)
+        print(action_enum)
+        return action_enum
 
 
 class NeuralNetworkSelector:

@@ -525,7 +525,7 @@ class CustomIntersectionRightTurn(DQNPolicy):
             for j in range(5):
                 perp_veh_mask = out_ph[:, perp_veh_start_index + (j + 1) * (veh_state_len + mask) - 1][:, None]
                 start = perp_veh_start_index + j * (veh_state_len + mask)
-                print(start, start + veh_state_len, veh_state_len)
+                # print(start, start + veh_state_len, veh_state_len)
                 perp_veh = out_ph[:, start:start + veh_state_len]
                 perp_veh_state = tf.concat([cur_veh, perp_veh], axis=1)
                 embed_perp_lane_vehs.append(
