@@ -47,15 +47,15 @@ class CustomEnv(gym.Env):
         elif event == Scenario.LEFT_TURN:
             N_ACTIONS = 3
             self.action_space = spaces.Discrete(N_ACTIONS)
-            self.observation_space = spaces.Box(low=-1000, high=1000, shape=(1, 264))
+            self.observation_space = spaces.Box(low=-1000, high=1000, shape=(1, 294))
         elif event == Scenario.RIGHT_TURN:
             N_ACTIONS = 3
             self.action_space = spaces.Discrete(N_ACTIONS)
-            self.observation_space = spaces.Box(low=-1000, high=1000, shape=(1, 141))
+            self.observation_space = spaces.Box(low=-1000, high=1000, shape=(1, 171))
         elif event == Scenario.GO_STRAIGHT:
             N_ACTIONS = 3
             self.action_space = spaces.Discrete(N_ACTIONS)
-            self.observation_space = spaces.Box(low=-1000, high=1000, shape=(1, 214))
+            self.observation_space = spaces.Box(low=-1000, high=1000, shape=(1, 244))
 
         self.path_planner = path_planner
         self.rl_manager = rl_manager

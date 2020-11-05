@@ -311,7 +311,7 @@ class P2PScenario:
         
         
 
-        return ego_vehicle, my_vehicles, global_path_wps, route, global_path_actions, intersection_topologies, incoming_road_lane_id_to_outgoing_lane_id_dict_for_each_intersection, road_lane_to_orientation_for_each_intersection, road_and_lane_ids_for_incoming_roads_in_global_path_for_each_intersection, list_of_intersection_waypoints_for_each_intersection
+        return ego_vehicle, my_vehicles, global_path_wps, route, global_path_actions, intersection_topologies, incoming_road_lane_id_to_outgoing_lane_id_dict_for_each_intersection, road_lane_to_orientation_for_each_intersection, road_and_lane_ids_for_incoming_roads_in_global_path_for_each_intersection, list_of_intersection_waypoints_for_each_intersection, list_of_intersection_ids_to_pass_in_ordered_sequence
 
     def get_random_route(self):
         

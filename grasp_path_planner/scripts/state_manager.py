@@ -337,9 +337,8 @@ class StateManager:
             for vehicle in lane.lane_vehicles:
                 perpendicular_lane_vehs.append([vehicle, lane])
 
-        # TODO: lane.left_turning_lane needs to be added into the paralllel lane message
         for lane in env_desc.adjacent_lanes:
-            if lane.same_direction is False and lane.left_turning_lane is True:
+            if lane.same_direction is False and lane.left_turning_lane is True and lane.is_misc is False:
                 for vehicle in lane.lane_vehicles:
                     opposite_left_turning_lane_vehs.append([vehicle, lane])
 
@@ -392,6 +391,42 @@ class StateManager:
                 dummy_vehicle, 5 - len(opposite_left_turning_lane_vehs_in_ego)))
             opposite_left_turning_lane_vehs_in_ego += dummy_vehicles
 
+        # get vehicles in the intersection
+        intersection_vehs_in_ego = []
+        intersection_vehs = []
+        for lane in env_desc.adjacent_lanes:
+            if lane.is_misc is True:
+                for vehicle in lane.lane_vehicles:
+                    if vehicle.location_global.distance(
+                        env_desc.cur_vehicle_state.location_global) < 20.0:
+                        intersection_vehs.append(vehicle)
+
+        # if number of vehicles in intersection are more then 3 then take 3 closest
+        if len(intersection_vehs) > 3:
+            intersection_vehs = sorted(
+                intersection_vehs,
+                key=lambda item: item.location_global.distance(
+                    env_desc.cur_vehicle_state.location_global))
+            intersection_vehs = intersection_vehs[:3]
+
+        for vehicle in intersection_vehs:
+            veh_in_ego = vehicle.fromControllingVehicle(env_desc.cur_vehicle_state.location_frenet,
+                                                        env_desc.current_lane)
+            intersection_vehs_in_ego.append([veh_in_ego.x,
+                                             veh_in_ego.y,
+                                             np.cos(veh_in_ego.theta),
+                                             np.sin(veh_in_ego.theta),
+                                             vehicle.speed,
+                                             vehicle.acceleration] +
+                                            self.createTrafficLightOneHotVec(
+                                                vehicle.traffic_light_status) + [1])
+
+        # if number of vehicles in intersection are less than 3 then add dummies
+        if len(intersection_vehs_in_ego) < 3:
+            dummy_vehicles = list(itertools.repeat(
+                dummy_vehicle, 3 - len(intersection_vehs_in_ego)))
+            intersection_vehs_in_ego += dummy_vehicles
+
         # Add the stop line status and segment start distance for current lane
         current_lane_status = []
         current_lane_status += self.createTrafficLightOneHotVec(
@@ -400,7 +435,7 @@ class StateManager:
         # new segment distance
         for point in env_desc.current_lane.lane_points:
             if point.lane_start is True:
-                current_lane_status += [(point.frenet_pose.x)]
+                current_lane_status += [abs(point.frenet_pose.x)]
                 break
 
         for point in env_desc.current_lane.lane_points:
@@ -418,10 +453,12 @@ class StateManager:
             back_vehicle_state + \
             [coord for state in pedestrian_states for coord in state] + \
             [coord for state in perpendicular_lane_vehs_in_ego for coord in state] + \
-            [coord for state in opposite_left_turning_lane_vehs_in_ego for coord in state]
+            [coord for state in opposite_left_turning_lane_vehs_in_ego for coord in state] +\
+            [coord for state in intersection_vehs_in_ego for coord in state]
 
         print(len(entire_state))
-        assert(len(entire_state) == 214)
+        print(len(intersection_vehs_in_ego))
+        assert(len(entire_state) == 244)
         return np.array(entire_state)
 
     def createIntersectionLeftTurnState(self, env_desc):
@@ -502,7 +539,7 @@ class StateManager:
 
         # identify the vehicles from parallel lane
         for lane in env_desc.adjacent_lanes:
-            if lane.same_direction is False:
+            if lane.same_direction is False and lane.is_misc is False:
                 for vehicle in lane.lane_vehicles:
                     parallel_lane_vehs.append([vehicle, lane])
 
@@ -553,6 +590,41 @@ class StateManager:
                 dummy_vehicle, 10 - len(parallel_lane_vehs_in_ego)))
             parallel_lane_vehs_in_ego += dummy_vehicles
 
+        intersection_vehs_in_ego = []
+        intersection_vehs = []
+        for lane in env_desc.adjacent_lanes:
+            if lane.is_misc is True:
+                for vehicle in lane.lane_vehicles:
+                    if vehicle.location_global.distance(
+                        env_desc.cur_vehicle_state.location_global) < 20.0:
+                        intersection_vehs.append(vehicle)
+
+        # if number of vehicles in intersection are more then 3 then take 3 closest
+        if len(intersection_vehs) > 3:
+            intersection_vehs = sorted(
+                intersection_vehs,
+                key=lambda item: item.location_global.distance(
+                    env_desc.cur_vehicle_state.location_global))
+            intersection_vehs = intersection_vehs[:3]
+
+        for vehicle in intersection_vehs:
+            veh_in_ego = vehicle.fromControllingVehicle(env_desc.cur_vehicle_state.location_frenet,
+                                                        env_desc.current_lane)
+            intersection_vehs_in_ego.append([veh_in_ego.x,
+                                             veh_in_ego.y,
+                                             np.cos(veh_in_ego.theta),
+                                             np.sin(veh_in_ego.theta),
+                                             vehicle.speed,
+                                             vehicle.acceleration] +
+                                            self.createTrafficLightOneHotVec(
+                                                vehicle.traffic_light_status) + [1])
+
+        # if number of vehicles in intersection are less than 3 then add dummies
+        if len(intersection_vehs_in_ego) < 3:
+            dummy_vehicles = list(itertools.repeat(
+                dummy_vehicle, 3 - len(intersection_vehs_in_ego)))
+            intersection_vehs_in_ego += dummy_vehicles
+
         # get the stopline distance, light status and merging lane distance
         current_lane_status = []
         current_lane_status += self.createTrafficLightOneHotVec(
@@ -581,10 +653,11 @@ class StateManager:
             back_vehicle_state + \
             [coord for state in pedestrian_states for coord in state] + \
             [coord for state in perpendicular_lane_vehs_in_ego for coord in state] + \
-            [coord for state in parallel_lane_vehs_in_ego for coord in state]
+            [coord for state in parallel_lane_vehs_in_ego for coord in state] + \
+            [coord for state in intersection_vehs_in_ego for coord in state]
 
         print(len(entire_state))
-        assert(len(entire_state) == 264)  # TODO: Update this after adding lights
+        assert(len(entire_state) == 294)  # TODO: Update this after adding lights
         return np.array(entire_state)
 
     def createIntersectionRightTurnState(self, env_desc):
@@ -709,6 +782,41 @@ class StateManager:
                 dummy_vehicle, 5 - len(perpendicular_lane_vehs_in_ego)))
             perpendicular_lane_vehs_in_ego += dummy_vehicles
 
+        intersection_vehs_in_ego = []
+        intersection_vehs = []
+        for lane in env_desc.adjacent_lanes:
+            if lane.is_misc is True:
+                for vehicle in lane.lane_vehicles:
+                    if vehicle.location_global.distance(
+                        env_desc.cur_vehicle_state.location_global) < 20.0:
+                        intersection_vehs.append(vehicle)
+
+        # if number of vehicles in intersection are more then 3 then take 3 closest
+        if len(intersection_vehs) > 3:
+            intersection_vehs = sorted(
+                intersection_vehs,
+                key=lambda item: item.location_global.distance(
+                    env_desc.cur_vehicle_state.location_global))
+            intersection_vehs = intersection_vehs[:3]
+
+        for vehicle in intersection_vehs:
+            veh_in_ego = vehicle.fromControllingVehicle(env_desc.cur_vehicle_state.location_frenet,
+                                                        env_desc.current_lane)
+            intersection_vehs_in_ego.append([veh_in_ego.x,
+                                             veh_in_ego.y,
+                                             np.cos(veh_in_ego.theta),
+                                             np.sin(veh_in_ego.theta),
+                                             vehicle.speed,
+                                             vehicle.acceleration] +
+                                            self.createTrafficLightOneHotVec(
+                                                vehicle.traffic_light_status) + [1])
+
+        # if number of vehicles in intersection are less than 3 then add dummies
+        if len(intersection_vehs_in_ego) < 3:
+            dummy_vehicles = list(itertools.repeat(
+                dummy_vehicle, 3 - len(intersection_vehs_in_ego)))
+            intersection_vehs_in_ego += dummy_vehicles
+
         # get the stopline distance, light status and merging lane distance
         current_lane_status = []
 
@@ -739,10 +847,11 @@ class StateManager:
             back_vehicle_state + \
             [coord for state in pedestrian_states_curr for coord in state] + \
             [coord for state in pedestrian_states_perp for coord in state] + \
-            [coord for state in perpendicular_lane_vehs_in_ego for coord in state]
+            [coord for state in perpendicular_lane_vehs_in_ego for coord in state] + \
+            [coord for state in intersection_vehs_in_ego for coord in state]
 
         print(len(entire_state))
-        assert(len(entire_state) == 141)  # TODO: Update this after adding lights
+        assert(len(entire_state) == 171)  # TODO: Update this after adding lights
         return np.array(entire_state)
 
     def embedState(self, env_desc: EnvDesc, scenario: Scenario):

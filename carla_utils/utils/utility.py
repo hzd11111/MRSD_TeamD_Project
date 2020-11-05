@@ -328,6 +328,7 @@ class ParallelLane(LaneStatus):
         left_to_the_current=False,
         adjacent_lane=False,
         lane_distance=0.0,
+        is_misc=False,
     ):
         super(ParallelLane, self).__init__(
             lane_vehicles,
@@ -344,6 +345,7 @@ class ParallelLane(LaneStatus):
         self.left_to_the_current = left_to_the_current
         self.adjacent_lane = adjacent_lane
         self.lane_distance = lane_distance
+        self.is_misc = is_misc
 
     @classmethod
     def fromRosMsg(cls, msg):
@@ -353,6 +355,7 @@ class ParallelLane(LaneStatus):
         obj.left_to_the_current = msg.left_to_the_current
         obj.adjacent_lane = msg.adjacent_lane
         obj.lane_distance = msg.lane_distance
+        obj.is_misc = msg.is_misc
         return obj
 
     def toRosMsg(self):
@@ -362,6 +365,7 @@ class ParallelLane(LaneStatus):
         msg.left_to_the_current = self.left_to_the_current
         msg.adjacent_lane = self.adjacent_lane
         msg.lane_distance = self.lane_distance
+        msg.is_misc = self.is_misc
         return msg
 
 
