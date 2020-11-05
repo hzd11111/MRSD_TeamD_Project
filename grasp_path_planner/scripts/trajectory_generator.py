@@ -134,7 +134,7 @@ class TrajGenerator:
         new_path_plan.reset_sim = False
         new_path_plan.tracking_speed = target_speed
         new_path_plan.end_of_action = action_end
-        new_path_plan.action_progress = 1 - target_speed/self.start_speed
+        new_path_plan.action_progress = 0.5
         new_path_plan.path_planner_terminate = action_end
 
         # add future poses ToDo
