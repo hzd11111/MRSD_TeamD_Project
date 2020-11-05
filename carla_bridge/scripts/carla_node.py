@@ -512,8 +512,10 @@ class CarlaManager:
         env_desc.speed_limit = self.speed_limit
         env_desc.reward_info = reward_info
         env_desc.global_path = self.global_path_in_intersection
-        # if(CURRENT_SCENARIO == Scenario.P2P):     
         env_desc.intersection_global_path = self.global_path_in_intersection  
+        if(CURRENT_SCENARIO == Scenario.P2P):
+            env_desc.intersection_global_path = self.intersection_path_global  
+
 
         return SimServiceResponse(env_desc.toRosMsg())
 
@@ -888,7 +890,7 @@ class CarlaManager:
                     self.ego_start_road_lane_pair,
                     self.global_path_in_intersection,
                     self.road_lane_to_orientation,
-                ) = self.tm.reset(num_vehicles=0, junction_id=53, warm_start_duration=2)
+                ) = self.tm.reset(num_vehicles=10, junction_id=53, warm_start_duration=2)
                 self.current_junction_id = 53
                 self.all_vehicles = self.carla_handler.world.get_actors().filter(
                     "vehicle.*"
