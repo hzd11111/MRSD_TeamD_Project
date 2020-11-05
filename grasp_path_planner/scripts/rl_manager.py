@@ -147,13 +147,15 @@ class RLManager(GeneralRLManager):
             # return true if any of the conditions described in the description is true
             return env_desc.reward_info.collision or \
                 env_desc.reward_info.path_planner_terminate or \
-                env_desc.reward_info.time_elapsed > self.eps_time
+                env_desc.reward_info.time_elapsed > self.eps_time or \
+                env_desc.reward_info.lane_switch_failure_terminate
 
         elif self.event == Scenario.SWITCH_LANE_RIGHT:
             # return true if any of the conditions described in the description is true
             return env_desc.reward_info.collision or \
                 env_desc.reward_info.path_planner_terminate or \
-                env_desc.reward_info.time_elapsed > self.eps_time
+                env_desc.reward_info.time_elapsed > self.eps_time or \
+                env_desc.reward_info.lane_switch_failure_terminate
 
         elif self.event == Scenario.LANE_FOLLOWING:
             # return true if any of the conditions described in the description is true

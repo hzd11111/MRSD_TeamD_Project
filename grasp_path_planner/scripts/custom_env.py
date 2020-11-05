@@ -70,10 +70,13 @@ class CustomEnv(gym.Env):
         The dictionary can contain additional information. Currently we send if the episode was a
         success or not.
         """
-        print("Action in env step:", action)
+        # action = 1
+        # print("Action in env step:", action)
+        # if action == 3:
+        
         # reset sb_event flag if previously set in previous action
         decision = self.rl_manager.convertDecision(action)
-        # print(decision)
+        print(decision)
         env_desc, end_of_action = self.path_planner.performAction(decision)
         env_copy = env_desc
         self.rl_manager.reward_manager.update(env_copy, action)

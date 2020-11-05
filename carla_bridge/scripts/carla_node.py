@@ -63,6 +63,8 @@ from actors import Actor, Vehicle, Pedestrian
 
 sys.path.append("../../grasp_path_planner/scripts/")
 from settings import *
+
+from traffic_light_manager import TrafficLightManager
 #######################################################################################
 
 NODE_NAME = "carla_bridge"
@@ -1019,6 +1021,9 @@ class CarlaManager:
         
         self.TLManager = TrafficLightManager(self.client)
 
+
+        # Traffic light manager
+        self.TLManager = TrafficLightManager(self.client)
 
         if synchronous_mode:
             settings = self.carla_handler.world.get_settings()

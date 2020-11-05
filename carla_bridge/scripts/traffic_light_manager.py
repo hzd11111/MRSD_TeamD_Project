@@ -24,7 +24,7 @@ class TrafficLightManager():
             self.lane_id_to_tl_x_loc_dict = pickle.load(open(LIGHTS_DICT, "rb"))
         else:
             raise NotImplementedError
-        
+
         self.all_traffic_lights = self.world.get_actors().filter("traffic.traffic_light*")
         self.road_to_tl_actor_dict = self.get_road_to_tl_actorid_dict()
 
@@ -60,6 +60,7 @@ class TrafficLightManager():
         tl, nearest_waypoint = self.get_actor_to_traffic_light(carla_actor)
         
         if tl is None:
+            print("tl is none for some reason")
             actor.traffic_light_status = TrafficLightStatus.GREEN
             actor.traffic_light_stop_distance = -1
         else:
