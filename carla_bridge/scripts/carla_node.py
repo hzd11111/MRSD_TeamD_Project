@@ -471,8 +471,8 @@ class CarlaManager:
         env_desc.speed_limit = self.speed_limit
         env_desc.reward_info = reward_info
         env_desc.global_path = self.global_path_in_intersection
-        if(CURRENT_SCENARIO == Scenario.P2P):     
-            env_desc.intersection_global_path = self.intersection_path_global        
+        # if(CURRENT_SCENARIO == Scenario.P2P):     
+        env_desc.intersection_global_path = self.global_path_in_intersection  
 
         return SimServiceResponse(env_desc.toRosMsg())
 
