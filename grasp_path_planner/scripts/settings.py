@@ -13,8 +13,8 @@ class Mode(Enum):
 
 
 ############ Mode and Model Selection ##############################
-CURRENT_SCENARIO = Scenario.P2P
-CURRENT_MODE = Mode.TEST
+CURRENT_SCENARIO = Scenario.LEFT_TURN
+CURRENT_MODE = Mode.TRAIN
 WANDB_DRYRUN = True
 
 #assert !(CURRENT_SCENARIO==Scenario.P2P and CURRENT_MODE==Mode.TRAIN), "P2P Cannot be called in train mode"

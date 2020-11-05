@@ -778,6 +778,7 @@ class CarlaManager:
         else:
             lane_switch_failure_terminate = False
         
+        self.TLManager.set_actor_traffic_light_state(ego_vehicle, is_ego=True)
         '''
         Part 3: Create ROS msg objects and ship it!
         '''

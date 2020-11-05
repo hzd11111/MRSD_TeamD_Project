@@ -179,14 +179,17 @@ class StateManager:
                                   back_vehicle.acceleration,
                                   1]
 
+        distance_to_stop_line = env_desc.cur_vehicle_state.traffic_light_stop_distance
+        print("Distance to stop line is",distance_to_stop_line)
         # concatenate all the states and lane distance
         entire_state = ego_vehicle_state + \
             [coord for state in adj_lane_vehicles_states for coord in state] + \
             front_vehicle_state + \
             back_vehicle_state + \
-            [coord for state in pedestrian_states for coord in state] + [lane_distance]
+            [coord for state in pedestrian_states for coord in state] + \
+            [lane_distance, distance_to_stop_line]
         try:
-            assert(len(entire_state) == 77)
+            assert(len(entire_state) == 78)
         except e:
             import ipdb; ipdb.set_trace()
         return np.array(entire_state)
@@ -438,15 +441,20 @@ class StateManager:
                 current_lane_status += [abs(point.frenet_pose.x)]
                 break
 
-        for point in env_desc.current_lane.lane_points:
-            if point.stop_line is not StopLineStatus.NO_STOP:
-                current_lane_status += [(point.frenet_pose.x)]
-                break
+        # for point in env_desc.current_lane.lane_points:
+        #     if point.stop_line is not StopLineStatus.NO_STOP:
+        #         current_lane_status += [(point.frenet_pose.x)]
+        #         break
+
+        distance_to_stop_line = env_desc.cur_vehicle_state.traffic_light_stop_distance
+        current_lane_status += [distance_to_stop_line]
+        print("Distance to stop line is", distance_to_stop_line)
 
         if len(current_lane_status) != 8:
             current_lane_status += list(itertools.repeat(
                 0, 8 - len(current_lane_status)))
 
+        
         # concatenate all the states and lane distance
         entire_state = current_lane_status + ego_vehicle_state + \
             front_vehicle_state + \
@@ -631,9 +639,13 @@ class StateManager:
             env_desc.cur_vehicle_state.traffic_light_status)
 
         # stop line distance
-        for point in env_desc.current_lane.lane_points:
-            if point.stop_line is not StopLineStatus.NO_STOP:
-                current_lane_status += [abs(point.frenet_pose.x)]
+        # for point in env_desc.current_lane.lane_points:
+        #     if point.stop_line is not StopLineStatus.NO_STOP:
+        #         current_lane_status += [abs(point.frenet_pose.x)]
+        
+        distance_to_stop_line = env_desc.cur_vehicle_state.traffic_light_stop_distance
+        current_lane_status += [distance_to_stop_line]
+        print("Distance to stop line is", distance_to_stop_line)
 
         # get the merging distance
         min_merging_dist = 100
@@ -824,10 +836,14 @@ class StateManager:
             env_desc.cur_vehicle_state.traffic_light_status)
 
         # stop line distance
-        for point in env_desc.current_lane.lane_points:
-            if point.stop_line is not StopLineStatus.NO_STOP:
-                current_lane_status += [(point.frenet_pose.x)]
-                break
+        # for point in env_desc.current_lane.lane_points:
+        #     if point.stop_line is not StopLineStatus.NO_STOP:
+        #         current_lane_status += [(point.frenet_pose.x)]
+        #         break
+
+        distance_to_stop_line = env_desc.cur_vehicle_state.traffic_light_stop_distance
+        current_lane_status += [distance_to_stop_line]
+        print("Distance to stop line is", distance_to_stop_line)
 
         # get the merging distance
         min_merging_dist = 100

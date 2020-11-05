@@ -3,7 +3,7 @@ from abc import ABC, abstractmethod
 # ROS Packages
 from grasp_path_planner.msg import VehicleMsg
 # other packages
-from options import Scenario, RLDecision
+from options import Scenario, RLDecision, TrafficLightStatus
 
 
 # Parent Reward Class
@@ -446,6 +446,14 @@ class PlainReward(Reward):
         """
         return
 
+    def ran_red_light(self, env_desc):
+        flag = env_desc.cur_vehicle_state.traffic_light_status is TrafficLightStatus.RED and \
+            env_desc.cur_vehicle_state.traffic_light_stop_distance >= 0 and \
+            env_desc.cur_vehicle_state.traffic_light_stop_distance <= 2
+        if flag:
+            print("Red light ran", flag)
+        return flag
+
     def get_reward(self, desc, action):
         """
         Gives the cost of taking action
@@ -453,7 +461,8 @@ class PlainReward(Reward):
         reward = 0
         # print("Action progress is ", desc.reward_info.action_progress)
         if desc.reward_info.collision or \
-                (desc.reward_info.time_elapsed > 80):
+                (desc.reward_info.time_elapsed > 80) or \
+                self.ran_red_light(desc):
             reward = reward - 1
         elif desc.reward_info.path_planner_terminate:
             reward += desc.reward_info.action_progress

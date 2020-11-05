@@ -6,7 +6,7 @@ from carla_utils.msg import EnvDescMsg
 
 # other packages
 from reward_manager import reward_selector
-from options import Scenario, RLDecision
+from options import Scenario, RLDecision, TrafficLightStatus
 from state_manager import StateManager
 
 
@@ -130,6 +130,14 @@ class RLManager(GeneralRLManager):
         self.event = event
         self.state_manager = StateManager()
 
+    def ran_red_light(self, env_desc):
+        flag = env_desc.cur_vehicle_state.traffic_light_status is TrafficLightStatus.RED and \
+            env_desc.cur_vehicle_state.traffic_light_stop_distance >= 0 and \
+            env_desc.cur_vehicle_state.traffic_light_stop_distance <= 2
+        if flag:
+            print("Red light ran", flag)
+        return flag
+
     def terminate(self, env_desc: EnvDescMsg) -> bool:
         """
         A function which returns true if the episode must terminate.
@@ -167,19 +175,22 @@ class RLManager(GeneralRLManager):
             # return true if any of the conditions described in the description is true
             return env_desc.reward_info.collision or \
                 env_desc.reward_info.path_planner_terminate or \
-                env_desc.reward_info.time_elapsed > self.eps_time
+                env_desc.reward_info.time_elapsed > self.eps_time or \
+                self.ran_red_light(env_desc)
 
         elif self.event == Scenario.LEFT_TURN:
             # return true if any of the conditions described in the description is true
             return env_desc.reward_info.collision or \
                 env_desc.reward_info.path_planner_terminate or \
-                env_desc.reward_info.time_elapsed > self.eps_time
+                env_desc.reward_info.time_elapsed > self.eps_time or \
+                self.ran_red_light(env_desc)
 
         elif self.event == Scenario.RIGHT_TURN:
             # return true if any of the conditions described in the description is true
             return env_desc.reward_info.collision or \
                 env_desc.reward_info.path_planner_terminate or \
-                env_desc.reward_info.time_elapsed > self.eps_time
+                env_desc.reward_info.time_elapsed > self.eps_time or \
+                self.ran_red_light(env_desc)
 
     def rewardCalculation(self) -> np.ndarray:
         raise NotImplementedError()
