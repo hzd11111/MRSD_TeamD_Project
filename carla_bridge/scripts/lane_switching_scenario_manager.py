@@ -33,7 +33,7 @@ town05_city = { "road_ids": [ 6, 7, 45, 46],
                 "average_car_length":5,
                 "swithching_left": False,
                 "goal_distance_to_travel":30,
-                "min_spawn_distance_from_EOL":30,                 
+                "min_spawn_distance_from_EOL":21,                 
 }
 
 def filter_waypoints(waypoints, road_id, lane_id):
