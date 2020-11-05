@@ -19,7 +19,7 @@ sys.path.append("../../global_route_planner/")
 from global_planner import get_global_planner
 
 #CONFIGURATIONS:
-town05_city = { "road_ids": [ 6, 7, 45, 46], 
+town05_city = { "road_ids": [ 6, 7, 45, 46 , 8], 
                 "distance_bwn_waypoints":1,
                 "max_ego_line_non_ego_vehicles":4, # num of non ego vehicles in ego lane
                 "min_ego_line_non_ego_vehicles":1, # num of non ego vehicles in ego lane
