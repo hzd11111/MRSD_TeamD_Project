@@ -19,19 +19,21 @@ sys.path.append("../../global_route_planner/")
 from global_planner import get_global_planner
 
 #CONFIGURATIONS:
-town05_city = { "road_ids": [6, 7, 8], 
+town05_city = { "road_ids": [ 6, 7, 45, 46], 
                 "distance_bwn_waypoints":1,
-                "total_ego_line_vehicles":3, # non ego vehicles in ego lane
-                "total_non_ego_lane_vehicles":5, #non ego vehicles in other lane
-                "max_vehicles_in_front":2,
+                "max_ego_line_non_ego_vehicles":4, # num of non ego vehicles in ego lane
+                "min_ego_line_non_ego_vehicles":1, # num of non ego vehicles in ego lane
+                "max_non_ego_line_non_ego_vehicles":4, # num of non ego vehicles in every other lane
+                "min_non_ego_line_non_ego_vehicles":1, # num of non ego vehicles in every other lane
                 "target_speed":1,
-                "max_dist_bwn_veh":5,
-                "min_dist_bwn_veh":2,
-                "max_dist_bwn_veh_other_lane":6,
+                "max_dist_bwn_veh":15,
+                "min_dist_bwn_veh":3,
+                "max_dist_bwn_veh_other_lane":15,
                 "min_dist_bwn_veh_other_lane":3,
                 "average_car_length":5,
                 "swithching_left": False,
-                "goal_distance_to_travel":30,                 
+                "goal_distance_to_travel":30,
+                "min_spawn_distance_from_EOL":30,                 
 }
 
 def filter_waypoints(waypoints, road_id, lane_id):
@@ -133,7 +135,10 @@ class LaneSwitchingScenario:
     
 
         self.current_lane_wps = ego_waypoint_list
-        self.goal_waypoint = ego_waypoint_list[self.config["goal_distance_to_travel"]]
+        # Assume only line 1 and line 2 exist
+        eog_line_id_positivity = 1 if ego_line_id > 0 else -1
+        target_line_id = (3 - abs(ego_line_id)) * eog_line_id_positivity
+        self.goal_waypoint = non_ego_waypoints_lists[target_line_id][-int(len(non_ego_waypoints_lists[target_line_id])/5)]
         ego_spawn_point, non_ego_spawn_points = self.get_ego_spawn_points(distance_bwn_waypoints, ego_waypoint_list)
         self.spawn_vehicles_on_selected_lane(ego_spawn_point, non_ego_spawn_points)
         
@@ -148,12 +153,23 @@ class LaneSwitchingScenario:
         # select waypoints from the list with some randomness
         selected_waypoints = []
         ptr = 0
-        for _ in range(config["total_ego_line_vehicles"]+1):
+        non_ego_vehicle_num = np.random.randint(config["min_ego_line_non_ego_vehicles"], config["max_ego_line_non_ego_vehicles"])
+        maximum_ego_vehicle_idx = 0
+        print("Road Id: ", waypoint_list[0].road_id)
+        print("Total waypoint from this road: ", len(waypoint_list))
+        print("Remaining waypoint for Ego V: ", len(waypoint_list) - config["min_spawn_distance_from_EOL"])
+
+        if((len(waypoint_list) - config["min_spawn_distance_from_EOL"]) < 0):
+            raise Exception("Select Training road or setting config")
+        
+        for _ in range(non_ego_vehicle_num + 1):
             ptr += np.random.randint(config["min_dist_bwn_veh"], config["max_dist_bwn_veh"])
             if ptr >= (len(waypoint_list) - 1):
                 print("This line will not fit the required vehicle num")
                 break
             selected_waypoints.append(waypoint_list[ptr])
+            if (ptr < len(waypoint_list) - config["min_spawn_distance_from_EOL"]):
+                maximum_ego_vehicle_idx += 1
             ptr += config["average_car_length"]
 
         # convert waypoints to spawn points
@@ -161,7 +177,7 @@ class LaneSwitchingScenario:
 
         for point in spawn_points_list: point.location.z += 0.2 # prevent collision
         # select the position of the ego vehicle
-        ego_veh_int = np.random.randint(0, len(selected_waypoints) - 1)
+        ego_veh_int = np.random.randint(0, max(1, maximum_ego_vehicle_idx))
         temp = spawn_points_list.pop(ego_veh_int)
         ego_spawn_point = (temp, temp.get_forward_vector())
         # non-ego vehicle spawn points
@@ -175,7 +191,8 @@ class LaneSwitchingScenario:
         # select waypoints from the list with some randomness
         selected_waypoints = []
         ptr = 0
-        for _ in range(config["total_non_ego_lane_vehicles"]):
+        non_ego_vehicle_num = np.random.randint(config["min_non_ego_line_non_ego_vehicles"], config["max_non_ego_line_non_ego_vehicles"] + 1)
+        for _ in range(non_ego_vehicle_num):
             ptr += np.random.randint(config["min_dist_bwn_veh_other_lane"], config["max_dist_bwn_veh_other_lane"])
             if ptr >= (len(waypoint_list) - 1): 
                 print("This line will not fit the required vehicle num")
