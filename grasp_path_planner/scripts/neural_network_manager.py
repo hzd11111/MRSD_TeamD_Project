@@ -39,6 +39,7 @@ class NNManager:
         :param model_paths: dict (Scenario Enu,path) the path to the model
         """
         for key in model_paths:
+            print(key, "model loaded")
             self.neural_nets[key] = DQN.load(model_paths[key])
 
     def makeDecision(self, env_desc, scenario) -> RLDecision:
@@ -48,7 +49,7 @@ class NNManager:
         :param env_embedding: Embedding of environment information
         """
         state = self.state_manager.embedState(env_desc, scenario)
-        action, _ = self.neural_network.predict(env_embedding)
+        action, _ = self.neural_nets[scenario].predict(state)
         return self.decision_maker.convertDecision(action, scenario)
 
 
