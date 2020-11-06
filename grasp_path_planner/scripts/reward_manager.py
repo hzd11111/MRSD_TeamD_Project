@@ -572,7 +572,7 @@ def reward_selector(event):
     """
     if event is Scenario.SWITCH_LANE_RIGHT or event is Scenario.SWITCH_LANE_LEFT:
         return PlainLaneChange()
-    elif event is Scenario.RIGHT_TURN:
+    elif event is Scenario.RIGHT_TURN or event is Scenario.LANE_FOLLOWING:
         return PlainReward()
     else:
         return PlainRewardWithLight()

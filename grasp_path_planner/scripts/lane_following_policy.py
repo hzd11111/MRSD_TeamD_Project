@@ -34,12 +34,14 @@ class CustomLaneFollowingPolicy(DQNPolicy):
     def embedding_net_front(self, input_vec):
         out = input_vec
         with tf.variable_scope("embedding_network_front", reuse=tf.compat.v1.AUTO_REUSE):
+            # out = tf.Print(out, [out], summarize=200, message="Front:")
             out = tf_layers.fully_connected(out, num_outputs=32, activation_fn=tf.nn.relu)
         return out
 
     def embedding_net_back(self, input_vec):
         out = input_vec
         with tf.variable_scope("embedding_network_back", reuse=tf.compat.v1.AUTO_REUSE):
+            # out = tf.Print(out, [out], summarize=200, message="Back:")
             out = tf_layers.fully_connected(out, num_outputs=32, activation_fn=tf.nn.relu)
         return out
 
@@ -59,6 +61,7 @@ class CustomLaneFollowingPolicy(DQNPolicy):
 
         with tf.variable_scope("model", reuse=reuse):
             out_ph = tf.layers.flatten(self.processed_obs)
+            # out_ph = tf.Print(out_ph, [out_ph], summarize=300, message="OUT_PH:")
             embed_adjacent_vehicles = []
             veh_state_len = 6
             ped_state_len = 6
