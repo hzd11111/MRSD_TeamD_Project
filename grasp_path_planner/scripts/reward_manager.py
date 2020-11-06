@@ -45,6 +45,10 @@ class Reward(ABC):
         Resets environment
         """
         self.closest_dist = 1e5
+    
+    @abstractmethod
+    def is_success(self, env_desc):
+        return
 
     def calculate_line_coefficients(self, point1, point2):
         """
@@ -473,7 +477,12 @@ class PlainRewardWithLight(Reward):
         """
         Resets environment
         """
-        return
+        return 
+    
+    def is_success(self, desc):
+        return not (desc.reward_info.collision or \
+                (desc.reward_info.time_elapsed > 80) or \
+                self.ran_red_light(desc))
 
 
 # Plain Lane switch reward
@@ -511,6 +520,11 @@ class PlainLaneChange(Reward):
         Resets environment
         """
         return
+    
+    def is_success(self, desc):
+        return not(desc.reward_info.collision or \
+                (desc.reward_info.time_elapsed > 80) or \
+                desc.reward_info.lane_switch_failure_terminate)
 
 
 class PlainReward(Reward):
@@ -547,7 +561,10 @@ class PlainReward(Reward):
         Resets environment
         """
         return
-
+    
+    def is_success(self, desc):
+        return not (desc.reward_info.collision or \
+                (desc.reward_info.time_elapsed > 80))
 
 def reward_selector(event):
     """

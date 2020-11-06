@@ -92,10 +92,7 @@ class CustomEnv(gym.Env):
         reward = None
         reward = self.rl_manager.reward_manager.get_reward(env_copy, decision)
         # for sending success signal during testing
-        success = not (
-            env_desc.reward_info.collision
-            or (env_desc.reward_info.time_elapsed > self.rl_manager.eps_time)
-        )
+        success = self.rl_manager.reward_manager.is_success(env_desc)
         info = {}
         info["success"] = success
         # time.sleep(2)

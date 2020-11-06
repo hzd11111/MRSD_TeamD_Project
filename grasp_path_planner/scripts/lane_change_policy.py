@@ -121,7 +121,7 @@ class CustomLaneChangePolicy(DQNPolicy):
             stacked_out = tf.stack(embed_list, axis=1)
             max_out = tf.reduce_max(stacked_out, axis=1)
             # concatenate the lane distance
-            max_out = tf.concat([max_out, out_ph[:, -1][:, None]], axis=1)
+            max_out = tf.concat([max_out, out_ph[:, -2:][:, None]], axis=1)
             q_out = self.q_net(max_out, ac_space.n)
 
         self.q_values = q_out
