@@ -431,7 +431,7 @@ class PedestrianReward(Reward):
 
 
 # Plain Reward Class
-class PlainReward(Reward):
+class PlainRewardWithLight(Reward):
     '''
     Implements positional costs and basic required interfaces for all rewards
     '''
@@ -513,11 +513,49 @@ class PlainLaneChange(Reward):
         return
 
 
+class PlainReward(Reward):
+    '''
+    Implements positional costs and basic required interfaces for all rewards
+    '''
+
+    def __init__(self):
+        super().__init__()
+        self.max_reward = 1
+
+    def update(self, desc, action):
+        """
+        Meant to update costs and other intermediate variables
+        """
+        return
+
+    def get_reward(self, desc, action):
+        """
+        Gives the cost of taking action
+        """
+        reward = 0
+        # print("Action progress is ", desc.reward_info.action_progress)
+        if desc.reward_info.collision or \
+                (desc.reward_info.time_elapsed > 80):
+            reward = reward - 1
+        elif desc.reward_info.path_planner_terminate:
+            reward += desc.reward_info.action_progress
+        print("Reward is ", reward)
+        return reward
+
+    def reset(self):
+        """
+        Resets environment
+        """
+        return
+
+
 def reward_selector(event):
     """
     Select reward manager based on event
     """
     if event is Scenario.SWITCH_LANE_RIGHT or event is Scenario.SWITCH_LANE_LEFT:
         return PlainLaneChange()
-    else:
+    elif event is Scenario.RIGHT_TURN:
         return PlainReward()
+    else:
+        return PlainRewardWithLight()

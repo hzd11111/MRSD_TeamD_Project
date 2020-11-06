@@ -189,8 +189,7 @@ class RLManager(GeneralRLManager):
             # return true if any of the conditions described in the description is true
             return env_desc.reward_info.collision or \
                 env_desc.reward_info.path_planner_terminate or \
-                env_desc.reward_info.time_elapsed > self.eps_time or \
-                self.ran_red_light(env_desc)
+                env_desc.reward_info.time_elapsed > self.eps_time
 
     def rewardCalculation(self) -> np.ndarray:
         raise NotImplementedError()
