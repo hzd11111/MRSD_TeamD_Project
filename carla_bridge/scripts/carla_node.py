@@ -56,7 +56,7 @@ from utility import (
     GlobalPathPoint,
     GlobalPath,
 )
-from options import GlobalPathAction
+from options import GlobalPathAction, TrafficLightStatus
 from functional_utility import Pose2D, Frenet
 
 from actors import Actor, Vehicle, Pedestrian
@@ -394,9 +394,43 @@ class CarlaManager:
         adjacent_lanes = copy.copy(self.adjacent_lanes)
         next_intersection = copy.copy(self.next_intersection)
         
+
+        ### Set traffic light status based on scenario
+        if(CURRENT_SCENARIO == Scenario.LEFT_TURN):
+            # Oncoming opposite direction lane turns green
+            for lane in adjacent_lanes:
+                if lane.same_direction == False:
+                    self.set_traffic_light_for_vehicles_on_lane(lane, TrafficLightStatus.GREEN)
+
+            # Perpendicular lanes turn RED
+            for lane in next_intersection:
+                self.set_traffic_light_for_vehicles_on_lane(lane, TrafficLightStatus.RED)
+
+            # CUrrent Lane turns GREEN
+            self.set_traffic_light_for_vehicles_on_lane(lane_cur, TrafficLightStatus.GREEN)
+        elif(CURRENT_SCENARIO == Scenario.RIGHT_TURN):
+
+            # Perpendicular lanes turn RED
+            for lane in next_intersection:
+                if(lane.directed_right == True):
+                    self.set_traffic_light_for_vehicles_on_lane(lane, TrafficLightStatus.GREEN)
+
+            # CUrrent Lane turns GREEN
+            self.set_traffic_light_for_vehicles_on_lane(lane_cur, TrafficLightStatus.GREEN)
+        elif(CURRENT_SCENARIO == Scenario.GO_STRAIGHT):
+
+            # Perpendicular lanes turn RED
+            for lane in next_intersection:
+                self.set_traffic_light_for_vehicles_on_lane(lane, TrafficLightStatus.GREEN)
+
+            # CUrrent Lane turns GREEN
+            self.set_traffic_light_for_vehicles_on_lane(lane_cur, TrafficLightStatus.GREEN)
+            
+
+            
         ### Set traffic light status for all vehicles
         self.TLManager.set_actor_traffic_light_state(vehicle_ego, is_ego=True)
-        print(vehicle_ego.traffic_light_status, vehicle_ego.traffic_light_stop_distance, "\n")
+        vehicle_ego.traffic_light_status = TrafficLightStatus.GREEN
         for i in range(len(lane_cur.lane_vehicles)):
             self.TLManager.set_actor_traffic_light_state(lane_cur.lane_vehicles[i])
         for i in range(len(adjacent_lanes)):
@@ -931,7 +965,7 @@ class CarlaManager:
                         self.ego_vehicle,
                         self.vehicles_list,
                         self.global_path_in_intersection #TODO: change variable name
-                    ) = self.tm.reset()
+                    ) = self.tm.reset(warm_start_duration=4)
 
                 self.global_path_in_intersection = [
                     self.waypoint_to_pose2D(wp) for wp in self.global_path_in_intersection
@@ -1021,9 +1055,6 @@ class CarlaManager:
         # Create a CarlaHandler object. CarlaHandler provides some cutom bus\ilt APIs for the Carla Server.
         self.carla_handler = CarlaHandler(client)
         self.client = client
-        
-        self.TLManager = TrafficLightManager(self.client)
-
 
         # Traffic light manager
         self.TLManager = TrafficLightManager(self.client)
@@ -1179,7 +1210,6 @@ class CarlaManager:
             life_time=5,
         )
 
-        print(vehicle.toRosMsg())
 
     def draw_location(self, location, color=(255, 0, 0)):
 
@@ -1204,6 +1234,11 @@ class CarlaManager:
                 color=carla.Color(r=color[0], g=color[1], b=color[2]),
                 life_time=6,
             )
+            
+    def set_traffic_light_for_vehicles_on_lane(self, lane, state=TrafficLightStatus.GREEN):
+
+        for vehicle in lane.lane_vehicles:
+            self.TLManager.set_traffic_light_for_vehicle(vehicle, state)
 
 
 if __name__ == "__main__":
