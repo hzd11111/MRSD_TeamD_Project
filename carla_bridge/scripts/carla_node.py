@@ -394,6 +394,10 @@ class CarlaManager:
         adjacent_lanes = copy.copy(self.adjacent_lanes)
         next_intersection = copy.copy(self.next_intersection)
         
+        
+        for lane in next_intersection:
+            for v in lane.lane_vehicles:
+                self.draw(v)
 
         ### Set traffic light status based on scenario
         if(CURRENT_SCENARIO == Scenario.LEFT_TURN):
@@ -422,6 +426,11 @@ class CarlaManager:
             # Perpendicular lanes turn GREEN
             for lane in next_intersection:
                 self.set_traffic_light_for_vehicles_on_lane(lane, TrafficLightStatus.GREEN)
+                
+            # Oncoming opposite direction lane turns RED
+            for lane in adjacent_lanes:
+                if lane.same_direction == False:
+                    self.set_traffic_light_for_vehicles_on_lane(lane, TrafficLightStatus.RED)
 
             # CUrrent Lane turns GREEN
             self.set_traffic_light_for_vehicles_on_lane(lane_cur, TrafficLightStatus.GREEN)
