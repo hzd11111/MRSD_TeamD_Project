@@ -18,6 +18,7 @@ CURRENT_MODE = Mode.TRAIN
 WANDB_DRYRUN = True
 VIZ = True
 
+NEW_RUN = False
 #assert !(CURRENT_SCENARIO==Scenario.P2P and CURRENT_MODE==Mode.TRAIN), "P2P Cannot be called in train mode"
 
 if CURRENT_SCENARIO == Scenario.LANE_FOLLOWING:
