@@ -24,7 +24,7 @@ from lane_following_policy import CustomLaneFollowingPolicy
 from custom_env import CustomEnv
 from options import Scenario, RLDecision
 from settings import Mode, WANDB_DRYRUN
-from settings import MODEL_LOAD_PATH, MODEL_SAVE_PATH, CURRENT_MODE, CURRENT_SCENARIO, MODEL_CP_PATH, NEW_RUN, LOG_NAME
+from settings import MODEL_LOAD_PATH, MODEL_SAVE_PATH, CURRENT_MODE, CURRENT_SCENARIO, MODEL_CP_PATH, NEW_RUN
 # if WANDB_DRYRUN:
     # os.environ["WANDB_MODE"] = "dryrun"
 # -----------------------------------Global------------------------------------------------------#
