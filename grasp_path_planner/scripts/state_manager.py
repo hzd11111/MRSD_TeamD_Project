@@ -401,7 +401,7 @@ class StateManager:
             if lane.is_misc is True:
                 for vehicle in lane.lane_vehicles:
                     if vehicle.location_global.distance(
-                        env_desc.cur_vehicle_state.location_global) < 40.0:
+                        env_desc.cur_vehicle_state.location_global) < 25.0:
                         intersection_vehs.append(vehicle)
 
         # if number of vehicles in intersection are more then 3 then take 3 closest
@@ -448,7 +448,6 @@ class StateManager:
 
         distance_to_stop_line = env_desc.cur_vehicle_state.traffic_light_stop_distance
         current_lane_status += [distance_to_stop_line]
-        print("Distance to stop line is", distance_to_stop_line)
 
         if len(current_lane_status) != 8:
             current_lane_status += list(itertools.repeat(

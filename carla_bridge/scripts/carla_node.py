@@ -94,6 +94,7 @@ class CarlaManager:
         self.lane_right = None
         self.collision_sensor = None
         self.tm = None
+        self.painter = None
 
         self.simulation_sync_timestep = FIXED_DELTA_SECONDS
         self.first_frame_generated = False
@@ -120,6 +121,7 @@ class CarlaManager:
         self.all_vehicles = None
         self.intersection_path_global = None
         self.TLManager = None
+        self.force_custom_traffic = 0
 
 
         self.intersection_topology_for_each_intersection = None
@@ -136,6 +138,10 @@ class CarlaManager:
         self.global_path_carla_waypoints = None
         self.autopilot_recompute_flag = 0
         self.agent = None
+
+
+        ### Viz Placeholders
+        self.camera = None
 
     def intersection_pathRequest(self, data):
 
@@ -396,40 +402,41 @@ class CarlaManager:
         
 
         ### Set traffic light status based on scenario
-        if(CURRENT_SCENARIO == Scenario.LEFT_TURN):
-            # Oncoming opposite direction lane turns green
-            for lane in adjacent_lanes:
-                if lane.same_direction == False:
-                    self.set_traffic_light_for_vehicles_on_lane(lane, TrafficLightStatus.GREEN)
+        if(self.force_custom_traffic == 1):
+            if(CURRENT_SCENARIO == Scenario.LEFT_TURN):
+                # Oncoming opposite direction lane turns green
+                for lane in adjacent_lanes:
+                    if lane.same_direction == False:
+                        self.set_traffic_light_for_vehicles_on_lane(lane, TrafficLightStatus.GREEN)
 
-            # Perpendicular lanes turn RED
-            for lane in next_intersection:
-                self.set_traffic_light_for_vehicles_on_lane(lane, TrafficLightStatus.RED)
-
-            # CUrrent Lane turns GREEN
-            self.set_traffic_light_for_vehicles_on_lane(lane_cur, TrafficLightStatus.GREEN)
-        elif(CURRENT_SCENARIO == Scenario.RIGHT_TURN):
-
-            # Perpendicular right lanes turn GREEN
-            for lane in next_intersection:
-                if(lane.directed_right == True):
-                    self.set_traffic_light_for_vehicles_on_lane(lane, TrafficLightStatus.GREEN)
-
-            # CUrrent Lane turns GREEN
-            self.set_traffic_light_for_vehicles_on_lane(lane_cur, TrafficLightStatus.GREEN)
-        elif(CURRENT_SCENARIO == Scenario.GO_STRAIGHT):
-
-            # Perpendicular lanes turn GREEN
-            for lane in next_intersection:
-                self.set_traffic_light_for_vehicles_on_lane(lane, TrafficLightStatus.GREEN)
-                
-            # Oncoming opposite direction lane turns RED
-            for lane in adjacent_lanes:
-                if lane.same_direction == False:
+                # Perpendicular lanes turn RED
+                for lane in next_intersection:
                     self.set_traffic_light_for_vehicles_on_lane(lane, TrafficLightStatus.RED)
 
-            # CUrrent Lane turns GREEN
-            self.set_traffic_light_for_vehicles_on_lane(lane_cur, TrafficLightStatus.GREEN)
+                # CUrrent Lane turns GREEN
+                self.set_traffic_light_for_vehicles_on_lane(lane_cur, TrafficLightStatus.GREEN)
+            elif(CURRENT_SCENARIO == Scenario.RIGHT_TURN):
+
+                # Perpendicular right lanes turn GREEN
+                for lane in next_intersection:
+                    if(lane.directed_right == True):
+                        self.set_traffic_light_for_vehicles_on_lane(lane, TrafficLightStatus.GREEN)
+
+                # CUrrent Lane turns GREEN
+                self.set_traffic_light_for_vehicles_on_lane(lane_cur, TrafficLightStatus.GREEN)
+            elif(CURRENT_SCENARIO == Scenario.GO_STRAIGHT):
+
+                # Perpendicular lanes turn GREEN
+                for lane in next_intersection:
+                    self.set_traffic_light_for_vehicles_on_lane(lane, TrafficLightStatus.GREEN)
+                    
+                # Oncoming opposite direction lane turns RED
+                for lane in adjacent_lanes:
+                    if lane.same_direction == False:
+                        self.set_traffic_light_for_vehicles_on_lane(lane, TrafficLightStatus.RED)
+
+                # CUrrent Lane turns GREEN
+                self.set_traffic_light_for_vehicles_on_lane(lane_cur, TrafficLightStatus.GREEN)
             
 
             
@@ -879,7 +886,31 @@ class CarlaManager:
         return Pose2D(x=x, y=y, theta=theta)
 
     def apply_control_after_reset(self):
-        del self.collision_sensor
+        
+
+        def do_something(data):
+            pass
+
+        ## Attach a camera to the ego vehicle (For Viz)
+        if(VIZ == True):
+            if(self.camera is not None):
+                self.camera.stop()
+                self.camera.destroy()
+                del self.camera
+            blueprint_camera = self.carla_handler.world.get_blueprint_library().find('sensor.camera.rgb')
+            blueprint_camera.set_attribute('image_size_x', '640')
+            blueprint_camera.set_attribute('image_size_y', '480')
+            blueprint_camera.set_attribute('fov', '110')
+            blueprint_camera.set_attribute('sensor_tick', '0.05')
+            transform_camera = carla.Transform(carla.Location(x=-0.15,y=-0.4, z=1.2), carla.Rotation())
+            self.camera = self.carla_handler.world.spawn_actor(blueprint_camera, transform_camera, attach_to=self.ego_vehicle)
+            self.camera.listen(lambda data: do_something(data))
+
+        if(self.collision_sensor is not None):
+            self.collision_sensor.stop()
+            self.collision_sensor.destroy()
+            del self.collision_sensor
+        
         self.collision_sensor = self.carla_handler.world.spawn_actor(
             self.carla_handler.world.get_blueprint_library().find(
                 "sensor.other.collision"
@@ -950,6 +981,12 @@ class CarlaManager:
                 )
 
                 self.draw_global_path(self.global_path_in_intersection)
+                
+                self.force_custom_traffic = np.random.randint(2)
+                if(self.force_custom_traffic == 1):
+                    print("Custom Traffic Light Routine started.......")
+                else:
+                    print("Default Traffic Light Routine started.......")
                 
             elif CURRENT_SCENARIO in LANE_SCENARIOS:
                 
@@ -1244,6 +1281,11 @@ class CarlaManager:
 
         for vehicle in lane.lane_vehicles:
             self.TLManager.set_traffic_light_for_vehicle(vehicle, state)
+
+
+
+
+
 
 
 if __name__ == "__main__":
