@@ -1,13 +1,15 @@
 import carla
 import pickle
 import sys
+
+import ipdb
 sys.path.append("../../carla_utils/utils")
 sys.path.append("../../grasp_path_planner/scripts/")
 from settings import STOP_LINE_DISTANCE_FOR_LANE_CHANGE_TERMINATE
 from actors import Vehicle
 from options import TrafficLightStatus
 
-TOWN_O5_LIGHTS = 'traffic_lights/town05_traffic_light_x.pkl'
+TOWN_O5_LIGHTS = 'traffic_lights/town05_traffic_light_x_V2.pkl'
 LIGHTS_DICT = TOWN_O5_LIGHTS
 
 class TrafficLightManager():
@@ -33,8 +35,9 @@ class TrafficLightManager():
         
         for tl in self.all_traffic_lights:
             x = tl.get_location().x
+            y = tl.get_location().y
             for key, value in self.lane_id_to_tl_x_loc_dict.items():
-                if x == value:
+                if (x + y) == value:
                     dic[key] = tl.id
         
         return dic
@@ -110,25 +113,69 @@ class TrafficLightManager():
             return None
 
 if __name__ == "__main__":
+    import string
+
     '''Testing this script with manual_control.py'''
     # Updating traffic light status for each vehicle takes 0.08 ms
 
     # connect to client, get world
     client = carla.Client('127.0.0.1', 2000)
     world = client.get_world()
-
-    # get ego vehicle spawned by manual control
-    actor = world.get_actors().filter("vehicle*")[0]
+    Map = world.get_map()
     tlm = TrafficLightManager(client)
-    
-    # make a Vehicle object
-    ac = Vehicle(world, actor.id)
+    waypoint_list = Map.generate_waypoints(3)
+    lf = 100 #lifetime of draw points
+
+    # # get ego vehicle spawned by manual control
+    # actor = world.get_actors().filter("vehicle*")[0]
+    # ac = Vehicle(world, actor.id)
     
     # keep printing ROS msg for the ego vehicle, check for light status
     while True:
-        try:
-            tlm.set_actor_traffic_light_state(ac, is_ego=True)
-            print(ac.toRosMsg())
-        except:
-            import ipdb; ipdb.set_trace()
-        import time; time.sleep(0.2)
+
+        tl_dict = {}
+        tl_loc_dict = {}
+        # tl = tlm.set_actor_traffic_light_state(ac, is_ego=True)
+        # print(ac.toRosMsg())
+
+        # label each point on map with a letter and its associated traffic light
+        for waypoint in waypoint_list:
+            
+            # get a tl object
+            road_id = waypoint.road_id
+            lane_id = waypoint.lane_id
+    
+            # get the traffic light from the stored dictionary
+            tl = tlm.get_traffic_light_from_road(road_id=road_id, lane_id=lane_id)
+            
+            # randomly pick two letters to draw per wp + tl combo
+            letter = str(road_id)+ ',' + str(lane_id)
+
+            # if a TL is found, draw a letter on the waypoint and the tl
+            if tl is not None:
+                tl_loc = tl.get_location()
+
+                # waypoint location
+                wp_loc = waypoint.transform.location
+                world.debug.draw_string(wp_loc, letter, draw_shadow=False,
+                                        color=carla.Color(r=0, g=255, b=0), life_time=lf)
+                
+
+                dic_key = str(tl.id)+letter
+                if dic_key not in tl_dict:
+                    # tl location
+                    dis = lane_id
+                    tl_loc.x += dis
+                    tl_loc.y += dis
+                    world.debug.draw_string(tl_loc, letter, draw_shadow=True,
+                                        color=carla.Color(r=0, g=255, b=0), life_time=lf)
+                    tl_dict[str(tl.id)+letter] = 1
+        
+        # print locations over all traffic_lights
+        for tl in world.get_actors().filter("traffic.traffic_light*"):
+            tl_loc = tl.get_location()
+            world.debug.draw_string(tl_loc, str(tl_loc.x + tl_loc.y), draw_shadow=True,
+                                color=carla.Color(r=0, g=255, b=0), life_time=lf)
+            tl_loc_dict[str(tl_loc.x)] = 1
+
+        import ipdb; ipdb.set_trace()
