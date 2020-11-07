@@ -124,7 +124,7 @@ class IntersectionScenario:
         if ego_road_orientation == 1:
             ego_road_waypoints = ego_road_waypoints[::-1]
 
-        ego_road_waypoints = ego_road_waypoints[5:20]
+        ego_road_waypoints = ego_road_waypoints[7:20]
         # ego_road_waypoints = []
         # for waypoint in waypoints:
         #     if (waypoint.road_id, waypoint.lane_id) == current_setup[0]:
