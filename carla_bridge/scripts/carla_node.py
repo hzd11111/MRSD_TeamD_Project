@@ -394,10 +394,6 @@ class CarlaManager:
         adjacent_lanes = copy.copy(self.adjacent_lanes)
         next_intersection = copy.copy(self.next_intersection)
         
-        
-        for lane in next_intersection:
-            for v in lane.lane_vehicles:
-                self.draw(v)
 
         ### Set traffic light status based on scenario
         if(CURRENT_SCENARIO == Scenario.LEFT_TURN):
