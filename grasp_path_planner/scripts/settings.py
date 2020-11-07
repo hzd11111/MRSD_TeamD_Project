@@ -17,9 +17,6 @@ CURRENT_SCENARIO = Scenario.SWITCH_LANE_RIGHT
 CURRENT_MODE = Mode.TRAIN
 WANDB_DRYRUN = True
 NEW_RUN = False
-LOG_NAME = "DQN_1"
-if not NEW_RUN:
-    assert(LOG_NAME is not None)
 #assert !(CURRENT_SCENARIO==Scenario.P2P and CURRENT_MODE==Mode.TRAIN), "P2P Cannot be called in train mode"
 
 if CURRENT_SCENARIO == Scenario.LANE_FOLLOWING:
