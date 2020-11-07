@@ -42,11 +42,9 @@ class CustomIntersectionStraight(DQNPolicy):
         with tf.variable_scope("embedding_network_front_back", reuse=tf.compat.v1.AUTO_REUSE):
             # out = tf.Print(out, [out], summarize=200, message="FRONT_BACK:")
             out = tf_layers.fully_connected(
-                out, num_outputs=16, activation_fn=tf.nn.relu)
-            out = tf_layers.fully_connected(
-                out, num_outputs=16, activation_fn=tf.nn.relu)
-            out = tf_layers.fully_connected(
                 out, num_outputs=32, activation_fn=tf.nn.relu)
+            out = tf_layers.fully_connected(
+                out, num_outputs=16, activation_fn=tf.nn.relu)
         return out
 
     def embedding_net_perpendicular(self, input_vec):
@@ -55,11 +53,9 @@ class CustomIntersectionStraight(DQNPolicy):
                                reuse=tf.compat.v1.AUTO_REUSE):
             # out = tf.Print(out, [out], summarize=200, message="PERP_VEH:")
             out = tf_layers.fully_connected(
-                out, num_outputs=16, activation_fn=tf.nn.relu)
-            out = tf_layers.fully_connected(
-                out, num_outputs=16, activation_fn=tf.nn.relu)
-            out = tf_layers.fully_connected(
                 out, num_outputs=32, activation_fn=tf.nn.relu)
+            out = tf_layers.fully_connected(
+                out, num_outputs=16, activation_fn=tf.nn.relu)
         return out
 
     def embedding_net_opposite(self, input_vec):
@@ -67,11 +63,9 @@ class CustomIntersectionStraight(DQNPolicy):
         with tf.variable_scope("embedding_network_opposite", reuse=tf.compat.v1.AUTO_REUSE):
             # out = tf.Print(out, [out], summarize=200, message="OPP_VEH:")
             out = tf_layers.fully_connected(
-                out, num_outputs=16, activation_fn=tf.nn.relu)
-            out = tf_layers.fully_connected(
-                out, num_outputs=16, activation_fn=tf.nn.relu)
-            out = tf_layers.fully_connected(
                 out, num_outputs=32, activation_fn=tf.nn.relu)
+            out = tf_layers.fully_connected(
+                out, num_outputs=16, activation_fn=tf.nn.relu)
         return out
 
     def embedding_net_intersection(self, input_vec):
@@ -81,20 +75,18 @@ class CustomIntersectionStraight(DQNPolicy):
             out = tf_layers.fully_connected(
                 out, num_outputs=16, activation_fn=tf.nn.relu)
             out = tf_layers.fully_connected(
-                out, num_outputs=16, activation_fn=tf.nn.relu)
-            out = tf_layers.fully_connected(
                 out, num_outputs=32, activation_fn=tf.nn.relu)
+            out = tf_layers.fully_connected(
+                out, num_outputs=16, activation_fn=tf.nn.relu)
         return out
 
     def q_net(self, input_vec, out_num):
         out = input_vec
         with tf.variable_scope("action_value"):
             out = tf_layers.fully_connected(
+                out, num_outputs=32, activation_fn=tf.nn.relu)
+            out = tf_layers.fully_connected(
                 out, num_outputs=64, activation_fn=tf.nn.relu)
-            out = tf_layers.fully_connected(
-                out, num_outputs=128, activation_fn=tf.nn.relu)
-            out = tf_layers.fully_connected(
-                out, num_outputs=128, activation_fn=tf.nn.relu)
             out = tf_layers.fully_connected(
                 out, num_outputs=out_num, activation_fn=tf.nn.tanh)
         return out
