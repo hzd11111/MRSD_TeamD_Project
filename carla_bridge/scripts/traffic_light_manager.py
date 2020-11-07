@@ -65,7 +65,7 @@ class TrafficLightManager():
         if tl is None:
             print("tl is none for some reason")
             actor.traffic_light_status = TrafficLightStatus.GREEN
-            actor.traffic_light_stop_distance = -1
+            # actor.traffic_light_stop_distance = -1
         else:
             state = str(tl.get_state())
 

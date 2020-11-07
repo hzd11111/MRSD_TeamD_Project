@@ -776,6 +776,7 @@ class CarlaManager:
         '''
         if CURRENT_SCENARIO in [Scenario.SWITCH_LANE_RIGHT, Scenario.SWITCH_LANE_LEFT]:
             dist = self.carla_handler.get_distance_to_lane_end(ego_vehicle)
+            ego_vehicle.traffic_light_stop_distance = dist
             lane_switch_failure_terminate = (dist < STOP_LINE_DISTANCE_FOR_LANE_CHANGE_TERMINATE)  
         else:
             lane_switch_failure_terminate = False
