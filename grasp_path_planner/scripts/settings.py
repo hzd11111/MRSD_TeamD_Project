@@ -16,7 +16,7 @@ class Mode(Enum):
 CURRENT_SCENARIO = Scenario.GO_STRAIGHT
 CURRENT_MODE = Mode.TRAIN
 WANDB_DRYRUN = True
-VIZ = True
+VIZ = False
 
 NEW_RUN = False
 #assert !(CURRENT_SCENARIO==Scenario.P2P and CURRENT_MODE==Mode.TRAIN), "P2P Cannot be called in train mode"

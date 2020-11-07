@@ -401,7 +401,7 @@ class StateManager:
             if lane.is_misc is True:
                 for vehicle in lane.lane_vehicles:
                     if vehicle.location_global.distance(
-                        env_desc.cur_vehicle_state.location_global) < 25.0:
+                        env_desc.cur_vehicle_state.location_global) < 40.0:
                         intersection_vehs.append(vehicle)
 
         # if number of vehicles in intersection are more then 3 then take 3 closest
