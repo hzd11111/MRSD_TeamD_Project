@@ -85,11 +85,11 @@ class GeneralRLManager:
         RLDecision enum
         """
         if action == 0:
-            return RLDecision.CONSTANT_SPEED
+            return RLDecision.GLOBAL_PATH_CONSTANT_SPEED
         elif action == 1:
-            return RLDecision.ACCELERATE
+            return RLDecision.GLOBAL_PATH_ACCELERATE
         elif action == 2:
-            return RLDecision.DECELERATE
+            return RLDecision.GLOBAL_PATH_DECELERATE
         # if action == 0:
         #     return RLDecision.CONSTANT_SPEED
         # elif action == 1:
@@ -189,8 +189,7 @@ class RLManager(GeneralRLManager):
             # return true if any of the conditions described in the description is true
             return env_desc.reward_info.collision or \
                 env_desc.reward_info.path_planner_terminate or \
-                env_desc.reward_info.time_elapsed > self.eps_time or \
-                self.ran_red_light(env_desc)
+                env_desc.reward_info.time_elapsed > self.eps_time
 
     def rewardCalculation(self) -> np.ndarray:
         raise NotImplementedError()

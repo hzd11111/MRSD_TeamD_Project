@@ -45,6 +45,10 @@ class Reward(ABC):
         Resets environment
         """
         self.closest_dist = 1e5
+    
+    @abstractmethod
+    def is_success(self, env_desc):
+        return
 
     def calculate_line_coefficients(self, point1, point2):
         """
@@ -431,7 +435,7 @@ class PedestrianReward(Reward):
 
 
 # Plain Reward Class
-class PlainReward(Reward):
+class PlainRewardWithLight(Reward):
     '''
     Implements positional costs and basic required interfaces for all rewards
     '''
@@ -473,7 +477,12 @@ class PlainReward(Reward):
         """
         Resets environment
         """
-        return
+        return 
+    
+    def is_success(self, desc):
+        return not (desc.reward_info.collision or \
+                (desc.reward_info.time_elapsed > 80) or \
+                self.ran_red_light(desc))
 
 
 # Plain Lane switch reward
@@ -511,7 +520,51 @@ class PlainLaneChange(Reward):
         Resets environment
         """
         return
+    
+    def is_success(self, desc):
+        return not(desc.reward_info.collision or \
+                (desc.reward_info.time_elapsed > 80) or \
+                desc.reward_info.lane_switch_failure_terminate)
 
+
+class PlainReward(Reward):
+    '''
+    Implements positional costs and basic required interfaces for all rewards
+    '''
+
+    def __init__(self):
+        super().__init__()
+        self.max_reward = 1
+
+    def update(self, desc, action):
+        """
+        Meant to update costs and other intermediate variables
+        """
+        return
+
+    def get_reward(self, desc, action):
+        """
+        Gives the cost of taking action
+        """
+        reward = 0
+        # print("Action progress is ", desc.reward_info.action_progress)
+        if desc.reward_info.collision or \
+                (desc.reward_info.time_elapsed > 80):
+            reward = reward - 1
+        elif desc.reward_info.path_planner_terminate:
+            reward += desc.reward_info.action_progress
+        print("Reward is ", reward)
+        return reward
+
+    def reset(self):
+        """
+        Resets environment
+        """
+        return
+    
+    def is_success(self, desc):
+        return not (desc.reward_info.collision or \
+                (desc.reward_info.time_elapsed > 80))
 
 def reward_selector(event):
     """
@@ -519,5 +572,7 @@ def reward_selector(event):
     """
     if event is Scenario.SWITCH_LANE_RIGHT or event is Scenario.SWITCH_LANE_LEFT:
         return PlainLaneChange()
-    else:
+    elif event is Scenario.RIGHT_TURN or event is Scenario.LANE_FOLLOWING:
         return PlainReward()
+    else:
+        return PlainRewardWithLight()

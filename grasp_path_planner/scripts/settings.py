@@ -13,15 +13,15 @@ class Mode(Enum):
 
 
 ############ Mode and Model Selection ##############################
-CURRENT_SCENARIO = Scenario.SWITCH_LANE_LEFT
+CURRENT_SCENARIO = Scenario.SWITCH_LANE_RIGHT
 CURRENT_MODE = Mode.TRAIN
 WANDB_DRYRUN = True
-
+NEW_RUN = False
 #assert !(CURRENT_SCENARIO==Scenario.P2P and CURRENT_MODE==Mode.TRAIN), "P2P Cannot be called in train mode"
 
 if CURRENT_SCENARIO == Scenario.LANE_FOLLOWING:
     MODEL_SAVE_PATH = dir_path + "/Models/DQN_Lane_Following"
-    MODEL_LOAD_PATH = dir_path + "/Models/DQN_Model_Lane_Following"
+    MODEL_LOAD_PATH = dir_path + "/Models/DQN_Lane_Following"
     # MODEL_LOAD_PATH = dir_path + "/Models/DQN_Lane_Following_model_18000_steps.zip"
     MODEL_CP_PATH = dir_path + "/Models/Lane_Following_CP"
 elif CURRENT_SCENARIO == Scenario.SWITCH_LANE_LEFT:

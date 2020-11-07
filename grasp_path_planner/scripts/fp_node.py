@@ -24,7 +24,7 @@ from lane_following_policy import CustomLaneFollowingPolicy
 from custom_env import CustomEnv
 from options import Scenario, RLDecision
 from settings import Mode, WANDB_DRYRUN
-from settings import MODEL_LOAD_PATH, MODEL_SAVE_PATH, CURRENT_MODE, CURRENT_SCENARIO, MODEL_CP_PATH
+from settings import MODEL_LOAD_PATH, MODEL_SAVE_PATH, CURRENT_MODE, CURRENT_SCENARIO, MODEL_CP_PATH, NEW_RUN
 # if WANDB_DRYRUN:
     # os.environ["WANDB_MODE"] = "dryrun"
 # -----------------------------------Global------------------------------------------------------#
@@ -47,41 +47,50 @@ class FullPlannerManager:
         env = CustomEnv(self.path_planner, self.behavior_planner, event)
         env = make_vec_env(lambda: env, n_envs=1)
         model = None
-        if self.event == Scenario.SWITCH_LANE_LEFT or\
+        if NEW_RUN and self.event == Scenario.SWITCH_LANE_LEFT or\
                 self.event == Scenario.SWITCH_LANE_RIGHT:
             model = DQN(CustomLaneChangePolicy, env, verbose=1,
                         learning_starts=256, batch_size=256,
                         exploration_fraction=0.93, target_network_update_freq=100,
                         tensorboard_log=dir_path + "/Logs")
 
-        if self.event == Scenario.LANE_FOLLOWING:
+        if NEW_RUN and self.event == Scenario.LANE_FOLLOWING:
             model = DQN(CustomLaneFollowingPolicy, env, verbose=1,
                         learning_starts=256, batch_size=256, exploration_fraction=0.9,
                         target_network_update_freq=100,
                         tensorboard_log=dir_path + "/Logs", gamma=0.93, learning_rate=0.0001)
 
-        if self.event == Scenario.GO_STRAIGHT:
+        if NEW_RUN and self.event == Scenario.GO_STRAIGHT:
             model = DQN(CustomIntersectionStraight, env, verbose=1,
                         learning_starts=256, batch_size=256, exploration_fraction=0.9,
                         target_network_update_freq=100,
                         tensorboard_log=dir_path + "/Logs", gamma=0.93, learning_rate=0.0001)
 
-        if self.event == Scenario.LEFT_TURN:
+        if NEW_RUN and self.event == Scenario.LEFT_TURN:
             model = DQN(CustomIntersectionLeftTurn, env, verbose=1,
                         learning_starts=256, batch_size=256, exploration_fraction=0.9,
                         target_network_update_freq=100,
                         tensorboard_log=dir_path + "/Logs", gamma=0.93, learning_rate=0.0001)
 
-        if self.event == Scenario.RIGHT_TURN:
+        if NEW_RUN and self.event == Scenario.RIGHT_TURN:
             model = DQN(CustomIntersectionRightTurn, env, verbose=1,
                         learning_starts=256, batch_size=256, exploration_fraction=0.9,
                         target_network_update_freq=100,
                         tensorboard_log=dir_path + "/Logs", gamma=0.93, learning_rate=0.0001)
 
+        if not NEW_RUN:
+            model = DQN.load(MODEL_LOAD_PATH, env=env,
+                             tensorboard_log=dir_path + "/Logs",
+                             exploration_fraction=0.02)
+            model.learn(total_timesteps=2000,
+                        callback=checkpoint_callback,
+                        reset_num_timesteps=False)
+            model.save(MODEL_SAVE_PATH + "_Extended")
         # wandb.save("./*.py")
         # wandb.save("./*.md")
-        model.learn(total_timesteps=20000, callback=checkpoint_callback)
-        model.save(MODEL_SAVE_PATH)
+        else:
+            model.learn(total_timesteps=20000, callback=checkpoint_callback)
+            model.save(MODEL_SAVE_PATH)
         # wandb.save(MODEL_SAVE_PATH + ".zip")
 
     def run_test(self):
