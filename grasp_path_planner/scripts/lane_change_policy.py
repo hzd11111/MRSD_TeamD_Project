@@ -109,19 +109,19 @@ class CustomLaneChangePolicy(DQNPolicy):
             # Add pedestrians
             ped_veh_start = veh_state_len + 7 * (veh_state_len + mask)
             embed_pedestrians = []
-            for j in range(3):
-                ped_veh_mask = out_ph[:, ped_veh_start + (j + 1) * (ped_state_len + mask) - 1][:, None]
-                start = ped_veh_start + j * (ped_state_len + mask)
-                ped = out_ph[:, start:start + ped_state_len]
-                ped_state = tf.concat([cur_veh, ped], axis=1)
-                embed_pedestrians.append(
-                    self.embedding_net_pedestrian(ped_state) * ped_veh_mask)
+            # for j in range(3):
+            #     ped_veh_mask = out_ph[:, ped_veh_start + (j + 1) * (ped_state_len + mask) - 1][:, None]
+            #     start = ped_veh_start + j * (ped_state_len + mask)
+            #     ped = out_ph[:, start:start + ped_state_len]
+            #     ped_state = tf.concat([cur_veh, ped], axis=1)
+            #     embed_pedestrians.append(
+            #         self.embedding_net_pedestrian(ped_state) * ped_veh_mask)
 
             embed_list = embed_adjacent_vehicles + embed_front_vehicle + embed_back_vehicle  # embed_pedestrians
             stacked_out = tf.stack(embed_list, axis=1)
             max_out = tf.reduce_max(stacked_out, axis=1)
             # concatenate the lane distance
-            max_out = tf.concat([max_out, out_ph[:, -2:][:, None]], axis=1)
+            max_out = tf.concat([max_out, out_ph[:, -2:]], axis=1)
             q_out = self.q_net(max_out, ac_space.n)
 
         self.q_values = q_out
