@@ -410,7 +410,7 @@ class CarlaManager:
             self.set_traffic_light_for_vehicles_on_lane(lane_cur, TrafficLightStatus.GREEN)
         elif(CURRENT_SCENARIO == Scenario.RIGHT_TURN):
 
-            # Perpendicular lanes turn RED
+            # Perpendicular right lanes turn GREEN
             for lane in next_intersection:
                 if(lane.directed_right == True):
                     self.set_traffic_light_for_vehicles_on_lane(lane, TrafficLightStatus.GREEN)
@@ -419,7 +419,7 @@ class CarlaManager:
             self.set_traffic_light_for_vehicles_on_lane(lane_cur, TrafficLightStatus.GREEN)
         elif(CURRENT_SCENARIO == Scenario.GO_STRAIGHT):
 
-            # Perpendicular lanes turn RED
+            # Perpendicular lanes turn GREEN
             for lane in next_intersection:
                 self.set_traffic_light_for_vehicles_on_lane(lane, TrafficLightStatus.GREEN)
 
