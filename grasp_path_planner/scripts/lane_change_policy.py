@@ -35,20 +35,23 @@ class CustomLaneChangePolicy(DQNPolicy):
         out = input_vec
         with tf.variable_scope("embedding_network_front", reuse=tf.compat.v1.AUTO_REUSE):
             # out = tf.Print(out, [out], summarize=200, message="Front:")
+            out = tf_layers.fully_connected(out, num_outputs=16, activation_fn=tf.nn.relu)
             out = tf_layers.fully_connected(out, num_outputs=32, activation_fn=tf.nn.relu)
         return out
 
-    def embedding_net_back(self, input_vec):
-        out = input_vec
-        with tf.variable_scope("embedding_network_back", reuse=tf.compat.v1.AUTO_REUSE):
-            # out = tf.Print(out, [out], summarize=200, message="Back:")
-            out = tf_layers.fully_connected(out, num_outputs=32, activation_fn=tf.nn.relu)
-        return out
+    # def embedding_net_back(self, input_vec):
+    #     out = input_vec
+    #     with tf.variable_scope("embedding_network_back", reuse=tf.compat.v1.AUTO_REUSE):
+    #         # out = tf.Print(out, [out], summarize=200, message="Back:")
+    #         out = tf_layers.fully_connected(out, num_outputs=16, activation_fn=tf.nn.relu)
+    #         out = tf_layers.fully_connected(out, num_outputs=32, activation_fn=tf.nn.relu)
+    #     return out
 
     def embedding_net_adjacent(self, input_vec):
         out = input_vec
         with tf.variable_scope("embedding_network_adjacent", reuse=tf.compat.v1.AUTO_REUSE):
             # out = tf.Print(out, [out], summarize=200, message="Adjacent:")
+            out = tf_layers.fully_connected(out, num_outputs=16, activation_fn=tf.nn.relu)
             out = tf_layers.fully_connected(out, num_outputs=32, activation_fn=tf.nn.relu)
         return out
 
@@ -57,6 +60,7 @@ class CustomLaneChangePolicy(DQNPolicy):
         with tf.variable_scope("action_value"):
             out = tf_layers.fully_connected(out, num_outputs=64, activation_fn=tf.nn.relu)
             out = tf_layers.fully_connected(out, num_outputs=128, activation_fn=tf.nn.relu)
+            out = tf_layers.fully_connected(out, num_outputs=64, activation_fn=tf.nn.relu)
             out = tf_layers.fully_connected(out, num_outputs=out_num, activation_fn=tf.nn.tanh)
         return out
 
@@ -104,7 +108,7 @@ class CustomLaneChangePolicy(DQNPolicy):
             back_veh_state = tf.concat([cur_veh, back_veh], axis=1)
             # filtered_back_veh_state = tf.boolean_mask(back_veh_state, back_veh_mask, name="back_veh_mask")
             embed_back_vehicle.append(
-                self.embedding_net_back(back_veh_state) * back_veh_mask)
+                self.embedding_net_front(back_veh_state) * back_veh_mask)
 
             # Add pedestrians
             ped_veh_start = veh_state_len + 7 * (veh_state_len + mask)
