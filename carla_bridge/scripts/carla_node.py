@@ -442,7 +442,6 @@ class CarlaManager:
             
         ### Set traffic light status for all vehicles
         self.TLManager.set_actor_traffic_light_state(vehicle_ego, is_ego=True)
-        vehicle_ego.traffic_light_status = TrafficLightStatus.GREEN
         for i in range(len(lane_cur.lane_vehicles)):
             self.TLManager.set_actor_traffic_light_state(lane_cur.lane_vehicles[i])
         for i in range(len(adjacent_lanes)):
