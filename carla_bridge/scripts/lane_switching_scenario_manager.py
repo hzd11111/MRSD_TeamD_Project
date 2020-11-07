@@ -15,8 +15,9 @@ import logging
 from carla_handler import CarlaHandler
 from collections import defaultdict
 sys.path.append("../../global_route_planner/")
-
+sys.path.append("../../grasp_path_planner/scripts/")
 from global_planner import get_global_planner
+from settings import *
 
 #CONFIGURATIONS:
 town05_city = { "road_ids": [ 6, 7, 45, 46 , 8], 
@@ -33,7 +34,7 @@ town05_city = { "road_ids": [ 6, 7, 45, 46 , 8],
                 "average_car_length":5,
                 "swithching_left": False,
                 "goal_distance_to_travel":30,
-                "min_spawn_distance_from_EOL":21,                 
+                "min_spawn_distance_from_EOL":26,                 
 }
 
 def filter_waypoints(waypoints, road_id, lane_id):
@@ -254,8 +255,8 @@ class LaneSwitchingScenario:
         all_actors = self.world.get_actors().filter("vehicle*")
         for actor in all_actors:
             self.traffic_manager.auto_lane_change(actor, self.auto_lane_change)
-            self.traffic_manager.ignore_lights_percentage(actor, 100)
-            self.traffic_manager.ignore_signs_percentage(actor, 100)
+            self.traffic_manager.ignore_lights_percentage(actor, IGNORE_LIGHTS_PERCENTAGE)
+            self.traffic_manager.ignore_signs_percentage(actor, IGNORE_SIGNS_PERCENTAGE)
             actor.set_simulate_physics(True)
 
         if ego_spawn_point is not None:

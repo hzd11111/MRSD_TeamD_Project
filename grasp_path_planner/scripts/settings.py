@@ -75,7 +75,7 @@ NON_EGO_VEHICLE_MODEL = 'vehicle.mustang.mustang'
 
 ################## Global Scenario Params #################
 DISTANCE_TO_INTERSECTION_FOR_SCENARIO_CHANGE = 20
-STOP_LINE_DISTANCE_FOR_LANE_CHANGE_TERMINATE = 5
+STOP_LINE_DISTANCE_FOR_LANE_CHANGE_TERMINATE = 8
 
 
 ################## Test Mode Arguments ######################
