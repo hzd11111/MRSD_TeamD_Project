@@ -20,7 +20,7 @@ from global_planner import get_global_planner
 from settings import *
 
 #CONFIGURATIONS:
-town05_city = { "road_ids": [ 6, 7, 45, 46 , 8], 
+town05_city = { "road_ids": [ 7, 8], # 45, 46
                 "distance_bwn_waypoints":1,
                 "max_ego_line_non_ego_vehicles":4, # num of non ego vehicles in ego lane
                 "min_ego_line_non_ego_vehicles":1, # num of non ego vehicles in ego lane
@@ -248,6 +248,10 @@ class LaneSwitchingScenario:
                     print(response.error)
                 else:
                     ego_vehicle = self.world.get_actor(response.actor_id)
+            ego_vehicle_spawn_waypoint = self.world.get_map().get_waypoint(
+                ego_vehicle.get_location(), project_to_road=True
+            )
+            print ("Ego V spawned ", len(ego_vehicle_spawn_waypoint.next_until_lane_end(1)), "m away from EOL")
         
         self.tick()
 

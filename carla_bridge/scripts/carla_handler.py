@@ -1006,3 +1006,10 @@ class CarlaHandler:
         waypoints_to_end_of_lane = nearest_waypoint.next_until_lane_end(1)
 
         return len(waypoints_to_end_of_lane)
+
+    def get_distance_to_lane_end_2(self, vehicle):
+        nearest_waypoint = self.get_nearest_waypoint(vehicle)
+
+        waypoints_to_end_of_lane = nearest_waypoint.next_until_lane_end(1)
+
+        return len(waypoints_to_end_of_lane)

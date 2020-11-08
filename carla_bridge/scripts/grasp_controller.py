@@ -56,7 +56,7 @@ class GRASPPIDController():
         """
 
         # print("Target Pose:", pose)
-        print("Target Speed:", target_speed)
+        # print("Target Speed:", target_speed)
         throttle = self._lon_controller.run_step(target_speed)
         steering = self._lat_controller.run_step(pose)
 
@@ -124,7 +124,7 @@ class PIDLongitudinalController():
         else:
             _de = 0.0
             _ie = 0.0
-        print("PID:", np.clip((self._K_P * _e) + (self._K_D * _de / self._dt) + (self._K_I * _ie * self._dt), -1.0, 1.0))
+        # print("PID:", np.clip((self._K_P * _e) + (self._K_D * _de / self._dt) + (self._K_I * _ie * self._dt), -1.0, 1.0))
         return np.clip((self._K_P * _e) + (self._K_D * _de / self._dt) + (self._K_I * _ie * self._dt), -1.0, 1.0)
 
 
