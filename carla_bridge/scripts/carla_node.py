@@ -986,7 +986,7 @@ class CarlaManager:
                     self.ego_start_road_lane_pair,
                     self.global_path_in_intersection,
                     self.road_lane_to_orientation,
-                ) = self.tm.reset(num_vehicles=10, junction_id=53, warm_start_duration=2)
+                ) = self.tm.reset(num_vehicles=20, junction_id=53, warm_start_duration=2)
                 self.current_junction_id = 53
                 self.all_vehicles = self.carla_handler.world.get_actors().filter(
                     "vehicle.*"
@@ -1008,7 +1008,7 @@ class CarlaManager:
 
                 self.draw_global_path(self.global_path_in_intersection)
                 
-                self.force_custom_traffic = np.random.randint(2)
+                self.force_custom_traffic = np.random.randint(5)
                 if(self.force_custom_traffic == 1):
                     print("Custom Traffic Light Routine started.......")
                 else:

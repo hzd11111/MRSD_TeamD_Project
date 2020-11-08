@@ -13,13 +13,13 @@ class Mode(Enum):
 
 
 ############ Mode and Model Selection ##############################
-CURRENT_SCENARIO = Scenario.GO_STRAIGHT
-CURRENT_MODE = Mode.TRAIN
+CURRENT_SCENARIO = Scenario.P2P
+CURRENT_MODE = Mode.TEST
 WANDB_DRYRUN = True
 VIZ = False
 VIS_LIDAR = False
 
-NEW_RUN = True
+NEW_RUN = False
 #assert !(CURRENT_SCENARIO==Scenario.P2P and CURRENT_MODE==Mode.TRAIN), "P2P Cannot be called in train mode"
 
 if CURRENT_SCENARIO == Scenario.LANE_FOLLOWING:
@@ -46,7 +46,7 @@ elif CURRENT_SCENARIO == Scenario.RIGHT_TURN:
 elif CURRENT_SCENARIO == Scenario.LEFT_TURN:
     MODEL_SAVE_PATH = dir_path + "/Models/DQN_Left_Turn"
     MODEL_LOAD_PATH = dir_path + "/Models/DQN_Left_Turn"
-    MODEL_CP_PATH = dir_path + "/Models/Left_Turn_CP"
+    MODEL_CP_PATH = dir_path + "/Models/Left_Turn_CP_2"
 
 INTERSECTION_SCENARIOS = [Scenario.GO_STRAIGHT, Scenario.RIGHT_TURN, 
                                                 Scenario.LEFT_TURN]

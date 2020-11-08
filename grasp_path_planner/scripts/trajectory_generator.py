@@ -174,7 +174,7 @@ class TrajGenerator:
         curr_vehicle_global_pose = curr_vehicle.location_global
 
         # determine the closest next pose in the global path
-        global_path = sim_data.global_path
+        global_path = sim_data.intersection_global_path
         global_path_points = global_path.path_points
         tracking_pose = False
         tracking_pose_ind = False
@@ -237,7 +237,7 @@ class TrajGenerator:
         curr_vehicle_global_pose = curr_vehicle.location_global
 
         # determine the closest next pose in the global path
-        global_path = sim_data.global_path
+        global_path = sim_data.intersection_global_path
         global_path_points = global_path.path_points
         tracking_pose = False
         tracking_pose_ind = False
@@ -300,7 +300,7 @@ class TrajGenerator:
         curr_vehicle_global_pose = curr_vehicle.location_global
 
         # determine the closest next pose in the global path
-        global_path = sim_data. global_path
+        global_path = sim_data.intersection_global_path
         global_path_points = global_path.path_points
         tracking_pose = False
         tracking_pose_ind = False

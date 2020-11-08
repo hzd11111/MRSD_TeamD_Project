@@ -2,7 +2,6 @@ import carla
 import pickle
 import sys
 
-import ipdb
 sys.path.append("../../carla_utils/utils")
 sys.path.append("../../grasp_path_planner/scripts/")
 from settings import STOP_LINE_DISTANCE_FOR_LANE_CHANGE_TERMINATE
