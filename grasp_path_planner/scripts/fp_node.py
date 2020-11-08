@@ -51,7 +51,7 @@ class FullPlannerManager:
                 self.event == Scenario.SWITCH_LANE_RIGHT:
             model = DQN(CustomLaneChangePolicy, env, verbose=1,
                         learning_starts=256, batch_size=256,
-                        exploration_fraction=0.93, target_network_update_freq=100,
+                        exploration_fraction=0.5, gamma=0.93, target_network_update_freq=100,
                         tensorboard_log=dir_path + "/Logs")
 
         if NEW_RUN and self.event == Scenario.LANE_FOLLOWING:
@@ -79,10 +79,11 @@ class FullPlannerManager:
                         tensorboard_log=dir_path + "/Logs", gamma=0.93, learning_rate=0.0001)
 
         if not NEW_RUN:
+            print("Resuming run")
             model = DQN.load(MODEL_LOAD_PATH, env=env,
                              tensorboard_log=dir_path + "/Logs",
-                             exploration_fraction=0.02)
-            model.learn(total_timesteps=2000,
+                             exploration_fraction=0.5)
+            model.learn(total_timesteps=35000,
                         callback=checkpoint_callback,
                         reset_num_timesteps=False)
             model.save(MODEL_SAVE_PATH + "_Extended")
