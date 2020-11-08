@@ -32,6 +32,8 @@ from traffic_light_manager import TrafficLightManager
 from grasp_path_planner.srv import SimService, SimServiceResponse
 from agents.tools.misc import get_speed
 
+from carla_painter import CarlaPainter
+
 from utils import *
 
 sys.path.append("../../carla_bridge/scripts/cartesian_to_frenet")
@@ -94,7 +96,9 @@ class CarlaManager:
         self.lane_right = None
         self.collision_sensor = None
         self.tm = None
-        self.painter = None
+        if (VIZ):  self.painter = CarlaPainter('localhost', 8089)
+        self.trajectories = [[]]
+
 
         self.simulation_sync_timestep = FIXED_DELTA_SECONDS
         self.first_frame_generated = False
@@ -142,6 +146,7 @@ class CarlaManager:
 
         ### Viz Placeholders
         self.camera = None
+        self.lidar = None
 
     def intersection_pathRequest(self, data):
 
@@ -852,10 +857,6 @@ class CarlaManager:
         env_desc.speed_limit = self.speed_limit
         env_desc.reward_info = reward_info
         env_desc.global_path = self.global_path_in_intersection
-        
-        print("x = :", env_desc.cur_vehicle_state.location_global.x)
-        print("y = :", env_desc.cur_vehicle_state.location_global.y)
-        print("z = :", env_desc.cur_vehicle_state.location_global.y)
 
         return SimServiceResponse(env_desc.toRosMsg())
 
@@ -884,27 +885,53 @@ class CarlaManager:
 
         return Pose2D(x=x, y=y, theta=theta)
 
-    def apply_control_after_reset(self):
-        
-
+    def visualize(self):
+        # empty trajectories when reset
+        self.trajectories = [[]] 
         def do_something(data):
             pass
+        if(self.camera is not None):
+            self.camera.stop()
+            self.camera.destroy()
+            del self.camera
+        blueprint_camera = self.carla_handler.world.get_blueprint_library().find('sensor.camera.rgb')
+        blueprint_camera.set_attribute('image_size_x', '640')
+        blueprint_camera.set_attribute('image_size_y', '480')
+        blueprint_camera.set_attribute('fov', '110')
+        blueprint_camera.set_attribute('sensor_tick', '0.05')
+        transform_camera = carla.Transform(carla.Location(x=-0.15,y=-0.4, z=1.2), carla.Rotation())
+        self.camera = self.carla_handler.world.spawn_actor(blueprint_camera, transform_camera, attach_to=self.ego_vehicle)
+        self.camera.listen(lambda data: do_something(data))
 
-        ## Attach a camera to the ego vehicle (For Viz)
-        if(VIZ == True):
-            if(self.camera is not None):
-                self.camera.stop()
-                self.camera.destroy()
-                del self.camera
-            blueprint_camera = self.carla_handler.world.get_blueprint_library().find('sensor.camera.rgb')
-            blueprint_camera.set_attribute('image_size_x', '640')
-            blueprint_camera.set_attribute('image_size_y', '480')
-            blueprint_camera.set_attribute('fov', '110')
-            blueprint_camera.set_attribute('sensor_tick', '0.05')
-            transform_camera = carla.Transform(carla.Location(x=-0.15,y=-0.4, z=1.2), carla.Rotation())
-            self.camera = self.carla_handler.world.spawn_actor(blueprint_camera, transform_camera, attach_to=self.ego_vehicle)
-            self.camera.listen(lambda data: do_something(data))
+        if (VIS_LIDAR):
+            if self.lidar is not None:
+                self.lidar.stop()
+                self.lidar.destroy()
+            blueprint_lidar = self.carla_handler.world.get_blueprint_library().find('sensor.lidar.ray_cast')
+            blueprint_lidar.set_attribute('range', '30')
+            blueprint_lidar.set_attribute('rotation_frequency', '10')
+            blueprint_lidar.set_attribute('channels', '32')
+            blueprint_lidar.set_attribute('lower_fov', '-30')
+            blueprint_lidar.set_attribute('upper_fov', '30')
+            blueprint_lidar.set_attribute('points_per_second', '56000')
+            transform_lidar = carla.Transform(carla.Location(x=0.0, z=5.0)) # a lidar on top of the car ?
+            self.lidar = self.carla_handler.world.spawn_actor(blueprint_lidar, transform_lidar, attach_to=self.ego_vehicle)
+            self.lidar.listen(lambda data: do_something(data))
 
+    def draw_carla_viz(self):
+        ego_location = self.ego_vehicle.get_location()
+        self.trajectories[0].append([ego_location.x, ego_location.y, ego_location.z])
+
+        # draw trajectories
+        self.painter.draw_polylines(self.trajectories)
+        
+        ego_velocity = self.ego_vehicle.get_velocity()
+        velocity_str = "{:.2f}, ".format(ego_velocity.x) + "{:.2f}".format(ego_velocity.y) \
+                + ", {:.2f}".format(ego_velocity.z)
+        self.painter.draw_texts([velocity_str],
+                    [[ego_location.x, ego_location.y, ego_location.z + 10.0]], size=20)
+
+    def apply_control_after_reset(self):
         if(self.collision_sensor is not None):
             self.collision_sensor.stop()
             self.collision_sensor.destroy()
@@ -1075,6 +1102,7 @@ class CarlaManager:
 
             ## Handing over control
             self.apply_control_after_reset()
+            if (VIZ == True): self.visualize()
             
         except rospy.ROSInterruptException:
             print("failed....")
@@ -1134,7 +1162,8 @@ class CarlaManager:
     def pathRequest_selector(self, data):
         
         plan = PathPlan.fromRosMsg(data.path_plan)
-        
+        if(VIZ): self.draw_carla_viz()
+
         if(CURRENT_SCENARIO == Scenario.P2P):
             scenario = plan.scenario_chosen
         else:
@@ -1250,7 +1279,6 @@ class CarlaManager:
             color=carla.Color(r=color[0], g=color[1], b=color[2]),
             life_time=5,
         )
-
 
     def draw_location(self, location, color=(255, 0, 0)):
 

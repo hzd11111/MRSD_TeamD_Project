@@ -117,7 +117,7 @@ class P2PScenario:
                     blueprint.get_attribute("driver_id").recommended_values
                 )
                 blueprint.set_attribute("driver_id", driver_id)
-            blueprint.set_attribute("role_name", "autopilot")
+            blueprint.set_attribute('role_name', 'ego')
             # transform = t.transform
             transform.location.z += 2.0
             ego_batch.append(
