@@ -16,7 +16,7 @@ class Mode(Enum):
 CURRENT_SCENARIO = Scenario.GO_STRAIGHT
 CURRENT_MODE = Mode.TRAIN
 WANDB_DRYRUN = True
-VIZ = True
+VIZ = False
 VIS_LIDAR = False
 
 NEW_RUN = True
