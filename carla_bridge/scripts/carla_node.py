@@ -921,13 +921,13 @@ class CarlaManager:
                         self.ego_vehicle,
                         self.vehicles_list,
                         self.global_path_in_intersection #TODO: change variable name
-                    ) = self.tm.reset(warm_start_duration=4, switching_left=False)
+                    ) = self.tm.reset(warm_start_duration=2, switching_left=False)
                 elif(CURRENT_SCENARIO == Scenario.SWITCH_LANE_LEFT):
                     (
                         self.ego_vehicle,
                         self.vehicles_list,
                         self.global_path_in_intersection #TODO: change variable name
-                    ) = self.tm.reset(warm_start_duration=4, switching_left=True)
+                    ) = self.tm.reset(warm_start_duration=2, switching_left=True)
                 else:
                     (
                         self.ego_vehicle,
