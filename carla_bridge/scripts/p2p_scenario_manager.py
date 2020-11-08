@@ -24,11 +24,10 @@ Description of routes:Lane Following is involved in all of them
 0. Left turn at an intersection
 1. Go straight intersection
 2. Right turn intersection
-3. Lane change and right turn
-4. Left Lane Change
-5. Right Lane Change
+3. Left Lane Change
+4. Right Lane Change
 '''
-route_start_locations = [(-47.5,-18.8,0.06) ,(-66.5,-91.5,0), (-66.5,-91.5,0), (-131.7,-70.3,0), (-125.1,-17.9,0)]
+route_start_locations = [(-47.5,-18.8,0.06) ,(-66.5,-91.5,0), (-69.5,-95,0), (-131.7,-70.3,0), (-125.1,-17.9,0)]
 route_end_locations = [(-92.1,-91.5,0), (-167.1,-91.6,0), (-120.9,-120.970520,0), (-128.6,-18.8,0), (-121.2,-69.9,0) ]
 
 class P2PScenario:
@@ -316,7 +315,7 @@ class P2PScenario:
     def get_random_route(self):
         
         random_ind = np.random.randint(0, len(route_start_locations))
-        random_ind = 0  # TODO: REMOVE THIS LINE.
+        random_ind = 2  # TODO: REMOVE THIS LINE.
         start_location = carla.Location(*route_start_locations[random_ind])
         end_location = carla.Location(*route_end_locations[random_ind])
 
@@ -341,7 +340,7 @@ class P2PScenario:
         incoming_road_lane_id_set,
         outgoing_road_lane_id_set,
         incoming_road_lane_id_to_outgoing_lane_id_dict,
-    ):
+        ):
         scenario_to_setup = {}
         scenario_to_setup[GlobalPathAction.LEFT_TURN] = []
         scenario_to_setup[GlobalPathAction.RIGHT_TURN] = []
