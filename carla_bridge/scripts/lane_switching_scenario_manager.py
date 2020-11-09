@@ -20,11 +20,11 @@ from global_planner import get_global_planner
 from settings import *
 
 #CONFIGURATIONS:
-town05_city = { "road_ids": [ 6, 7, 45, 46 , 8], 
+town05_city = { "road_ids": [6, 7, 45, 46],
                 "distance_bwn_waypoints":1,
-                "max_ego_line_non_ego_vehicles":4, # num of non ego vehicles in ego lane
+                "max_ego_line_non_ego_vehicles":3, # num of non ego vehicles in ego lane
                 "min_ego_line_non_ego_vehicles":1, # num of non ego vehicles in ego lane
-                "max_non_ego_line_non_ego_vehicles":4, # num of non ego vehicles in every other lane
+                "max_non_ego_line_non_ego_vehicles":3, # num of non ego vehicles in every other lane
                 "min_non_ego_line_non_ego_vehicles":1, # num of non ego vehicles in every other lane
                 "target_speed":1,
                 "max_dist_bwn_veh":15,
@@ -34,7 +34,7 @@ town05_city = { "road_ids": [ 6, 7, 45, 46 , 8],
                 "average_car_length":5,
                 "swithching_left": False,
                 "goal_distance_to_travel":30,
-                "min_spawn_distance_from_EOL":26,                 
+                "min_spawn_distance_from_EOL":30,                 
 }
 
 def filter_waypoints(waypoints, road_id, lane_id):
@@ -249,6 +249,10 @@ class LaneSwitchingScenario:
                     print(response.error)
                 else:
                     ego_vehicle = self.world.get_actor(response.actor_id)
+            ego_vehicle_spawn_waypoint = self.world.get_map().get_waypoint(
+                ego_vehicle.get_location(), project_to_road=True
+            )
+            print ("Ego V spawned ", len(ego_vehicle_spawn_waypoint.next_until_lane_end(1)), "m away from EOL")
         
         self.tick()
 

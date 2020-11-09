@@ -180,7 +180,7 @@ class StateManager:
                                   1]
 
         distance_to_stop_line = env_desc.cur_vehicle_state.traffic_light_stop_distance
-        print("Distance to stop line is",distance_to_stop_line)
+        print("Distance to stop line is", distance_to_stop_line)
         # concatenate all the states and lane distance
         entire_state = ego_vehicle_state + \
             [coord for state in adj_lane_vehicles_states for coord in state] + \

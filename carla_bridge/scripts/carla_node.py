@@ -202,7 +202,7 @@ class CarlaManager:
                         
                     
                 speed = self.ego_vehicle.get_velocity()
-                print("Speed:", np.linalg.norm([speed.x, speed.y, speed.z]) * 3.6)
+                # print("Speed:", np.linalg.norm([speed.x, speed.y, speed.z]) * 3.6)
 
                 #### Check Sync ###
                 flag = 0
@@ -630,7 +630,7 @@ class CarlaManager:
 
             # print the speed of the vehicle
             speed = self.ego_vehicle.get_velocity()
-            print("Speed:", np.linalg.norm([speed.x, speed.y, speed.z]) * 3.6)
+            # print("Speed:", np.linalg.norm([speed.x, speed.y, speed.z]) * 3.6)
 
             # tick the world once for the changes to take effect
             tick()
@@ -826,6 +826,8 @@ class CarlaManager:
         '''
         if CURRENT_SCENARIO in [Scenario.SWITCH_LANE_RIGHT, Scenario.SWITCH_LANE_LEFT]:
             dist = self.carla_handler.get_distance_to_lane_end(ego_vehicle)
+            ego_vehicle.traffic_light_stop_distance = dist
+            # print("Traffic_light_stop_distance:" , ego_vehicle.traffic_light_stop_distance, "\n")
             lane_switch_failure_terminate = (dist < STOP_LINE_DISTANCE_FOR_LANE_CHANGE_TERMINATE)  
         else:
             lane_switch_failure_terminate = False
@@ -857,6 +859,10 @@ class CarlaManager:
         env_desc.speed_limit = self.speed_limit
         env_desc.reward_info = reward_info
         env_desc.global_path = self.global_path_in_intersection
+        
+        # print("x = :", env_desc.cur_vehicle_state.location_global.x)
+        # print("y = :", env_desc.cur_vehicle_state.location_global.y)
+        # print("z = :", env_desc.cur_vehicle_state.location_global.y)
 
         return SimServiceResponse(env_desc.toRosMsg())
 
@@ -969,7 +975,7 @@ class CarlaManager:
         )
 
     def resetEnv(self):
-
+        print("################Reset################")
         self.destroy_actors_and_sensors()
         self.timestamp = 0
         self.collision_marker = 0
@@ -1021,13 +1027,13 @@ class CarlaManager:
                         self.ego_vehicle,
                         self.vehicles_list,
                         self.global_path_in_intersection #TODO: change variable name
-                    ) = self.tm.reset(warm_start_duration=4, switching_left=False)
+                    ) = self.tm.reset(warm_start_duration=2, switching_left=False)
                 elif(CURRENT_SCENARIO == Scenario.SWITCH_LANE_LEFT):
                     (
                         self.ego_vehicle,
                         self.vehicles_list,
                         self.global_path_in_intersection #TODO: change variable name
-                    ) = self.tm.reset(warm_start_duration=4, switching_left=True)
+                    ) = self.tm.reset(warm_start_duration=2, switching_left=True)
                 else:
                     (
                         self.ego_vehicle,
@@ -1099,6 +1105,7 @@ class CarlaManager:
                     self.draw_global_path(self.intersection_waypoints_for_each_intersection[i])
 
 
+            print("Traffic_light_stop_distance:" , self.carla_handler.get_distance_to_lane_end_2(self.ego_vehicle), "\n")
 
             ## Handing over control
             self.apply_control_after_reset()

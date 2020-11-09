@@ -84,6 +84,7 @@ class CustomEnv(gym.Env):
         end_of_action = end_of_action or done
         while not end_of_action:
             env_desc, end_of_action = self.path_planner.performAction(decision)
+            # print("Distance to traffic light:", env_desc.cur_vehicle_state.traffic_light_stop_distance)
             env_copy = env_desc
             self.rl_manager.reward_manager.update(env_copy, action)
             done = self.rl_manager.terminate(env_copy)
@@ -105,6 +106,7 @@ class CustomEnv(gym.Env):
         print("####################################")
         self.rl_manager.reward_manager.reset()
         env_desc = self.path_planner.resetSim()
+        print("Resetting::: Distance to traffic light:", env_desc.cur_vehicle_state.traffic_light_stop_distance)
         env_copy = env_desc
         env_state = self.rl_manager.makeStateVector(env_copy)
         return env_state
