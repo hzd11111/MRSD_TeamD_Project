@@ -187,9 +187,9 @@ class StateManager:
             front_vehicle_state + \
             back_vehicle_state + \
             [coord for state in pedestrian_states for coord in state] + \
-            [lane_distance, distance_to_stop_line]
+            [lane_distance]
         try:
-            assert(len(entire_state) == 78)
+            assert(len(entire_state) == 77)
         except e:
             import ipdb; ipdb.set_trace()
         return np.array(entire_state)

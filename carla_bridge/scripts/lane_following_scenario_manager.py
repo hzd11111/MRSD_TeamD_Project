@@ -4,7 +4,6 @@ import random
 # from configparse import ConfigParser
 import subprocess
 import carla
-import ipdb
 import numpy as np
 
 sys.path.append("../../grasp_path_planner/scripts/")

@@ -27,7 +27,7 @@ Description of routes:Lane Following is involved in all of them
 3. Left Lane Change
 4. Right Lane Change
 '''
-route_start_locations = [(-47.5,-18.8,0.06) ,(-66.5,-91.5,0), (-69.5,-95,0), (-131.7,-70.3,0), (-125.1,-17.9,0)]
+route_start_locations = [(-47.5,-18.8,0.06) ,(-66.5,-91.5,0), (-66.5,-95,0), (-131.7,-70.3,0), (-125.1,-17.9,0)]
 route_end_locations = [(-92.1,-91.5,0), (-167.1,-91.6,0), (-120.9,-120.970520,0), (-128.6,-18.8,0), (-121.2,-69.9,0) ]
 
 class P2PScenario:
@@ -100,6 +100,7 @@ class P2PScenario:
         # draw_waypoints(self.world, global_path_wps, life_time=100)
 
         spawn_waypoint = global_path_wps[0]
+        spawn_waypoint = spawn_waypoint.previous(1)[0]
         # import pdb; pdb.set_trace()
         # Ego Vehicle
         for n, transform in enumerate([spawn_waypoint.transform]):
@@ -315,7 +316,7 @@ class P2PScenario:
     def get_random_route(self):
         
         random_ind = np.random.randint(0, len(route_start_locations))
-        random_ind = 2  # TODO: REMOVE THIS LINE.
+        random_ind = 3  # TODO: REMOVE THIS LINE.
         start_location = carla.Location(*route_start_locations[random_ind])
         end_location = carla.Location(*route_end_locations[random_ind])
 

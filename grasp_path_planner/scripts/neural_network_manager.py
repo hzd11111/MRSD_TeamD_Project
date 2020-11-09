@@ -67,11 +67,11 @@ class NeuralNetworkSelector:
             print(single_pose.isInfrontOf(curr_vehicle_global_pose))
             print(single_pose.distance(curr_vehicle_global_pose))
             print("Global Path Pose:", single_pose.x, single_pose.y, single_pose.theta)
+            print("Global Point:", self.global_path_pointer, "/", len(global_path.path_points))
             if single_pose.isInfrontOf(curr_vehicle_global_pose) and \
-                   single_pose.distance(curr_vehicle_global_pose) > 0.2 and \
-                    single_pose.distance(curr_vehicle_global_pose) < 15:
+                    single_pose.distance(curr_vehicle_global_pose) < 30:
                 break
-            print("Next Global Point:",self.global_path_pointer, "/", len(global_path.path_points))
+
             self.global_path_pointer += 1
 
     def priorityDeterminatoin(self, scenario):
@@ -178,6 +178,7 @@ class NeuralNetworkSelector:
         cul_distance = 0
         temp_global_path_pointer = self.global_path_pointer
         lane_change_action_found = False
+
         while temp_global_path_pointer < (len(env_desc.global_path.path_points) - 1) and \
                 cul_distance < 50:
             if env_desc.global_path.path_points[temp_global_path_pointer].action == GlobalPathAction.SWITCH_LANE_LEFT:
