@@ -56,7 +56,7 @@ class FullPlannerManager:
 
         if NEW_RUN and self.event == Scenario.LANE_FOLLOWING:
             model = DQN(CustomLaneFollowingPolicy, env, verbose=1,
-                        learning_starts=256, batch_size=256, exploration_fraction=0.9,
+                        learning_starts=256, batch_size=256, exploration_fraction=0.5,
                         target_network_update_freq=100,
                         tensorboard_log=dir_path + "/Logs", gamma=0.93, learning_rate=0.0001)
 
