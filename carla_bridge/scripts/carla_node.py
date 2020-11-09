@@ -1134,6 +1134,7 @@ class CarlaManager:
 
         # Traffic light manager
         self.TLManager = TrafficLightManager(self.client)
+        self.set_global_traffic_light_duration()
 
         if synchronous_mode:
             settings = self.carla_handler.world.get_settings()
@@ -1321,6 +1322,15 @@ class CarlaManager:
 
 
 
+    def set_global_traffic_light_duration(self):
+        ''' Changes global traffic light duration based on time (s) listed in 
+        settings.py'''
+
+        all_tls = self.carla_handler.world.get_actors().filter("traffic.traffic_light*")
+        for tl in all_tls:
+            tl.set_green_time(TRAFFIC_LIGHT_GREEN_DURATION)
+            tl.set_yellow_time(TRAFFIC_LIGHT_YELLOW_DURATION)
+            tl.set_red_time(TRAFFIC_LIGHT_RED_DURATION)
 
 if __name__ == "__main__":
     try:

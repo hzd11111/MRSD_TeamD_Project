@@ -4,12 +4,15 @@ import random
 # from configparse import ConfigParser
 import subprocess
 import carla
+import ipdb
 import numpy as np
 
-from carla_handler import CarlaHandler
-from global_planner import get_global_planner
-
 sys.path.append("../../grasp_path_planner/scripts/")
+sys.path.append("../../global_route_planner/")
+
+from carla_handler import CarlaHandler
+from global_planner import get_global_planner, draw_waypoints
+
 from settings import *
 
 
@@ -62,7 +65,7 @@ class LaneFollowingScenario:
         self.hybrid_physics_mode = HYBRID_PHYSICS_MODE
         self.auto_lane_change = AUTO_LANE_CHANGE
         self.distance_to_leading_vehicle = DISTANCE_TO_LEADING_VEHICLES
-        self.target_speed = TARGET_SPEED
+        self.target_speed = self.config["target_speed"]
 
         # vehicle lists
         self.ego_vehicle = None
@@ -88,7 +91,7 @@ class LaneFollowingScenario:
         if self.synchronous_mode:
             self.world.tick()
     
-    def warm_start(self, warm_start_duration=5):
+    def warm_start(self, warm_start_duration=1):
         warm_start_curr = 0
         while warm_start_curr < warm_start_duration:
             warm_start_curr += self.fixed_delta_seconds
@@ -98,49 +101,62 @@ class LaneFollowingScenario:
                 self.world.wait_for_tick()
 
     def get_spawn_points(self, distance_bwn_waypoints):
+        try:
+            # Get a list of waypoints 1 m apart on the desired lane
+            config = self.config
+
+            ind = np.random.choice(len(self.map_spawn_locations))
+            spawn_location = carla.Location(*self.map_spawn_locations[ind])
+
+            loc = carla.Location(spawn_location)
+            first_waypoint = self.Map.get_waypoint(loc, project_to_road=True, \
+                                                    lane_type=carla.LaneType.Driving)
+            waypoint_list = first_waypoint.next_until_lane_end(distance_bwn_waypoints)
+            waypoint_spawn_list = waypoint_list[:-config["min_dist_to_end_of_lane_from_first_veh"]]
+            draw_waypoints(self.world, waypoint_list, life_time=1)
+
+            self.current_road_and_lane = (first_waypoint.road_id, first_waypoint.lane_id) 
+            self.current_lane_wps = waypoint_list
+            # TODO: Fix the way we spawn things
+
+            # select waypoints from the list with some randomness
+            selected_waypoints = []
+            ptr = 0
+            total_vehicles_possible = 0
+            self.total_non_ego_vehicles = np.random.randint(config["min_non_ego_veh"],
+                                                        config["max_non_ego_veh"]+1)
+            
+            for _ in range(self.total_non_ego_vehicles+1):
+                if ptr >= len(waypoint_spawn_list): break
+                selected_waypoints.append(waypoint_spawn_list[ptr])
+                total_vehicles_possible += 1
+                
+                ptr += np.random.randint(config["min_dist_bwn_veh"], 
+                                            config["max_dist_bwn_veh"])
+                ptr += config["average_car_length"]
+            self.total_non_ego_vehicles = total_vehicles_possible - 1
+
+            # convert waypoints to spawn points
+            spawn_points_list = [item.transform for item in selected_waypoints]
+            for point in spawn_points_list: point.location.z += 0.2
+
+            # select the position of the ego vehicle
+            ego_veh_int = np.random.randint(0, total_vehicles_possible)
+            temp = spawn_points_list.pop(ego_veh_int)
+            ego_spawn_point = (temp, temp.get_forward_vector())
+            # self.goal_waypoint = waypoint_list[ptr + config["goal_distance_to_travel"]]
+            self.goal_waypoint = waypoint_list[-STOP_LINE_DISTANCE_FOR_LANE_CHANGE_TERMINATE]
+            draw_waypoints(self.world, [self.goal_waypoint], 1, [255, 255, 0])
+
+            # non-ego vehicle spawn points
+            non_ego_spawn_points = [(spawn_points_list[i], 
+                                    spawn_points_list[i].get_forward_vector())
+                                    for i in range(self.total_non_ego_vehicles)]
+            # vectors = [x.get_forward_vector() for x in spawn_points_list[1:5]]
         
-        # Get a list of waypoints 1 m apart on the desired lane
-        config = self.config
-
-        ind = np.random.choice(len(self.map_spawn_locations))
-        spawn_location = carla.Location(*self.map_spawn_locations[ind])
-
-        loc = carla.Location(spawn_location)
-        first_waypoint = self.Map.get_waypoint(loc, project_to_road=True, \
-                                                lane_type=carla.LaneType.Driving)
-        waypoint_list = first_waypoint.next_until_lane_end(distance_bwn_waypoints)
-        
-        self.current_road_and_lane = (first_waypoint.road_id, first_waypoint.lane_id) 
-        self.current_lane_wps = waypoint_list
-        # TODO: Fix the way we spawn things
-        # waypoint_list = filter_waypoints(self.all_waypoints, 6, -1)
-
-        # select waypoints from the list with some randomness
-        selected_waypoints = []
-        ptr = 0
-        self.total_non_ego_vehicles = np.random.randint(config["min_non_ego_veh"],
-                                                    config["max_non_ego_veh"]+1)
-        for _ in range(self.total_non_ego_vehicles+2):
-            ptr += np.random.randint(config["min_dist_bwn_veh"], 
-                                        config["max_dist_bwn_veh"])
-            selected_waypoints.append(waypoint_list[ptr])
-            ptr += config["average_car_length"]
-
-        # convert waypoints to spawn points
-        spawn_points_list = [item.transform for item in selected_waypoints]
-        for point in spawn_points_list: point.location.z += 0.2
-
-        # select the position of the ego vehicle
-        ego_veh_int = np.random.randint(0, self.total_non_ego_vehicles+2)
-        temp = spawn_points_list.pop(ego_veh_int)
-        ego_spawn_point = (temp, temp.get_forward_vector())
-        self.goal_waypoint = waypoint_list[ptr + config["goal_distance_to_travel"]]
-        
-        # non-ego vehicle spawn points
-        non_ego_spawn_points = [(spawn_points_list[i], 
-                                spawn_points_list[i].get_forward_vector())
-                                for i in range(self.total_non_ego_vehicles)]
-        # vectors = [x.get_forward_vector() for x in spawn_points_list[1:5]]
+        except Exception as e:
+            print(e)
+            import ipdb; ipdb.set_trace()
         
         return ego_spawn_point, non_ego_spawn_points
 
@@ -211,16 +227,20 @@ class LaneFollowingScenario:
     def get_global_path(self):
         '''For the lane following scenario, returns a global path, which is from
         the current ego_vehicle location to the end of the lane.'''
-        start_location = self.current_lane_wps[0].transform.location
-        # Lane tracking point is 5m from the intersection
-        end_location = self.goal_waypoint.transform.location
-        
-        if len(self.current_lane_wps) < 100: #TODO: Check logic here for smaller roads
-            dist = DISTANCE_TO_INTERSECTION_FOR_SCENARIO_CHANGE
-            end_location = self.current_lane_wps[-dist].transform.location 
+        try:
+            start_location = self.current_lane_wps[0].transform.location
+            # Lane tracking point is 5m from the intersection
+            end_location = self.goal_waypoint.transform.location
+            
+            # if len(self.current_lane_wps) < 100: #TODO: Check logic here for smaller roads
+            #     dist = DISTANCE_TO_INTERSECTION_FOR_SCENARIO_CHANGE
+            #     end_location = self.current_lane_wps[-dist].transform.location 
 
-        route = self.global_planner.trace_route(start_location, end_location)
-        global_path_wps = [route[i][0] for i in range(len(route))]
+            route = self.global_planner.trace_route(start_location, end_location)
+            global_path_wps = [route[i][0] for i in range(len(route))]
+        except Exception as e:
+            print(e)
+            import ipdb; ipdb.set_trace()
 
         return global_path_wps
     
