@@ -24,7 +24,8 @@ NEW_RUN = False
 
 if CURRENT_SCENARIO == Scenario.LANE_FOLLOWING:
     MODEL_SAVE_PATH = dir_path + "/Models/DQN_Lane_Following"
-    MODEL_LOAD_PATH = dir_path + "/Models/DQN_Lane_Following"
+    # MODEL_LOAD_PATH = dir_path + "/Models/DQN_Lane_Following"
+    MODEL_LOAD_PATH = dir_path + "/Models/DQN_Lane_Following_Extended"
     # MODEL_LOAD_PATH = dir_path + "/Models/DQN_Lane_Following_model_18000_steps.zip"
     MODEL_CP_PATH = dir_path + "/Models/Lane_Following_CP"
 elif CURRENT_SCENARIO == Scenario.SWITCH_LANE_LEFT:
@@ -60,6 +61,11 @@ SYNCHRONOUS = True
 FIXED_DELTA_SECONDS = 0.05
 NO_RENDER_MODE = False
 
+# TRAFFIC LIGHT DURATION
+TRAFFIC_LIGHT_RED_DURATION = 1
+TRAFFIC_LIGHT_GREEN_DURATION = 5
+TRAFFIC_LIGHT_YELLOW_DURATION = 0.25
+
 # TRAFFIC MANAGER SETTINGS
 TM_PORT = 8000
 AUTO_LANE_CHANGE = None
@@ -67,8 +73,8 @@ DISTANCE_TO_LEADING_VEHICLES = 2
 TARGET_SPEED = 30
 HYBRID_PHYSICS_MODE = None 
 HYBRID_PHYSICS_RADIUS = 20
-IGNORE_LIGHTS_PERCENTAGE = 100
-IGNORE_SIGNS_PERCENTAGE = 100
+IGNORE_LIGHTS_PERCENTAGE = 10
+IGNORE_SIGNS_PERCENTAGE = 0
 ACTOR_SIMULATE_PHYSICS = False
 
 # EGO VEHICLE PROPS
@@ -78,7 +84,7 @@ NON_EGO_VEHICLE_MODEL = 'vehicle.mustang.mustang'
 
 ################## Global Scenario Params #################
 DISTANCE_TO_INTERSECTION_FOR_SCENARIO_CHANGE = 20
-STOP_LINE_DISTANCE_FOR_LANE_CHANGE_TERMINATE = 5
+STOP_LINE_DISTANCE_FOR_LANE_CHANGE_TERMINATE = 8
 
 
 ################## Test Mode Arguments ######################
@@ -87,22 +93,30 @@ if CURRENT_SCENARIO == Scenario.LANE_FOLLOWING:
     # add town params? or assume we are only working with Town05
     TOWN_ID = "Town05"
 
-    SPAWN_LOCS_VEC = [(53, 205, 0.1)] #list of potential spawn points, randomize?
+    SPAWN_LOCS_VEC = [#(53, 205, 0.1), # highway 
+                        (-48.5, -106, 0.1), # curved road
+                        (-66, -95, 0.1), # short straight road 1
+                        (-144, -92, 0.1), # super short road 
+                        (-51.5, -74.5, 0.1), # medium length road
+                        (-64, -4.3, 0.1), # medium length road
+                         ] #list of potential spawn points, randomize?
     
     LANE_FOLLOWING_CONFIG = {
+                    "road_ids": [ 6, 7, 45, 46 , 8], 
                     "distance_bwn_waypoints":1,
-                    "target_speed":15,
+                    "target_speed":5,
                     "warm_start":True,
-                    "warm_start_duration":2,
+                    "warm_start_duration":0.2,
                     # configure non-ego veh count
-                    "min_non_ego_veh":1,
-                    "max_non_ego_veh":6, # also update max_q_pos
+                    "min_non_ego_veh":0,
+                    "max_non_ego_veh":4,
                     # distance between variables
-                    "max_dist_bwn_veh":15,
-                    "min_dist_bwn_veh":3,
+                    "max_dist_bwn_veh":10,
+                    "min_dist_bwn_veh":2,
                     "average_car_length":5,
+                    "min_dist_to_end_of_lane_from_first_veh":10
                     # scenario variables
-                    "goal_distance_to_travel":30,          
+                    # "goal_distance_to_travel":30,          
                     }
     spectator_trans = carla.Transform(carla.Location(x=53, y=205, z=50), \
                                     carla.Rotation(pitch=-39, yaw=41, roll=0))

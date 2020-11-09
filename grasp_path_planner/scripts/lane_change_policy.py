@@ -35,20 +35,23 @@ class CustomLaneChangePolicy(DQNPolicy):
         out = input_vec
         with tf.variable_scope("embedding_network_front", reuse=tf.compat.v1.AUTO_REUSE):
             # out = tf.Print(out, [out], summarize=200, message="Front:")
+            out = tf_layers.fully_connected(out, num_outputs=16, activation_fn=tf.nn.relu)
             out = tf_layers.fully_connected(out, num_outputs=32, activation_fn=tf.nn.relu)
         return out
 
-    def embedding_net_back(self, input_vec):
-        out = input_vec
-        with tf.variable_scope("embedding_network_back", reuse=tf.compat.v1.AUTO_REUSE):
-            # out = tf.Print(out, [out], summarize=200, message="Back:")
-            out = tf_layers.fully_connected(out, num_outputs=32, activation_fn=tf.nn.relu)
-        return out
+    # def embedding_net_back(self, input_vec):
+    #     out = input_vec
+    #     with tf.variable_scope("embedding_network_back", reuse=tf.compat.v1.AUTO_REUSE):
+    #         # out = tf.Print(out, [out], summarize=200, message="Back:")
+    #         out = tf_layers.fully_connected(out, num_outputs=16, activation_fn=tf.nn.relu)
+    #         out = tf_layers.fully_connected(out, num_outputs=32, activation_fn=tf.nn.relu)
+    #     return out
 
     def embedding_net_adjacent(self, input_vec):
         out = input_vec
         with tf.variable_scope("embedding_network_adjacent", reuse=tf.compat.v1.AUTO_REUSE):
             # out = tf.Print(out, [out], summarize=200, message="Adjacent:")
+            out = tf_layers.fully_connected(out, num_outputs=16, activation_fn=tf.nn.relu)
             out = tf_layers.fully_connected(out, num_outputs=32, activation_fn=tf.nn.relu)
         return out
 
@@ -57,6 +60,7 @@ class CustomLaneChangePolicy(DQNPolicy):
         with tf.variable_scope("action_value"):
             out = tf_layers.fully_connected(out, num_outputs=64, activation_fn=tf.nn.relu)
             out = tf_layers.fully_connected(out, num_outputs=128, activation_fn=tf.nn.relu)
+            out = tf_layers.fully_connected(out, num_outputs=64, activation_fn=tf.nn.relu)
             out = tf_layers.fully_connected(out, num_outputs=out_num, activation_fn=tf.nn.tanh)
         return out
 
@@ -104,24 +108,24 @@ class CustomLaneChangePolicy(DQNPolicy):
             back_veh_state = tf.concat([cur_veh, back_veh], axis=1)
             # filtered_back_veh_state = tf.boolean_mask(back_veh_state, back_veh_mask, name="back_veh_mask")
             embed_back_vehicle.append(
-                self.embedding_net_back(back_veh_state) * back_veh_mask)
+                self.embedding_net_front(back_veh_state) * back_veh_mask)
 
             # Add pedestrians
             ped_veh_start = veh_state_len + 7 * (veh_state_len + mask)
             embed_pedestrians = []
-            for j in range(3):
-                ped_veh_mask = out_ph[:, ped_veh_start + (j + 1) * (ped_state_len + mask) - 1][:, None]
-                start = ped_veh_start + j * (ped_state_len + mask)
-                ped = out_ph[:, start:start + ped_state_len]
-                ped_state = tf.concat([cur_veh, ped], axis=1)
-                embed_pedestrians.append(
-                    self.embedding_net_pedestrian(ped_state) * ped_veh_mask)
+            # for j in range(3):
+            #     ped_veh_mask = out_ph[:, ped_veh_start + (j + 1) * (ped_state_len + mask) - 1][:, None]
+            #     start = ped_veh_start + j * (ped_state_len + mask)
+            #     ped = out_ph[:, start:start + ped_state_len]
+            #     ped_state = tf.concat([cur_veh, ped], axis=1)
+            #     embed_pedestrians.append(
+            #         self.embedding_net_pedestrian(ped_state) * ped_veh_mask)
 
             embed_list = embed_adjacent_vehicles + embed_front_vehicle + embed_back_vehicle  # embed_pedestrians
             stacked_out = tf.stack(embed_list, axis=1)
             max_out = tf.reduce_max(stacked_out, axis=1)
             # concatenate the lane distance
-            max_out = tf.concat([max_out, out_ph[:, -1][:, None]], axis=1)
+            max_out = tf.concat([max_out, out_ph[:, -2:]], axis=1)
             q_out = self.q_net(max_out, ac_space.n)
 
         self.q_values = q_out
