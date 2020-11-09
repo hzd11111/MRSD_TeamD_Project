@@ -662,8 +662,18 @@ class CarlaHandler:
             #     Vehicle(self.world, vehicle_id) for vehicle_id in unallocated_actor_ids
             # ]
             all_misc_vehicles = self.get_intersection_vehicles(all_vehicles, intersection_id, ego_vehicle.id)
-            print("Intersection Actors:", [v.actor_id for v in all_misc_vehicles])
-
+            all_misc_vehicles_ids = [v.actor_id for v in all_misc_vehicles]
+            
+            for i in range(len(intersecting_left_info)):
+                intersecting_left_info[i][0] = [elem for elem in intersecting_left_info[i][0] if elem.actor_id not in all_misc_vehicles_ids]
+            for i in range(len(intersecting_right_info)):
+                intersecting_right_info[i][0] = [elem for elem in intersecting_right_info[i][0] if elem.actor_id not in all_misc_vehicles_ids]
+            for i in range(len(parallel_same_dir_info)):
+                parallel_same_dir_info[i][0] = [elem for elem in parallel_same_dir_info[i][0] if elem.actor_id not in all_misc_vehicles_ids]
+            for i in range(len(parallel_opposite_dir_info)):
+                parallel_opposite_dir_info[i][0] = [elem for elem in parallel_opposite_dir_info[i][0] if elem.actor_id not in all_misc_vehicles_ids]
+            for i in range(len(ego_lane_info)):
+                parallel_opposite_dir_info[i][0] = [elem for elem in parallel_opposite_dir_info[i][0] if elem.actor_id not in all_misc_vehicles_ids]
 
             return (
                 intersecting_left_info,
@@ -715,7 +725,19 @@ class CarlaHandler:
             #     Vehicle(self.world, vehicle_id) for vehicle_id in unallocated_actor_ids
             # ]
             all_misc_vehicles = self.get_intersection_vehicles(all_vehicles, intersection_id, ego_vehicle.id)
-            print("Intersection Actors:", [v.actor_id for v in all_misc_vehicles])
+            all_misc_vehicles_ids = [v.actor_id for v in all_misc_vehicles]
+            
+            for i in range(len(intersecting_left_info)):
+                intersecting_left_info[i][0] = [elem for elem in intersecting_left_info[i][0] if elem.actor_id not in all_misc_vehicles_ids]
+            for i in range(len(intersecting_right_info)):
+                intersecting_right_info[i][0] = [elem for elem in intersecting_right_info[i][0] if elem.actor_id not in all_misc_vehicles_ids]
+            for i in range(len(parallel_same_dir_info)):
+                parallel_same_dir_info[i][0] = [elem for elem in parallel_same_dir_info[i][0] if elem.actor_id not in all_misc_vehicles_ids]
+            for i in range(len(parallel_opposite_dir_info)):
+                parallel_opposite_dir_info[i][0] = [elem for elem in parallel_opposite_dir_info[i][0] if elem.actor_id not in all_misc_vehicles_ids]
+            for i in range(len(ego_lane_info)):
+                parallel_opposite_dir_info[i][0] = [elem for elem in parallel_opposite_dir_info[i][0] if elem.actor_id not in all_misc_vehicles_ids]
+
 
             return (
                 intersecting_left_info,

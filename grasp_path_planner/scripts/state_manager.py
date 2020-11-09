@@ -448,7 +448,6 @@ class StateManager:
 
         distance_to_stop_line = env_desc.cur_vehicle_state.traffic_light_stop_distance
         current_lane_status += [distance_to_stop_line]
-        print("Distance to stop line is", distance_to_stop_line)
 
         if len(current_lane_status) != 8:
             current_lane_status += list(itertools.repeat(

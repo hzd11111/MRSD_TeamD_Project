@@ -32,6 +32,8 @@ from traffic_light_manager import TrafficLightManager
 from grasp_path_planner.srv import SimService, SimServiceResponse
 from agents.tools.misc import get_speed
 
+from carla_painter import CarlaPainter
+
 from utils import *
 
 sys.path.append("../../carla_bridge/scripts/cartesian_to_frenet")
@@ -56,7 +58,7 @@ from utility import (
     GlobalPathPoint,
     GlobalPath,
 )
-from options import GlobalPathAction
+from options import GlobalPathAction, TrafficLightStatus
 from functional_utility import Pose2D, Frenet
 
 from actors import Actor, Vehicle, Pedestrian
@@ -94,6 +96,9 @@ class CarlaManager:
         self.lane_right = None
         self.collision_sensor = None
         self.tm = None
+        if (VIZ):  self.painter = CarlaPainter('localhost', 8089)
+        self.trajectories = [[]]
+
 
         self.simulation_sync_timestep = FIXED_DELTA_SECONDS
         self.first_frame_generated = False
@@ -120,6 +125,7 @@ class CarlaManager:
         self.all_vehicles = None
         self.intersection_path_global = None
         self.TLManager = None
+        self.force_custom_traffic = 0
 
 
         self.intersection_topology_for_each_intersection = None
@@ -136,6 +142,11 @@ class CarlaManager:
         self.global_path_carla_waypoints = None
         self.autopilot_recompute_flag = 0
         self.agent = None
+
+
+        ### Viz Placeholders
+        self.camera = None
+        self.lidar = None
 
     def intersection_pathRequest(self, data):
 
@@ -394,9 +405,48 @@ class CarlaManager:
         adjacent_lanes = copy.copy(self.adjacent_lanes)
         next_intersection = copy.copy(self.next_intersection)
         
+
+        ### Set traffic light status based on scenario
+        if(self.force_custom_traffic == 1):
+            if(CURRENT_SCENARIO == Scenario.LEFT_TURN):
+                # Oncoming opposite direction lane turns green
+                for lane in adjacent_lanes:
+                    if lane.same_direction == False:
+                        self.set_traffic_light_for_vehicles_on_lane(lane, TrafficLightStatus.GREEN)
+
+                # Perpendicular lanes turn RED
+                for lane in next_intersection:
+                    self.set_traffic_light_for_vehicles_on_lane(lane, TrafficLightStatus.RED)
+
+                # CUrrent Lane turns GREEN
+                self.set_traffic_light_for_vehicles_on_lane(lane_cur, TrafficLightStatus.GREEN)
+            elif(CURRENT_SCENARIO == Scenario.RIGHT_TURN):
+
+                # Perpendicular right lanes turn GREEN
+                for lane in next_intersection:
+                    if(lane.directed_right == True):
+                        self.set_traffic_light_for_vehicles_on_lane(lane, TrafficLightStatus.GREEN)
+
+                # CUrrent Lane turns GREEN
+                self.set_traffic_light_for_vehicles_on_lane(lane_cur, TrafficLightStatus.GREEN)
+            elif(CURRENT_SCENARIO == Scenario.GO_STRAIGHT):
+
+                # Perpendicular lanes turn GREEN
+                # for lane in next_intersection:
+                #     self.set_traffic_light_for_vehicles_on_lane(lane, TrafficLightStatus.GREEN)
+                    
+                # Oncoming opposite direction lane turns RED
+                for lane in adjacent_lanes:
+                    if lane.same_direction == False:
+                        self.set_traffic_light_for_vehicles_on_lane(lane, TrafficLightStatus.GREEN)
+
+                # CUrrent Lane turns GREEN
+                self.set_traffic_light_for_vehicles_on_lane(lane_cur, TrafficLightStatus.GREEN)
+            
+
+            
         ### Set traffic light status for all vehicles
         self.TLManager.set_actor_traffic_light_state(vehicle_ego, is_ego=True)
-        print(vehicle_ego.traffic_light_status, vehicle_ego.traffic_light_stop_distance, "\n")
         for i in range(len(lane_cur.lane_vehicles)):
             self.TLManager.set_actor_traffic_light_state(lane_cur.lane_vehicles[i])
         for i in range(len(adjacent_lanes)):
@@ -841,8 +891,58 @@ class CarlaManager:
 
         return Pose2D(x=x, y=y, theta=theta)
 
+    def visualize(self):
+        # empty trajectories when reset
+        self.trajectories = [[]] 
+        def do_something(data):
+            pass
+        if(self.camera is not None):
+            self.camera.stop()
+            self.camera.destroy()
+            del self.camera
+        blueprint_camera = self.carla_handler.world.get_blueprint_library().find('sensor.camera.rgb')
+        blueprint_camera.set_attribute('image_size_x', '640')
+        blueprint_camera.set_attribute('image_size_y', '480')
+        blueprint_camera.set_attribute('fov', '110')
+        blueprint_camera.set_attribute('sensor_tick', '0.05')
+        transform_camera = carla.Transform(carla.Location(x=-0.15,y=-0.4, z=1.2), carla.Rotation())
+        self.camera = self.carla_handler.world.spawn_actor(blueprint_camera, transform_camera, attach_to=self.ego_vehicle)
+        self.camera.listen(lambda data: do_something(data))
+
+        if (VIS_LIDAR):
+            if self.lidar is not None:
+                self.lidar.stop()
+                self.lidar.destroy()
+            blueprint_lidar = self.carla_handler.world.get_blueprint_library().find('sensor.lidar.ray_cast')
+            blueprint_lidar.set_attribute('range', '30')
+            blueprint_lidar.set_attribute('rotation_frequency', '10')
+            blueprint_lidar.set_attribute('channels', '32')
+            blueprint_lidar.set_attribute('lower_fov', '-30')
+            blueprint_lidar.set_attribute('upper_fov', '30')
+            blueprint_lidar.set_attribute('points_per_second', '56000')
+            transform_lidar = carla.Transform(carla.Location(x=0.0, z=5.0)) # a lidar on top of the car ?
+            self.lidar = self.carla_handler.world.spawn_actor(blueprint_lidar, transform_lidar, attach_to=self.ego_vehicle)
+            self.lidar.listen(lambda data: do_something(data))
+
+    def draw_carla_viz(self):
+        ego_location = self.ego_vehicle.get_location()
+        self.trajectories[0].append([ego_location.x, ego_location.y, ego_location.z])
+
+        # draw trajectories
+        self.painter.draw_polylines(self.trajectories)
+        
+        ego_velocity = self.ego_vehicle.get_velocity()
+        velocity_str = "{:.2f}, ".format(ego_velocity.x) + "{:.2f}".format(ego_velocity.y) \
+                + ", {:.2f}".format(ego_velocity.z)
+        self.painter.draw_texts([velocity_str],
+                    [[ego_location.x, ego_location.y, ego_location.z + 10.0]], size=20)
+
     def apply_control_after_reset(self):
-        del self.collision_sensor
+        if(self.collision_sensor is not None):
+            self.collision_sensor.stop()
+            self.collision_sensor.destroy()
+            del self.collision_sensor
+        
         self.collision_sensor = self.carla_handler.world.spawn_actor(
             self.carla_handler.world.get_blueprint_library().find(
                 "sensor.other.collision"
@@ -892,7 +992,7 @@ class CarlaManager:
                     self.ego_start_road_lane_pair,
                     self.global_path_in_intersection,
                     self.road_lane_to_orientation,
-                ) = self.tm.reset(num_vehicles=10, junction_id=53, warm_start_duration=2)
+                ) = self.tm.reset(num_vehicles=20, junction_id=53, warm_start_duration=2)
                 self.current_junction_id = 53
                 self.all_vehicles = self.carla_handler.world.get_actors().filter(
                     "vehicle.*"
@@ -914,6 +1014,12 @@ class CarlaManager:
 
                 self.draw_global_path(self.global_path_in_intersection)
                 
+                self.force_custom_traffic = np.random.randint(5)
+                if(self.force_custom_traffic == 1):
+                    print("Custom Traffic Light Routine started.......")
+                else:
+                    print("Default Traffic Light Routine started.......")
+                
             elif CURRENT_SCENARIO in LANE_SCENARIOS:
                 
                 if(CURRENT_SCENARIO == Scenario.SWITCH_LANE_RIGHT):
@@ -933,7 +1039,7 @@ class CarlaManager:
                         self.ego_vehicle,
                         self.vehicles_list,
                         self.global_path_in_intersection #TODO: change variable name
-                    ) = self.tm.reset()
+                    ) = self.tm.reset(warm_start_duration=4)
 
                 self.global_path_in_intersection = [
                     self.waypoint_to_pose2D(wp) for wp in self.global_path_in_intersection
@@ -1003,6 +1109,7 @@ class CarlaManager:
 
             ## Handing over control
             self.apply_control_after_reset()
+            if (VIZ == True): self.visualize()
             
         except rospy.ROSInterruptException:
             print("failed....")
@@ -1024,9 +1131,6 @@ class CarlaManager:
         # Create a CarlaHandler object. CarlaHandler provides some cutom bus\ilt APIs for the Carla Server.
         self.carla_handler = CarlaHandler(client)
         self.client = client
-        
-        self.TLManager = TrafficLightManager(self.client)
-
 
         # Traffic light manager
         self.TLManager = TrafficLightManager(self.client)
@@ -1065,7 +1169,8 @@ class CarlaManager:
     def pathRequest_selector(self, data):
         
         plan = PathPlan.fromRosMsg(data.path_plan)
-        
+        if(VIZ): self.draw_carla_viz()
+
         if(CURRENT_SCENARIO == Scenario.P2P):
             scenario = plan.scenario_chosen
         else:
@@ -1182,8 +1287,6 @@ class CarlaManager:
             life_time=5,
         )
 
-        print(vehicle.toRosMsg())
-
     def draw_location(self, location, color=(255, 0, 0)):
 
         location_ = carla.Location(location.x, location.y, z=2)
@@ -1207,6 +1310,16 @@ class CarlaManager:
                 color=carla.Color(r=color[0], g=color[1], b=color[2]),
                 life_time=6,
             )
+            
+    def set_traffic_light_for_vehicles_on_lane(self, lane, state=TrafficLightStatus.GREEN):
+
+        for vehicle in lane.lane_vehicles:
+            self.TLManager.set_traffic_light_for_vehicle(vehicle, state)
+
+
+
+
+
 
 
 if __name__ == "__main__":

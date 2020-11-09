@@ -79,17 +79,17 @@ class FullPlannerManager:
                         tensorboard_log=dir_path + "/Logs", gamma=0.93, learning_rate=0.0001)
 
         if not NEW_RUN:
-            print("Resuming run")
+            print("Continue Training")
             model = DQN.load(MODEL_LOAD_PATH, env=env,
                              tensorboard_log=dir_path + "/Logs",
-                             exploration_fraction=0.5)
-            model.learn(total_timesteps=35000,
+                             exploration_fraction=0.02)
+            model.learn(total_timesteps=40000,
                         callback=checkpoint_callback,
                         reset_num_timesteps=False)
             model.save(MODEL_SAVE_PATH + "_Extended")
+        else:
         # wandb.save("./*.py")
         # wandb.save("./*.md")
-        else:
             model.learn(total_timesteps=50000, callback=checkpoint_callback)
             model.save(MODEL_SAVE_PATH)
         # wandb.save(MODEL_SAVE_PATH + ".zip")

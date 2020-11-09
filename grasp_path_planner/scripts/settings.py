@@ -43,7 +43,7 @@ elif CURRENT_SCENARIO == Scenario.RIGHT_TURN:
 elif CURRENT_SCENARIO == Scenario.LEFT_TURN:
     MODEL_SAVE_PATH = dir_path + "/Models/DQN_Left_Turn"
     MODEL_LOAD_PATH = dir_path + "/Models/DQN_Left_Turn"
-    MODEL_CP_PATH = dir_path + "/Models/Left_Turn_CP"
+    MODEL_CP_PATH = dir_path + "/Models/Left_Turn_CP_2"
 
 INTERSECTION_SCENARIOS = [Scenario.GO_STRAIGHT, Scenario.RIGHT_TURN, 
                                                 Scenario.LEFT_TURN]

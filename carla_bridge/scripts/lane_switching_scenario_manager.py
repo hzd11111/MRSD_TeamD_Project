@@ -240,6 +240,7 @@ class LaneSwitchingScenario:
         if ego_spawn_point is not None:
             # spawning ego vehicle
             ego_batch = []
+            ego_vehicle_blueprint.set_attribute('role_name', 'ego')
             ego_batch.append(SpawnActor(ego_vehicle_blueprint, ego_spawn_point[0])
                     .then(ApplyVelocity(FutureActor, ego_spawn_point[1] * self.target_speed))
                     .then(SetAutopilot(FutureActor, True)))

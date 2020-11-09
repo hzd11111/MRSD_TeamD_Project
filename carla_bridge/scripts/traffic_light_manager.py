@@ -2,7 +2,6 @@ import carla
 import pickle
 import sys
 
-import ipdb
 sys.path.append("../../carla_utils/utils")
 sys.path.append("../../grasp_path_planner/scripts/")
 from settings import STOP_LINE_DISTANCE_FOR_LANE_CHANGE_TERMINATE
@@ -81,16 +80,25 @@ class TrafficLightManager():
             dist = len(nearest_waypoint.next_until_lane_end(1)) - STOP_LINE_DISTANCE_FOR_LANE_CHANGE_TERMINATE
             dist = max(0, dist)
             actor.traffic_light_stop_distance = dist
+            
 
-    def set_traffic_light_for_vehicle(self, vehicle, raise_exception=False):
+    def set_traffic_light_for_vehicle(self, vehicle, state=TrafficLightStatus.GREEN):
         carla_actor = self.world.get_actor(vehicle.actor_id)
-        tl_state = carla_actor.get_traffic_light_state() 
+        # tl_state = carla_actor.get_traffic_light_state() 
         
         nearest_waypoint = self.Map.get_waypoint(carla_actor.get_location())
         road_id = nearest_waypoint.road_id
         lane_id = nearest_waypoint.lane_id
 
-        tl = self.get_traffic_light_from_road(road_id, lane_id, raise_exception)
+        tl = self.get_traffic_light_from_road(road_id, lane_id, raise_exception=False)
+        if (tl == None):
+            return
+        if(state == TrafficLightStatus.GREEN):
+            tl.set_state(carla.TrafficLightState.Green)
+        if(state == TrafficLightStatus.RED):
+            tl.set_state(carla.TrafficLightState.Red)
+        if(state == TrafficLightStatus.YELLOW):
+            tl.set_state(carla.TrafficLightState.Yellow)
 
     def get_traffic_light_from_road(self, road_id, lane_id, raise_exception=False):
         '''

@@ -103,7 +103,7 @@ class IntersectionScenario:
         waypoints = self.waypoints_finer
         road_waypoints = []
         for waypoint in waypoints:
-            if waypoint.road_id in road_id_set:
+            if waypoint.road_id in [elem[0] for elem in incoming_road_lane_id_set]:
                 road_waypoints.append(waypoint)
         number_of_spawn_points = len(road_waypoints)
 
@@ -124,7 +124,7 @@ class IntersectionScenario:
         if ego_road_orientation == 1:
             ego_road_waypoints = ego_road_waypoints[::-1]
 
-        ego_road_waypoints = ego_road_waypoints[20:25]
+        ego_road_waypoints = ego_road_waypoints[7:20]
         # ego_road_waypoints = []
         # for waypoint in waypoints:
         #     if (waypoint.road_id, waypoint.lane_id) == current_setup[0]:
@@ -161,7 +161,7 @@ class IntersectionScenario:
                     blueprint.get_attribute("driver_id").recommended_values
                 )
                 blueprint.set_attribute("driver_id", driver_id)
-            blueprint.set_attribute("role_name", "autopilot")
+            blueprint.set_attribute('role_name', 'ego')
             transform = t.transform
             transform.location.z += 2.0
             ego_batch.append(
