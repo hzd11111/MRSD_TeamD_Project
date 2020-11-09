@@ -68,8 +68,9 @@ class NeuralNetworkSelector:
             print(single_pose.distance(curr_vehicle_global_pose))
             print("Global Path Pose:", single_pose.x, single_pose.y, single_pose.theta)
             print("Global Point:", self.global_path_pointer, "/", len(global_path.path_points))
-            if single_pose.isInfrontOf(curr_vehicle_global_pose) and \
-                    single_pose.distance(curr_vehicle_global_pose) < 30:
+            if (single_pose.isInfrontOf(curr_vehicle_global_pose) and \
+                    single_pose.distance(curr_vehicle_global_pose) < 30) or \
+                    single_pose.distance(curr_vehicle_global_pose) < 0.5:
                 break
 
             self.global_path_pointer += 1
