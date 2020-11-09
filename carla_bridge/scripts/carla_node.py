@@ -1039,7 +1039,7 @@ class CarlaManager:
                         self.ego_vehicle,
                         self.vehicles_list,
                         self.global_path_in_intersection #TODO: change variable name
-                    ) = self.tm.reset(warm_start_duration=4)
+                    ) = self.tm.reset()
 
                 self.global_path_in_intersection = [
                     self.waypoint_to_pose2D(wp) for wp in self.global_path_in_intersection
