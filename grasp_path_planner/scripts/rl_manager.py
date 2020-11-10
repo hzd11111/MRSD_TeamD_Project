@@ -8,7 +8,7 @@ from carla_utils.msg import EnvDescMsg
 from reward_manager import reward_selector
 from options import Scenario, RLDecision, TrafficLightStatus
 from state_manager import StateManager
-from settings import CURRENT_MODE
+from settings import Mode, CURRENT_MODE
 
 
 class GeneralRLManager:
