@@ -192,6 +192,8 @@ class StateManager:
             assert(len(entire_state) == 78)
         except e:
             import ipdb; ipdb.set_trace()
+        for state in adj_lane_vehicles_states:
+            print(state)
         return np.array(entire_state)
 
     def createLaneFollowingState(self, env_desc):

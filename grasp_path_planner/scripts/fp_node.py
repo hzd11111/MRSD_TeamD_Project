@@ -87,9 +87,9 @@ class FullPlannerManager:
                         callback=checkpoint_callback,
                         reset_num_timesteps=False)
             model.save(MODEL_SAVE_PATH + "_Extended")
-        else:
         # wandb.save("./*.py")
         # wandb.save("./*.md")
+        else:
             model.learn(total_timesteps=50000, callback=checkpoint_callback)
             model.save(MODEL_SAVE_PATH)
         # wandb.save(MODEL_SAVE_PATH + ".zip")

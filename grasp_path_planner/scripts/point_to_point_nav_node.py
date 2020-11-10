@@ -44,7 +44,7 @@ class Point2PointPlanner:
     def initialize(self):
         self.nn_manager.initialize({Scenario.LANE_FOLLOWING:"./P2PModel/DQN_Lane_Following_model.zip",
                                     Scenario.SWITCH_LANE_LEFT:"./P2PModel/DQN_Lane_Switch_Left.zip",
-                                    Scenario.SWITCH_LANE_RIGHT:"./P2PModel/DQN_Lane_Switch_Right.zip",
+                                    Scenario.SWITCH_LANE_RIGHT:"./P2PModel/DQN_Lane_Switch_Left.zip",
                                     Scenario.LEFT_TURN:"./P2PModel/DQN_Left_Turn.zip",
                                     Scenario.RIGHT_TURN:"./P2PModel/DQN_Right_Turn.zip",
                                     Scenario.GO_STRAIGHT:"./P2PModel/DQN_Straight.zip"}) #ToDo: Fillin the paths

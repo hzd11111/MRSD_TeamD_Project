@@ -20,6 +20,7 @@ NEW_RUN = True
 
 VIZ = False
 VIS_LIDAR = False
+
 #assert !(CURRENT_SCENARIO==Scenario.P2P and CURRENT_MODE==Mode.TRAIN), "P2P Cannot be called in train mode"
 
 if CURRENT_SCENARIO == Scenario.LANE_FOLLOWING:

@@ -824,15 +824,16 @@ class CarlaManager:
         '''
         Check for Lane Switching Path Terminate condition
         '''
+        self.TLManager.set_actor_traffic_light_state(ego_vehicle, is_ego=True)
+        dist = self.carla_handler.get_distance_to_lane_end(ego_vehicle)
+        ego_vehicle.traffic_light_stop_distance = dist
+
         if CURRENT_SCENARIO in [Scenario.SWITCH_LANE_RIGHT, Scenario.SWITCH_LANE_LEFT]:
-            dist = self.carla_handler.get_distance_to_lane_end(ego_vehicle)
-            ego_vehicle.traffic_light_stop_distance = dist
             # print("Traffic_light_stop_distance:" , ego_vehicle.traffic_light_stop_distance, "\n")
             lane_switch_failure_terminate = (dist < STOP_LINE_DISTANCE_FOR_LANE_CHANGE_TERMINATE)  
         else:
             lane_switch_failure_terminate = False
         
-        self.TLManager.set_actor_traffic_light_state(ego_vehicle, is_ego=True)
         '''
         Part 3: Create ROS msg objects and ship it!
         '''
@@ -1064,7 +1065,7 @@ class CarlaManager:
                     self.ego_start_road_lane_pair_for_each_intersection,
                     self.intersection_waypoints_for_each_intersection,
                     self.intersection_ids_for_each_intersection,
-                ) = self.tm.reset()
+                ) = self.tm.reset(num_vehicles = 200)
                 
                 # Reset intersection pointer idx
                 self.current_intersection_idx = -1
