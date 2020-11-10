@@ -82,11 +82,11 @@ class CustomLaneFollowingPolicy(DQNPolicy):
             # Add back vehicle
             embed_back_vehicle = []
             back_veh_start = veh_state_len + 1 * (veh_state_len + mask)
-            back_veh_mask = out_ph[:, back_veh_start + veh_state_len][:, None]
-            back_veh = out_ph[:, back_veh_start:back_veh_start + veh_state_len]
-            back_veh_state = tf.concat([cur_veh, back_veh], axis=1)
-            embed_back_vehicle.append(
-                self.embedding_net_front(back_veh_state) * back_veh_mask)
+            # back_veh_mask = out_ph[:, back_veh_start + veh_state_len][:, None]
+            # back_veh = out_ph[:, back_veh_start:back_veh_start + veh_state_len]
+            # back_veh_state = tf.concat([cur_veh, back_veh], axis=1)
+            # embed_back_vehicle.append(
+            #     self.embedding_net_front(back_veh_state) * back_veh_mask)
 
             # Add pedestrians
             embed_pedestrians = []
@@ -100,7 +100,7 @@ class CustomLaneFollowingPolicy(DQNPolicy):
             #         self.embedding_net_pedestrian(ped_state) * ped_veh_mask)
 
             embed_list = embed_adjacent_vehicles + \
-                embed_front_vehicle + embed_back_vehicle # + embed_pedestrians
+                embed_front_vehicle  # + embed_back_vehicle # + embed_pedestrians
             stacked_out = tf.stack(embed_list, axis=1)
             max_out = tf.reduce_max(stacked_out, axis=1)
             q_out = self.q_net(max_out, ac_space.n)
