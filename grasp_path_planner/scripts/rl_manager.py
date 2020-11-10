@@ -8,6 +8,7 @@ from carla_utils.msg import EnvDescMsg
 from reward_manager import reward_selector
 from options import Scenario, RLDecision, TrafficLightStatus
 from state_manager import StateManager
+from settings import CURRENT_MODE
 
 
 class GeneralRLManager:
@@ -84,12 +85,20 @@ class GeneralRLManager:
         Returns:
         RLDecision enum
         """
-        if action == 0:
-            return RLDecision.CONSTANT_SPEED
-        elif action == 1:
-            return RLDecision.ACCELERATE
-        elif action == 2:
-            return RLDecision.DECELERATE
+        if CURRENT_MODE is Mode.Test: 
+            if action == 0:
+                return RLDecision.CONSTANT_SPEED
+            elif action == 1:
+                return RLDecision.ACCELERATE
+            elif action == 2:
+                return RLDecision.DECELERATE
+        else:
+            if action == 0:
+                return RLDecision.GLOBAL_PATH_CONSTANT_SPEED
+            elif action == 1:
+                return RLDecision.GLOBAL_PATH_ACCELERATE
+            elif action == 2:
+                return RLDecision.GLOBAL_PATH_DECELERATE
         # if action == 0:
         #     return RLDecision.CONSTANT_SPEED
         # elif action == 1:
