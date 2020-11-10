@@ -85,7 +85,7 @@ class GeneralRLManager:
         Returns:
         RLDecision enum
         """
-        if CURRENT_MODE is Mode.Test: 
+        if CURRENT_MODE is Mode.TEST: 
             if action == 0:
                 return RLDecision.CONSTANT_SPEED
             elif action == 1:

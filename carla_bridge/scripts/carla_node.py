@@ -860,7 +860,7 @@ class CarlaManager:
         env_desc.speed_limit = self.speed_limit
         env_desc.reward_info = reward_info
         env_desc.global_path = self.global_path_in_intersection
-        
+        env_desc.intersection_global_path = self.global_path_in_intersection
         # print("x = :", env_desc.cur_vehicle_state.location_global.x)
         # print("y = :", env_desc.cur_vehicle_state.location_global.y)
         # print("z = :", env_desc.cur_vehicle_state.location_global.y)
