@@ -475,6 +475,8 @@ class CustomIntersectionRightTurn(DQNPolicy):
             out = tf_layers.fully_connected(
                 out, num_outputs=128, activation_fn=tf.nn.relu)
             out = tf_layers.fully_connected(
+                out, num_outputs=64, activation_fn=tf.nn.relu)
+            out = tf_layers.fully_connected(
                 out, num_outputs=out_num, activation_fn=tf.nn.tanh)
         return out
 
