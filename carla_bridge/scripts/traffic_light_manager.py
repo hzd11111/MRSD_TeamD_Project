@@ -178,7 +178,14 @@ if __name__ == "__main__":
                     world.debug.draw_string(tl_loc, letter, draw_shadow=True,
                                         color=carla.Color(r=0, g=255, b=0), life_time=lf)
                     tl_dict[str(tl.id)+letter] = 1
-        
+            else:
+                if waypoint.road_id > 61: continue
+                # waypoint location
+                wp_loc = waypoint.transform.location
+                world.debug.draw_string(wp_loc, letter, draw_shadow=False,
+                                        color=carla.Color(r=255, g=0, b=0), life_time=lf)
+
+
         # print locations over all traffic_lights
         for tl in world.get_actors().filter("traffic.traffic_light*"):
             tl_loc = tl.get_location()
@@ -187,3 +194,21 @@ if __name__ == "__main__":
             tl_loc_dict[str(tl_loc.x)] = 1
 
         import ipdb; ipdb.set_trace()
+
+        while False:
+            rf_rate = 0.2
+            spec = world.get_spectator()
+            loc = spec.get_location()
+            wp = Map.get_waypoint(loc, project_to_road = True)
+
+            next_wp_locs = [wp.transform.location for wp in wp.next_until_lane_end(2)]
+            prev_wp_locs = [wp.transform.location for wp in wp.previous_until_lane_start(2)]
+            
+            for wp_loc in next_wp_locs:
+                world.debug.draw_string(wp_loc, 'x', draw_shadow=False,
+                                        color=carla.Color(r=0, g=255, b=0), life_time=rf_rate)
+            for wp_loc in prev_wp_locs:
+                world.debug.draw_string(wp_loc, 'y', draw_shadow=False,
+                                        color=carla.Color(r=255, g=0, b=0), life_time=rf_rate)
+
+            import time; time.sleep(rf_rate)

@@ -110,7 +110,7 @@ class Point2PointPlanner:
                 path_planner_terminate = True
             else:
                 #path_planner_terminate = self.performRLDecision(None, selected_scenario, True)
-                if new_scenario:
+                if new_scenario or self.prev_env_desc.reward_info.time_elapsed < 2.0:
                     self.performRLDecision(None, selected_scenario)
                     path_planner_terminate = False
                 else:

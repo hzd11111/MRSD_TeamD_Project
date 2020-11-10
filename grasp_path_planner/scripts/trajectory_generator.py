@@ -39,10 +39,12 @@ class TrajGenerator:
             return rl_decision
         return self.current_action
 
-    def trajPlan(self, rl_decision, env_desc, chosen_scenario = None):
+    def trajPlan(self, rl_decision, env_desc, chosen_scenario = None, dummy_action = False):
+
+
         # check the validity of env_desc
         # import ipdb; ipdb.set_trace()
-        if rl_decision is None:
+        if rl_decision is None or dummy_action:
             path_plan = self.tempConstSpeed(env_desc)
             if chosen_scenario is not None:
                 path_plan.scenario_chosen = chosen_scenario
@@ -363,7 +365,7 @@ class TrajGenerator:
         new_path_plan = PathPlan()
         new_path_plan.tracking_pose = current_lane.frenetToGlobal(next_point_frenet)
         new_path_plan.reset_sim = False
-        new_path_plan.tracking_speed = max(self.traj_parameters['min_speed'], self.start_speed)
+        new_path_plan.tracking_speed = max(self.traj_parameters['min_speed'], self.start_speed) + 1
         new_path_plan.end_of_action = True
         new_path_plan.action_progress = 1.
         new_path_plan.path_planner_terminate = False

@@ -912,9 +912,29 @@ class CarlaHandler:
         # get all the vehicles in the world
         all_vehicles = self.world.get_actors().filter("vehicle.*")
         
-        current_road_id = self.get_nearest_waypoint(ego_vehicle).road_id
+        current_road_id = [self.get_nearest_waypoint(ego_vehicle).road_id]
         # loop over all actors to get vehicles in the same, right of left lane
         # as ego vehicles
+
+        ######### Fix the carla lane_ids bug
+        road_ids_with_road_bug = [(5,49),  (17,47), (16,25), (18,40), (26,29) ,(50,52)]
+        road_ids_with_lane_bug = [(26,29) ,(50,52)]
+
+        for pair in road_ids_with_road_bug:
+            if current_road_id[0] in pair:
+                for elem in pair:
+                    if elem == current_road_id[0]: continue
+                    current_road_id.append(elem)
+                break
+
+        for pair in road_ids_with_lane_bug: # loop over all buggy pairs
+            if current_road_id[0] in pair:  # check if current road_id is buggy
+                # for buggy lanes, also add the negative of lane_id
+                left_lane_ids.append(left_lane_ids[0] * -1)
+                right_lane_ids.append(right_lane_ids[0] * -1)
+                break
+        ########
+
         for actor in all_vehicles:
 
             # skip the ego vehicle for the following calculations
@@ -924,11 +944,11 @@ class CarlaHandler:
             # get waypoint closest to the actor
             actor_nearest_waypoint = self.get_nearest_waypoint(actor)
             # append the actor to the correct lane list based on their lane id
-            if actor_nearest_waypoint.lane_id in left_lane_ids and actor_nearest_waypoint.road_id == current_road_id:
+            if actor_nearest_waypoint.lane_id in left_lane_ids and actor_nearest_waypoint.road_id in current_road_id:
                 actors_in_left_lane.append(actor)
-            elif actor_nearest_waypoint.lane_id in right_lane_ids and actor_nearest_waypoint.road_id == current_road_id:
+            elif actor_nearest_waypoint.lane_id in right_lane_ids and actor_nearest_waypoint.road_id in current_road_id:
                 actors_in_right_lane.append(actor)
-            elif actor_nearest_waypoint.lane_id in current_lane_ids and actor_nearest_waypoint.road_id == current_road_id:
+            elif actor_nearest_waypoint.lane_id in current_lane_ids and actor_nearest_waypoint.road_id in current_road_id:
                 actors_in_current_lane.append(actor)
 
         # return as Vehicle object list, instead of carla.Vehicle object list
