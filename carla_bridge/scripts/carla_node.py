@@ -1065,7 +1065,7 @@ class CarlaManager:
                     self.ego_start_road_lane_pair_for_each_intersection,
                     self.intersection_waypoints_for_each_intersection,
                     self.intersection_ids_for_each_intersection,
-                ) = self.tm.reset(num_vehicles = 200)
+                ) = self.tm.reset(num_vehicles = 100)
                 
                 # Reset intersection pointer idx
                 self.current_intersection_idx = -1

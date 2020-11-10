@@ -264,7 +264,10 @@ class StateManager:
             front_vehicle_state + \
             back_vehicle_state + \
             [coord for state in pedestrian_states for coord in state]
-
+        print("Front Vehicle State: ")
+        print(front_vehicle_state)
+        print("Back Vehicle State")
+        print(back_vehicle_state)
         assert(len(entire_state) == 41)
         return np.array(entire_state)
 
