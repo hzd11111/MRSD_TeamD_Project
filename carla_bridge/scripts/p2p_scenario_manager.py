@@ -26,9 +26,13 @@ Description of routes:Lane Following is involved in all of them
 2. Right turn intersection
 3. Left Lane Change
 4. Right Lane Change
+5. Lane Fol - Go Str - Lane Fol - Left Turn - Lane Follow
+6. Lane Ch Right - Lane Fol - Right Turn - Left Change Lane - Left Turn
 '''
-route_start_locations = [(-47.5,-18.8,0.06) ,(-66.5,-91.5,0), (-66.5,-95,0), (-131.7,-70.3,0), (-125.1,-17.9,0)]
-route_end_locations = [(-92.1,-91.5,0), (-167.1,-91.6,0), (-120.9,-120.970520,0), (-128.6,-18.8,0), (-121.2,-69.9,0) ]
+route_start_locations = [(-47.5,-18.8,0.06) ,(-66.5,-91.5,0), (-66.5,-95,0), (-131.7,-70.3,0), \
+                        (-125.1,-17.9,0), (-47, 52, 0), (-47.5,-13.8,0)]
+route_end_locations = [(-92.1,-91.5,0), (-167.1,-91.6,0), (-120.9,-120.970520,0), (-128.6,-18.8,0), \
+                        (-121.2,-69.9,0), (-95,-91.5,0), (34,-124,0)]
 
 class P2PScenario:
     def __init__(self, client) -> None:
