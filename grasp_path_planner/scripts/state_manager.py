@@ -286,6 +286,7 @@ class StateManager:
             env_desc.cur_vehicle_state.speed,
             env_desc.cur_vehicle_state.acceleration] + \
             self.createTrafficLightOneHotVec(env_desc.cur_vehicle_state.traffic_light_status)
+        print(self.createTrafficLightOneHotVec(env_desc.cur_vehicle_state.traffic_light_status))
 
         # extract front vehicle and back vehicle and pedestrian in current lane
         # TODO: Make sure vehicle in front or back are always present

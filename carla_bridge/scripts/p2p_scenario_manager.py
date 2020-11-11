@@ -78,6 +78,7 @@ class P2PScenario:
         blueprints = [x for x in blueprints if not x.id.endswith("carlacola")]
         blueprints = [x for x in blueprints if not x.id.endswith("t2")]
         blueprints = [x for x in blueprints if not x.id.endswith("police")]
+        blueprints = [x for x in blueprints if not x.id.endswith("cybertruck")]
 
         ego_blueprints = [x for x in blueprints if x.id.endswith("model3")]
 
@@ -320,7 +321,7 @@ class P2PScenario:
     def get_random_route(self):
         
         random_ind = np.random.randint(0, len(route_start_locations))
-        random_ind = 3  # TODO: REMOVE THIS LINE.
+        random_ind = 5  # TODO: REMOVE THIS LINE.
         start_location = carla.Location(*route_start_locations[random_ind])
         end_location = carla.Location(*route_end_locations[random_ind])
 

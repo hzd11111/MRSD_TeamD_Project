@@ -42,7 +42,7 @@ class Point2PointPlanner:
 
 
     def initialize(self):
-        self.nn_manager.initialize({Scenario.LANE_FOLLOWING:"./P2PModel/DQN_Lane_Following_model.zip",
+        self.nn_manager.initialize({Scenario.LANE_FOLLOWING:"./P2PModel/DQN_Lane_Following.zip",
                                     Scenario.SWITCH_LANE_LEFT:"./P2PModel/DQN_Lane_Switch_Left.zip",
                                     Scenario.SWITCH_LANE_RIGHT:"./P2PModel/DQN_Lane_Switch_Left.zip",
                                     Scenario.LEFT_TURN:"./P2PModel/DQN_Left_Turn.zip",
