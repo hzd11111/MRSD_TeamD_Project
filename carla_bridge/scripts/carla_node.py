@@ -1088,7 +1088,7 @@ class CarlaManager:
                 self.global_path_in_intersection = GlobalPath(
                     path_points=self.global_path_in_intersection
                 )
-                # self.draw_global_path(self.global_path_in_intersection)
+                self.draw_global_path(self.global_path_in_intersection)
                 
                 
                 ### Process all intersection paths
@@ -1103,7 +1103,7 @@ class CarlaManager:
                     self.intersection_waypoints_for_each_intersection[i] = GlobalPath(
                         path_points=self.intersection_waypoints_for_each_intersection[i]
                     )
-                    self.draw_global_path(self.intersection_waypoints_for_each_intersection[i])
+                    # self.draw_global_path(self.intersection_waypoints_for_each_intersection[i], (255,0,0))
 
 
             print("Traffic_light_stop_distance:" , self.carla_handler.get_distance_to_lane_end_2(self.ego_vehicle), "\n")

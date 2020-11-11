@@ -14,7 +14,7 @@ class Mode(Enum):
 
 ############ Mode and Model Selection ##############################
 CURRENT_SCENARIO = Scenario.P2P
-CURRENT_MODE = Mode.TRAIN
+CURRENT_MODE = Mode.TEST
 WANDB_DRYRUN = True
 NEW_RUN = False
 

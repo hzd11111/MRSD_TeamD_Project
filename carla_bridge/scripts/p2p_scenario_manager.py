@@ -280,8 +280,8 @@ class P2PScenario:
             ].transform.location  # 10 m after end of intersection
 
             route = self.global_planner.trace_route(start_location, end_location)
-            global_path_wps = [route[i][0] for i in range(len(route))]
-            list_of_intersection_waypoints_for_each_intersection.append(global_path_wps)
+            global_path_wps_for_intersection = [route[i][0] for i in range(len(route))]
+            list_of_intersection_waypoints_for_each_intersection.append(global_path_wps_for_intersection)
             #################################################################################
             
             
@@ -310,10 +310,7 @@ class P2PScenario:
         
 
         
-        print("Control handed to system....")
-        
-
-        
+        print("Control handed to system....")     
         
 
         return ego_vehicle, my_vehicles, global_path_wps, route, global_path_actions, intersection_topologies, incoming_road_lane_id_to_outgoing_lane_id_dict_for_each_intersection, road_lane_to_orientation_for_each_intersection, road_and_lane_ids_for_incoming_roads_in_global_path_for_each_intersection, list_of_intersection_waypoints_for_each_intersection, list_of_intersection_ids_to_pass_in_ordered_sequence
