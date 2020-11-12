@@ -69,7 +69,7 @@ class NeuralNetworkSelector:
             print("Global Path Pose:", single_pose.x, single_pose.y, single_pose.theta)
             print("Global Point:", self.global_path_pointer, "/", len(global_path.path_points))
             if (single_pose.isInfrontOf(curr_vehicle_global_pose) and \
-                    single_pose.distance(curr_vehicle_global_pose) < 30) or \
+                    single_pose.distance(curr_vehicle_global_pose) < 100) or \
                     single_pose.distance(curr_vehicle_global_pose) < 0.5:
                 break
 
@@ -115,7 +115,7 @@ class NeuralNetworkSelector:
         # determine the distance to the last pose of global path
         curr_pose = env_desc.cur_vehicle_state.location_global
         distance_to_goal = curr_pose.distance(last_global_path_pose)
-        return distance_to_goal < 7
+        return distance_to_goal < 3
 
     def leftTurnStateCondition(self, env_desc):
         # check if there is a intersection point in the next 20 meters

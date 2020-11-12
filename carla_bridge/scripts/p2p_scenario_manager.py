@@ -26,9 +26,13 @@ Description of routes:Lane Following is involved in all of them
 2. Right turn intersection
 3. Left Lane Change
 4. Right Lane Change
+5. Lane Fol - Go Str - Lane Fol - Left Turn - Lane Follow
+6. Lane Ch Right - Lane Fol - Right Turn - Left Change Lane - Left Turn
 '''
-route_start_locations = [(-47.5,-18.8,0.06) ,(-66.5,-91.5,0), (-66.5,-95,0), (-131.7,-70.3,0), (-125.1,-17.9,0)]
-route_end_locations = [(-92.1,-91.5,0), (-167.1,-91.6,0), (-120.9,-120.970520,0), (-128.6,-18.8,0), (-121.2,-69.9,0) ]
+route_start_locations = [(-47.5,-18.8,0.06) ,(-66.5,-91.5,0), (-66.5,-95,0), (-131.7,-70.3,0), \
+                        (-125.1,-17.9,0), (-47, 52, 0), (-47.5,-13.8,0)]
+route_end_locations = [(-92.1,-91.5,0), (-167.1,-91.6,0), (-120.9,-120.970520,0), (-128.6,-18.8,0), \
+                        (-121.2,-69.9,0), (-95,-91.5,0), (34,-124,0)]
 
 class P2PScenario:
     def __init__(self, client) -> None:
@@ -74,6 +78,7 @@ class P2PScenario:
         blueprints = [x for x in blueprints if not x.id.endswith("carlacola")]
         blueprints = [x for x in blueprints if not x.id.endswith("t2")]
         blueprints = [x for x in blueprints if not x.id.endswith("police")]
+        blueprints = [x for x in blueprints if not x.id.endswith("cybertruck")]
 
         ego_blueprints = [x for x in blueprints if x.id.endswith("model3")]
 
@@ -271,12 +276,12 @@ class P2PScenario:
 
             start_location = incoming_lane_waypoints[-1].transform.location  # Start of lane
             end_location = outgoing_lane_waypoints[
-                10
+                min(len(outgoing_lane_waypoints)-1,10)
             ].transform.location  # 10 m after end of intersection
 
             route = self.global_planner.trace_route(start_location, end_location)
-            global_path_wps = [route[i][0] for i in range(len(route))]
-            list_of_intersection_waypoints_for_each_intersection.append(global_path_wps)
+            global_path_wps_for_intersection = [route[i][0] for i in range(len(route))]
+            list_of_intersection_waypoints_for_each_intersection.append(global_path_wps_for_intersection)
             #################################################################################
             
             
@@ -305,10 +310,7 @@ class P2PScenario:
         
 
         
-        print("Control handed to system....")
-        
-
-        
+        print("Control handed to system....")     
         
 
         return ego_vehicle, my_vehicles, global_path_wps, route, global_path_actions, intersection_topologies, incoming_road_lane_id_to_outgoing_lane_id_dict_for_each_intersection, road_lane_to_orientation_for_each_intersection, road_and_lane_ids_for_incoming_roads_in_global_path_for_each_intersection, list_of_intersection_waypoints_for_each_intersection, list_of_intersection_ids_to_pass_in_ordered_sequence

@@ -22,16 +22,28 @@ from trajectory_generator import TrajGenerator
 from options import RLDecision, Scenario
 
 
-TRAJ_PARAM = {'look_up_distance': 0, \
-              'lane_change_length': 30, \
-              'lane_change_time_constant': 1.05, \
-              'lane_change_time_disc': 0.4, \
-              'action_time_disc': 0.2, \
-              'action_duration': 0.5, \
-              'accelerate_amt': 5, \
-              'decelerate_amt': 5, \
-              'min_speed': 0
-              }
+# TRAJ_PARAM = {'look_up_distance': 0, \
+#               'lane_change_length': 30, \
+#               'lane_change_time_constant': 1.05, \
+#               'lane_change_time_disc': 0.4, \
+#               'action_time_disc': 0.2, \
+#               'action_duration': 0.5, \
+#               'accelerate_amt': 5, \
+#               'decelerate_amt': 5, \
+#               'min_speed': 0
+#               }
+
+TRAJ_PARAM = {
+    "look_up_distance": 0,
+    "lane_change_length": 15,
+    "lane_change_time_constant": 1.5,
+    "lane_change_time_disc": 0.2,
+    "action_time_disc": 0.2,
+    "action_duration": 0.8,
+    "accelerate_amt": 10,
+    "decelerate_amt": 5,
+    "min_speed": 0.0,
+}
 
 class Point2PointPlanner:
     def __init__(self):
@@ -42,7 +54,7 @@ class Point2PointPlanner:
 
 
     def initialize(self):
-        self.nn_manager.initialize({Scenario.LANE_FOLLOWING:"./P2PModel/DQN_Lane_Following_model.zip",
+        self.nn_manager.initialize({Scenario.LANE_FOLLOWING:"./P2PModel/DQN_Lane_Following.zip",
                                     Scenario.SWITCH_LANE_LEFT:"./P2PModel/DQN_Lane_Switch_Left.zip",
                                     Scenario.SWITCH_LANE_RIGHT:"./P2PModel/DQN_Lane_Switch_Left.zip",
                                     Scenario.LEFT_TURN:"./P2PModel/DQN_Left_Turn.zip",
