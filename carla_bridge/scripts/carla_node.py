@@ -163,7 +163,7 @@ class CarlaManager:
             tracking_speed = plan.tracking_speed  # / 3.6
             reset_sim = plan.reset_sim
             is_autopilot = plan.auto_pilot
-            print("Autopilot", is_autopilot)
+            # print("Autopilot", is_autopilot)
 
             self.end_of_action = plan.end_of_action
             self.action_progress = plan.action_progress
@@ -985,6 +985,13 @@ class CarlaManager:
 
         try:
             if CURRENT_SCENARIO in INTERSECTION_SCENARIOS:
+                if CURRENT_MODE == Mode.TRAIN:
+                    random_jn = np.random.choice([53, 965, 599])
+                else:
+                    random_jn = 53
+                    
+                num_vehicles = int(min(30,max(0,np.random.normal(15,10))))
+                    
                 (
                     self.ego_vehicle,
                     self.vehicles_list,
@@ -993,8 +1000,8 @@ class CarlaManager:
                     self.ego_start_road_lane_pair,
                     self.global_path_in_intersection,
                     self.road_lane_to_orientation,
-                ) = self.tm.reset(num_vehicles=20, junction_id=53, warm_start_duration=2)
-                self.current_junction_id = 53
+                ) = self.tm.reset(num_vehicles=num_vehicles, junction_id=random_jn, warm_start_duration=2)
+                self.current_junction_id = random_jn
                 self.all_vehicles = self.carla_handler.world.get_actors().filter(
                     "vehicle.*"
                 )
@@ -1135,7 +1142,7 @@ class CarlaManager:
 
         # Traffic light manager
         self.TLManager = TrafficLightManager(self.client)
-        self.set_global_traffic_light_duration()
+        # self.set_global_traffic_light_duration()
 
         if synchronous_mode:
             settings = self.carla_handler.world.get_settings()

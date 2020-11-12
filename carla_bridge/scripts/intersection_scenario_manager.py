@@ -74,7 +74,7 @@ class IntersectionScenario:
             junction_id, _ = random.choice(
                 [53]  # , 905, 599, 965]
             )  # random.choice(self.junctions)
-        print("generating scenario at junction id: ", junction_id)
+        print("generating scenario at junction id: ", junction_id, "Num vehicles:", num_vehicles)
 
         (
             road_id_set,

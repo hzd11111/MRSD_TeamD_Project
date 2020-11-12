@@ -13,8 +13,8 @@ class Mode(Enum):
 
 
 ############ Mode and Model Selection ##############################
-CURRENT_SCENARIO = Scenario.P2P
-CURRENT_MODE = Mode.TEST
+CURRENT_SCENARIO = Scenario.GO_STRAIGHT
+CURRENT_MODE = Mode.TRAIN
 WANDB_DRYRUN = True
 NEW_RUN = False
 
@@ -86,7 +86,11 @@ NON_EGO_VEHICLE_MODEL = 'vehicle.mustang.mustang'
 
 ################## Global Scenario Params #################
 DISTANCE_TO_INTERSECTION_FOR_SCENARIO_CHANGE = 20
-STOP_LINE_DISTANCE_FOR_LANE_CHANGE_TERMINATE = 8
+if CURRENT_SCENARIO == Scenario.GO_STRAIGHT or CURRENT_SCENARIO == Scenario.LEFT_TURN or CURRENT_SCENARIO == Scenario.RIGHT_TURN:
+    STOP_LINE_DISTANCE_FOR_LANE_CHANGE_TERMINATE = 2
+else:
+    STOP_LINE_DISTANCE_FOR_LANE_CHANGE_TERMINATE = 8
+
 
 
 ################## Test Mode Arguments ######################
