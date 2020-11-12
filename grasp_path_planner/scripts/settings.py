@@ -13,7 +13,7 @@ class Mode(Enum):
 
 
 ############ Mode and Model Selection ##############################
-CURRENT_SCENARIO = Scenario.RIGHT_TURN
+CURRENT_SCENARIO = Scenario.SWITCH_LANE_RIGHT
 CURRENT_MODE = Mode.TRAIN
 WANDB_DRYRUN = True
 NEW_RUN = True
