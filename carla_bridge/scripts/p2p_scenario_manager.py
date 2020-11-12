@@ -276,7 +276,7 @@ class P2PScenario:
 
             start_location = incoming_lane_waypoints[-1].transform.location  # Start of lane
             end_location = outgoing_lane_waypoints[
-                10
+                min(len(outgoing_lane_waypoints)-1,10)
             ].transform.location  # 10 m after end of intersection
 
             route = self.global_planner.trace_route(start_location, end_location)
@@ -318,7 +318,7 @@ class P2PScenario:
     def get_random_route(self):
         
         random_ind = np.random.randint(0, len(route_start_locations))
-        random_ind = 5  # TODO: REMOVE THIS LINE.
+        random_ind = 3  # TODO: REMOVE THIS LINE.
         start_location = carla.Location(*route_start_locations[random_ind])
         end_location = carla.Location(*route_end_locations[random_ind])
 
