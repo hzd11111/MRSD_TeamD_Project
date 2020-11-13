@@ -20,19 +20,23 @@ from options import Scenario, GlobalPathAction
 
 
 '''
+LF - Lane Follow, RT/LT - Right/Left Turn, LCR/LCL - Lane chane right/left
+GS - Go straight
 Description of routes:Lane Following is involved in all of them
 0. Left turn at an intersection
 1. Go straight intersection
 2. Right turn intersection
-3. Left Lane Change
-4. Right Lane Change
+3. Lane change and right turn
+4. Left Lane Change
 5. Lane Fol - Go Str - Lane Fol - Left Turn - Lane Follow
 6. Lane Ch Right - Lane Fol - Right Turn - Left Change Lane - Left Turn
+7. (Bug free lanes) LF - GS - LCL - LF - LT - RT - LF - RT
+8. (Bug free lanes) LCR - LF - RT - LF - GS - LCL - LT - LF
 '''
 route_start_locations = [(-47.5,-18.8,0.06) ,(-66.5,-91.5,0), (-66.5,-95,0), (-131.7,-70.3,0), \
-                        (-125.1,-17.9,0), (-47, 52, 0), (-47.5,-13.8,0)]
+                        (-125.1,-17.9,0), (-47, 52, 0), (-47.5,-13.8,0), (96,37,0), (32,-173,0)]
 route_end_locations = [(-92.1,-91.5,0), (-167.1,-91.6,0), (-120.9,-120.970520,0), (-128.6,-18.8,0), \
-                        (-121.2,-69.9,0), (-95,-91.5,0), (34,-124,0)]
+                        (-121.2,-69.9,0), (-95,-91.5,0), (34,-124,0), (-120,130,0), (-128,-49,-0)]
 
 class P2PScenario:
     def __init__(self, client) -> None:
@@ -318,7 +322,7 @@ class P2PScenario:
     def get_random_route(self):
         
         random_ind = np.random.randint(0, len(route_start_locations))
-        random_ind = 6  # TODO: REMOVE THIS LINE.
+        random_ind = 7  # TODO: REMOVE THIS LINE.
         start_location = carla.Location(*route_start_locations[random_ind])
         end_location = carla.Location(*route_end_locations[random_ind])
 
@@ -326,6 +330,7 @@ class P2PScenario:
         # Generate the route using the global route planner object.
         route = grp.trace_route(start_location, end_location)
         global_path_wps = [route[i][0] for i in range(len(route))]
+        draw_waypoints(self.world, global_path_wps, life_time=30)
 
         return route, global_path_wps
 
