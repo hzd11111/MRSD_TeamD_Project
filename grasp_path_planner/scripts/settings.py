@@ -13,8 +13,8 @@ class Mode(Enum):
 
 
 ############ Mode and Model Selection ##############################
-CURRENT_SCENARIO = Scenario.GO_STRAIGHT
-CURRENT_MODE = Mode.TRAIN
+CURRENT_SCENARIO = Scenario.P2P
+CURRENT_MODE = Mode.TEST
 WANDB_DRYRUN = True
 NEW_RUN = False
 
@@ -49,7 +49,7 @@ elif CURRENT_SCENARIO == Scenario.RIGHT_TURN:
 elif CURRENT_SCENARIO == Scenario.LEFT_TURN:
     MODEL_SAVE_PATH = dir_path + "/Models/DQN_Left_Turn"
     MODEL_LOAD_PATH = dir_path + "/Models/DQN_Left_Turn"
-    MODEL_CP_PATH = dir_path + "/Models/Left_Turn_CP_2"
+    MODEL_CP_PATH = dir_path + "/Models/Left_Turn_CP_3"
 
 INTERSECTION_SCENARIOS = [Scenario.GO_STRAIGHT, Scenario.RIGHT_TURN, 
                                                 Scenario.LEFT_TURN]

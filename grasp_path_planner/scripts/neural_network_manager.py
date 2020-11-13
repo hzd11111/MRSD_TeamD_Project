@@ -115,7 +115,7 @@ class NeuralNetworkSelector:
         # determine the distance to the last pose of global path
         curr_pose = env_desc.cur_vehicle_state.location_global
         distance_to_goal = curr_pose.distance(last_global_path_pose)
-        return distance_to_goal < 3
+        return distance_to_goal < 5
 
     def leftTurnStateCondition(self, env_desc):
         # check if there is a intersection point in the next 20 meters
@@ -123,7 +123,7 @@ class NeuralNetworkSelector:
         temp_global_path_pointer = self.global_path_pointer
         left_turn_action_found = False
         while temp_global_path_pointer < (len(env_desc.global_path.path_points) - 1) and \
-            cul_distance < 20:
+            cul_distance < 22:
             if env_desc.global_path.path_points[temp_global_path_pointer].action == GlobalPathAction.LEFT_TURN:
                 #print("Left Turn Found")
                 left_turn_action_found = True
@@ -143,7 +143,7 @@ class NeuralNetworkSelector:
         temp_global_path_pointer = self.global_path_pointer
         right_turn_action_found = False
         while temp_global_path_pointer < (len(env_desc.global_path.path_points) - 1) and \
-            cul_distance < 20:
+            cul_distance < 22:
             if env_desc.global_path.path_points[temp_global_path_pointer].action == GlobalPathAction.RIGHT_TURN:
                 #print("Right Turn Found")
                 right_turn_action_found = True
@@ -163,7 +163,7 @@ class NeuralNetworkSelector:
         temp_global_path_pointer = self.global_path_pointer
         go_straight_action_found = False
         while temp_global_path_pointer < (len(env_desc.global_path.path_points) - 1) and \
-                cul_distance < 20:
+                cul_distance < 22:
             if env_desc.global_path.path_points[temp_global_path_pointer].action == GlobalPathAction.GO_STRAIGHT:
                 print("Go Straight Found")
                 go_straight_action_found = True
@@ -178,6 +178,7 @@ class NeuralNetworkSelector:
         # check if there is a left lane switch action in the next 50 meters
         cul_distance = 0
         temp_global_path_pointer = self.global_path_pointer
+        temp_global_path_pointer = max(0, temp_global_path_pointer-15)
         lane_change_action_found = False
 
         while temp_global_path_pointer < (len(env_desc.global_path.path_points) - 1) and \
@@ -201,6 +202,7 @@ class NeuralNetworkSelector:
         # check if there is a left lane switch action in the next 50 meters
         cul_distance = 0
         temp_global_path_pointer = self.global_path_pointer
+        temp_global_path_pointer = max(0, temp_global_path_pointer-15)
         lane_change_action_found = False
         while temp_global_path_pointer < (len(env_desc.global_path.path_points) - 1) and \
                 cul_distance < 50:

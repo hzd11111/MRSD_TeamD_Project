@@ -8,7 +8,7 @@ import copy
 
 class TrajGenerator:
     SAME_POSE_THRESHOLD = 2
-    SAME_POSE_LOWER_THRESHOLD = 0.02
+    SAME_POSE_LOWER_THRESHOLD = 0.01
     MAX_GLOBAL_SPEED = 20
     MAX_STRAIGHT_SPEED = 28
 
@@ -120,8 +120,8 @@ class TrajGenerator:
                 break
 
         # determine the speed needed
-        action_end = not (tracking_pose and not tracking_pose_ind >= len(global_path_points) - 1)
-        if not action_end:
+        #action_end = not (tracking_pose and not tracking_pose_ind >= len(global_path_points) - 1)
+        if False:
             # determine the distance till the end of path
             distance = curr_vehicle_global_pose.distance(global_path_points[-1].global_pose)
             target_speed = 20 - 20 / distance
@@ -132,6 +132,7 @@ class TrajGenerator:
             next_point_frenet.x = 1.
             target_pose = sim_data.current_lane.frenetToGlobal(next_point_frenet)
 
+        action_end = curr_vehicle.speed < 1
         new_path_plan = PathPlan()
         new_path_plan.tracking_pose = target_pose
         new_path_plan.reset_sim = False
@@ -543,8 +544,8 @@ class TrajGenerator:
 
     def cubicSplineGen(self, lane_dist, v_cur):
         v_cur = v_cur / 3.6
-        if v_cur < 5:
-            v_cur = 5
+        if v_cur < 10:
+            v_cur = 10
         # determine external parameters
         w = lane_dist
         l = self.traj_parameters['lane_change_length']
