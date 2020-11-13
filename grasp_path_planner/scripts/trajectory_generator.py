@@ -205,7 +205,7 @@ class TrajGenerator:
             action_progress = 1.
             end_of_action = True
             path_planner_terminate = True
-            print("Lane Navigation Terminated")
+            print("Lane Navigation Terminated", self.global_path_pointer, "/", len(global_path_points))
 
         new_path_plan = PathPlan()
         new_path_plan.tracking_pose = tracking_pose
@@ -222,7 +222,7 @@ class TrajGenerator:
                 new_path_plan.future_poses.append(global_path_points[i].global_pose)
 
         if end_of_action:
-            self.reset()
+            self.reset(complete_reset=path_planner_terminate)
 
         return new_path_plan
 
@@ -268,7 +268,7 @@ class TrajGenerator:
             action_progress = 1.
             end_of_action = True
             path_planner_terminate = True
-            print("Lane Navigation Terminated")
+            print("Lane Navigation Terminated", self.global_path_pointer, "/", len(global_path_points))
 
         new_path_plan = PathPlan()
         new_path_plan.tracking_pose = tracking_pose
@@ -285,7 +285,7 @@ class TrajGenerator:
                 new_path_plan.future_poses.append(global_path_points[i].global_pose)
 
         if end_of_action:
-            self.reset()
+            self.reset(complete_reset=path_planner_terminate)
 
         return new_path_plan
 
@@ -334,7 +334,7 @@ class TrajGenerator:
             action_progress = 1.
             end_of_action = True
             path_planner_terminate = True
-            print("Lane Navigation Terminated")
+            print("Lane Navigation Terminated", self.global_path_pointer, "/", len(global_path_points))
 
 
         new_path_plan = PathPlan()
@@ -353,7 +353,7 @@ class TrajGenerator:
                 new_path_plan.future_poses.append(global_path_points[i].global_pose)
 
         if end_of_action:
-            self.reset()
+            self.reset(complete_reset=path_planner_terminate)
 
         return new_path_plan
 

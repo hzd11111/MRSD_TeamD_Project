@@ -280,7 +280,7 @@ class P2PScenario:
 
             start_location = incoming_lane_waypoints[-1].transform.location  # Start of lane
             end_location = outgoing_lane_waypoints[
-                min(len(outgoing_lane_waypoints)-1,10)
+                min(len(outgoing_lane_waypoints)-1,5)
             ].transform.location  # 10 m after end of intersection
 
             route = self.global_planner.trace_route(start_location, end_location)
