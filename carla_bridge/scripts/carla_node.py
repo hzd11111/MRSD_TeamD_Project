@@ -827,9 +827,9 @@ class CarlaManager:
         self.TLManager.set_actor_traffic_light_state(ego_vehicle, is_ego=True)
         dist = self.carla_handler.get_distance_to_lane_end(ego_vehicle)
         ego_vehicle.traffic_light_stop_distance = dist
+        print("Traffic_light_stop_distance:" , ego_vehicle.traffic_light_stop_distance, "\n")
 
         if CURRENT_SCENARIO in [Scenario.SWITCH_LANE_RIGHT, Scenario.SWITCH_LANE_LEFT]:
-            # print("Traffic_light_stop_distance:" , ego_vehicle.traffic_light_stop_distance, "\n")
             lane_switch_failure_terminate = (dist < STOP_LINE_DISTANCE_FOR_LANE_CHANGE_TERMINATE)  
         else:
             lane_switch_failure_terminate = False
@@ -1111,9 +1111,6 @@ class CarlaManager:
                         path_points=self.intersection_waypoints_for_each_intersection[i]
                     )
                     # self.draw_global_path(self.intersection_waypoints_for_each_intersection[i], (255,0,0))
-
-
-            print("Traffic_light_stop_distance:" , self.carla_handler.get_distance_to_lane_end_2(self.ego_vehicle), "\n")
 
             ## Handing over control
             self.apply_control_after_reset()

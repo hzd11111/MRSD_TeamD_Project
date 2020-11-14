@@ -65,6 +65,11 @@ class CarlaHandler:
         self.actor_dict = {}
 
         self.world.set_weather(find_weather_presets()[2][0])
+        
+        ### CARLA buggy road-ids lists for Town 05
+        self.buggy_road_list = [5,49,17,47,16,25,18,40,26,29,50,52]
+        self.road_ids_with_road_bug = [(5,49),  (17,47), (16,25), (18,40), (26,29) ,(50,52)]
+        self.road_ids_with_lane_bug = [(26,29) ,(50,52)]
 
         print("Handler Initialized!\n")
 
@@ -848,7 +853,16 @@ class CarlaHandler:
         if(right_waypoint is not None and right_waypoint.lane_id > 0):
             right_lane_waypoints.reverse()
         
+        # fix buggy waypoints in some roads
+        if nearest_waypoint.road_id in self.buggy_road_list:
+            (
+                current_lane_waypoints, 
+                left_lane_waypoints, 
+                right_lane_waypoints
+            ) = self.fix_waypoint_bugs(current_lane_waypoints, left_lane_waypoints,
+                                        right_lane_waypoints)
 
+        # convert it to LanePoint object
         if as_LanePoint == True:
             current_lane_waypoints = [
                 LanePoint(global_pose=self.waypoint_to_pose2D(wp))
@@ -862,6 +876,61 @@ class CarlaHandler:
                 LanePoint(global_pose=self.waypoint_to_pose2D(wp))
                 for wp in right_lane_waypoints
             ]
+
+        return current_lane_waypoints, left_lane_waypoints, right_lane_waypoints
+
+    def fix_waypoint_bugs(self, current_lane_waypoints, left_lane_waypoints,
+                                    right_lane_waypoints):
+        '''
+        Takes in lane_waypoints and appends the other waypoints for the buggy roads.
+        '''
+
+        # append other road waypoints to current road_waypoints
+        last_wp = current_lane_waypoints[-1]
+        nwp = last_wp.next(10)[0]
+        if nwp.road_id in self.buggy_road_list:
+            current_lane_waypoints.append(nwp)
+            current_lane_waypoints.extend(nwp.next_until_lane_end(10))
+        
+        first_wp = current_lane_waypoints[0]
+        pwp = first_wp.previous(10)[0]
+        if pwp.road_id in self.buggy_road_list:
+            current_lane_waypoints.insert(0,pwp)
+            prev_waypoints = pwp.previous_until_lane_start(10)
+            prev_waypoints.extend(current_lane_waypoints)
+            current_lane_waypoints = prev_waypoints
+
+        # do the same for left road waypoints
+        if left_lane_waypoints != []:
+            last_wp = left_lane_waypoints[-1]
+            nwp = last_wp.next(10)[0]
+            if nwp.road_id in self.buggy_road_list:
+                left_lane_waypoints.append(nwp)
+                left_lane_waypoints.extend(nwp.next_until_lane_end(10))
+            
+            first_wp = left_lane_waypoints[0]
+            pwp = first_wp.previous(10)[0]
+            if pwp.road_id in self.buggy_road_list:
+                left_lane_waypoints.insert(0,pwp)
+                prev_waypoints = pwp.previous_until_lane_start(10)
+                prev_waypoints.extend(left_lane_waypoints)
+                left_lane_waypoints = prev_waypoints
+
+        # do the same for right waypoints
+        if right_lane_waypoints != []:
+            last_wp = right_lane_waypoints[-1]
+            nwp = last_wp.next(10)[0]
+            if nwp.road_id in self.buggy_road_list:
+                right_lane_waypoints.append(nwp)
+                right_lane_waypoints.extend(nwp.next_until_lane_end(10))
+            
+            first_wp = right_lane_waypoints[0]
+            pwp = first_wp.previous(10)[0]
+            if pwp.road_id in self.buggy_road_list:
+                right_lane_waypoints.insert(0,pwp)
+                prev_waypoints = pwp.previous_until_lane_start(10)
+                prev_waypoints.extend(right_lane_waypoints)
+                right_lane_waypoints = prev_waypoints
 
         return current_lane_waypoints, left_lane_waypoints, right_lane_waypoints
 
@@ -1046,12 +1115,14 @@ class CarlaHandler:
         nearest_waypoint = self.get_nearest_waypoint(carla_vehicle)
 
         waypoints_to_end_of_lane = nearest_waypoint.next_until_lane_end(1)
+        
+        # get the last wp in this road, and find the first wp in next road
+        last_wp = waypoints_to_end_of_lane[-1]
+        next_wp = last_wp.next(1)[0]
 
-        return len(waypoints_to_end_of_lane)
-
-    def get_distance_to_lane_end_2(self, vehicle):
-        nearest_waypoint = self.get_nearest_waypoint(vehicle)
-
-        waypoints_to_end_of_lane = nearest_waypoint.next_until_lane_end(1)
+        # if vehicle is in buggy lane, and next lane is also buggy, add wps
+        if (nearest_waypoint.road_id in self.buggy_road_list and \
+                next_wp.road_id in self.buggy_road_list):
+            waypoints_to_end_of_lane.extend(next_wp.next_until_lane_end(1))
 
         return len(waypoints_to_end_of_lane)
