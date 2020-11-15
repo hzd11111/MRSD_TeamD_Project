@@ -17,6 +17,7 @@ from topology_extraction import (
 )
 from utils import get_intersection_topology, get_full_lanes
 from options import Scenario, GlobalPathAction
+from settings import TEST_ROUTE
 
 
 '''
@@ -324,7 +325,7 @@ class P2PScenario:
     def get_random_route(self):
         
         random_ind = np.random.randint(0, len(route_start_locations))
-        random_ind = 6  # TODO: REMOVE THIS LINE.
+        random_ind = TEST_ROUTE  # TODO: REMOVE THIS LINE.
         start_location = carla.Location(*route_start_locations[random_ind])
         end_location = carla.Location(*route_end_locations[random_ind])
 
