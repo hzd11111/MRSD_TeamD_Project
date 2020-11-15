@@ -19,7 +19,16 @@ from utils import get_intersection_topology, get_full_lanes
 from options import Scenario, GlobalPathAction
 from settings import TEST_ROUTE
 
-
+if(TEST_ROUTE == 9):
+    np.random.seed(0)
+    random.seed(0)
+    
+if(TEST_ROUTE == 5):
+    print("Starting route 5....")
+    np.random.seed(0)
+    random.seed(0)
+    
+    
 '''
 LF - Lane Follow, RT/LT - Right/Left Turn, LCR/LCL - Lane chane right/left
 GS - Go straight
@@ -33,11 +42,12 @@ Description of routes:Lane Following is involved in all of them
 6. Lane Ch Right - Lane Fol - Right Turn - Left Change Lane - Left Turn
 7. (Bug free lanes) LF - GS - LCL - LF - LT - RT - LF - RT
 8. (Bug free lanes) LCR - LF - RT - LF - GS - LCL - LT - LF
+9. (GS - LT - RLC - RT - LLC)
 '''
 route_start_locations = [(-47.5,-18.8,0.06) ,(-66.5,-91.5,0), (-66.5,-95,0), (-131.7,-70.3,0), \
-                        (-125.1,-17.9,0), (-47, 52, 0), (-47.5,-13.8,0), (96,37,0), (29,-130,0)]
+                        (-125.1,-17.9,0), (-47, 52, 0), (-47.5,-13.8,0), (96,37,0), (29,-130,0), (-220,3.08,0)]
 route_end_locations = [(-92.1,-91.5,0), (-167.1,-91.6,0), (-120.9,-120.970520,0), (-128.6,-18.8,0), \
-                        (-121.2,-69.9,0), (-95,-91.5,0), (34,-124,0), (-72,140,0), (-128,-49,-0)]
+                        (-121.2,-69.9,0), (-95,-91.5,0), (34,-124,0), (-72,140,0), (-128,-49,-0), (-74.20005798339844, -88.00556182861328, 0.0)]
 
 class P2PScenario:
     def __init__(self, client) -> None:

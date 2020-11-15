@@ -43,7 +43,7 @@ class IntersectionScenario:
         self.waypoints_finer = self.world.get_map().generate_waypoints(distance=1)
 
         ### Precompute Stuff
-        self.junctions = [53, 905, 965, 599]
+        self.junctions = [224, 965, 421, 1175, 905, 1162, 139, 1260, 685, 334, 751, 1148, 1050, 53, 599, 1070, 943, 509, 924, 829, 245]
         self.junction_to_road_sets = {}
         for junction in self.junctions:
             self.junction_to_road_sets[junction] = self.get_road_sets(junction)
