@@ -117,9 +117,10 @@ class P2PScenario:
                 break
             blueprint = random.choice(ego_blueprints)
             if blueprint.has_attribute("color"):
-                color = random.choice(
-                    blueprint.get_attribute("color").recommended_values
-                )
+                color = '255,0,0'
+                # color = random.choice(
+                #     blueprint.get_attribute("color").recommended_values
+                # )
                 blueprint.set_attribute("color", color)
             if blueprint.has_attribute("driver_id"):
                 driver_id = random.choice(
@@ -140,9 +141,10 @@ class P2PScenario:
                 break
             blueprint = random.choice(blueprints)
             if blueprint.has_attribute("color"):
-                color = random.choice(
-                    blueprint.get_attribute("color").recommended_values
-                )
+                color = '0,0,0'
+                # color = random.choice(
+                #     blueprint.get_attribute("color").recommended_values
+                # )
                 blueprint.set_attribute("color", color)
             if blueprint.has_attribute("driver_id"):
                 driver_id = random.choice(
@@ -163,7 +165,7 @@ class P2PScenario:
             else:
                 # self.vehicles_list.append(response.actor_id)
                 ego_vehicle_id = response.actor_id
-
+        print("Ego vehicle id: ------------------------------", ego_vehicle_id)
         for response in self.client.apply_batch_sync(batch, synchronous_master):
             if response.error:
                 print("Response Error while applying batch!")
@@ -322,7 +324,7 @@ class P2PScenario:
     def get_random_route(self):
         
         random_ind = np.random.randint(0, len(route_start_locations))
-        random_ind = 7  # TODO: REMOVE THIS LINE.
+        random_ind = 6  # TODO: REMOVE THIS LINE.
         start_location = carla.Location(*route_start_locations[random_ind])
         end_location = carla.Location(*route_end_locations[random_ind])
 
