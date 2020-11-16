@@ -28,6 +28,7 @@ Description of routes:Lane Following is involved in all of them
 10. LF - LT - LF - LCR - GS
 11. RT - LF - LT - LF
 12. RT - LF - RT
+13. LCR - RT - LF - GS - LF
 '''
 ############ Mode and Model Selection ##############################
 CURRENT_SCENARIO = Scenario.P2P
