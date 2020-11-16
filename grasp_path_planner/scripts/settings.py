@@ -29,6 +29,8 @@ Description of routes:Lane Following is involved in all of them
 11. RT - LF - LT - LF
 12. RT - LF - RT
 13. LCR - RT - LF - GS - LF
+14. LCL - LF - LT - LF
+15. RT - RT - LCL - LF - LT - LF
 '''
 ############ Mode and Model Selection ##############################
 CURRENT_SCENARIO = Scenario.P2P
@@ -40,7 +42,7 @@ DEBUG = True
 VIZ = False
 VIS_LIDAR = False
 NUM_NON_EGO_VEHICLES = 200
-TEST_ROUTE = 13
+TEST_ROUTE = 15
 
 #assert !(CURRENT_SCENARIO==Scenario.P2P and CURRENT_MODE==Mode.TRAIN), "P2P Cannot be called in train mode"we
 
@@ -113,7 +115,7 @@ else:
 
 
 
-################## Test Mode Arguments ######################
+################## Test Mode Arguments ######################s
 if CURRENT_SCENARIO == Scenario.LANE_FOLLOWING:
 
     # add town params? or assume we are only working with Town05
