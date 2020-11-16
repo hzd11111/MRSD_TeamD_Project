@@ -386,7 +386,8 @@ class P2PScenario:
     def get_random_route(self):
         
         random_ind = np.random.randint(0, len(route_start_locations))
-        random_ind = TEST_ROUTE  # TODO: REMOVE THIS LINE.
+        if TEST_ROUTE != -1:
+            random_ind = TEST_ROUTE
         start_location = carla.Location(*route_start_locations[random_ind])
         end_location = carla.Location(*route_end_locations[random_ind])
 

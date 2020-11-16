@@ -827,7 +827,7 @@ class CarlaManager:
         self.TLManager.set_actor_traffic_light_state(ego_vehicle, is_ego=True)
         dist = self.carla_handler.get_distance_to_lane_end(ego_vehicle)
         ego_vehicle.traffic_light_stop_distance = dist
-        # print("Traffic_light_stop_distance:" , ego_vehicle.traffic_light_stop_distance, "\n")
+        if DEBUG: print("Traffic_light_stop_distance:" , ego_vehicle.traffic_light_stop_distance, "\n")
 
         if CURRENT_SCENARIO in [Scenario.SWITCH_LANE_RIGHT, Scenario.SWITCH_LANE_LEFT]:
             lane_switch_failure_terminate = (dist < STOP_LINE_DISTANCE_FOR_LANE_CHANGE_TERMINATE)  
