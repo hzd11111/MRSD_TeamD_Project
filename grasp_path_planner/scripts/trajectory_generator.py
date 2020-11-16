@@ -21,6 +21,7 @@ class TrajGenerator:
         self.action_start_time = 0
         self.start_speed = 0
         self.global_path_pointer = 0
+        self.lane_change_done = False
         self.reset()
 
     # reset the traj generator with
@@ -30,6 +31,7 @@ class TrajGenerator:
         self.path_pointer = 0
         self.action_start_time = action_start_time
         self.start_speed = start_speed
+        self.lane_change_done = False
         if complete_reset:
             self.global_path_pointer = 0
 
@@ -669,15 +671,30 @@ class TrajGenerator:
         # determine the action progress
         action_progress = self.path_pointer / float(len(self.generated_path))
 
+        if action_progress >= 0.9999:
+            self.lane_change_done = True
+
+        if self.lane_change_done:
+            deceleration = (self.traj_parameters['decelerate_amt']-1)/self.traj_parameters['action_duration']
+            curr_speed = curr_vehicle.speed
+            ref_speed = curr_speed - deceleration * 0.05
+            next_point_frenet = Frenet()
+            next_point_frenet.x = 1.
+            current_lane = sim_data.current_lane
+            tracking_pose = current_lane.frenetToGlobal(next_point_frenet)
+
         # determine if this is the end of an action
         end_of_action = False
-        if action_progress >= 0.9999:
+        if action_progress >= 0.9999 and curr_speed < 1:
             end_of_action = True
             action_progress = 1.
 
         new_path_plan = PathPlan()
         if end_of_action:
             self.reset()
+        elif self.lane_change_done:
+            new_path_plan.tracking_pose = tracking_pose
+            new_path_plan.tracking_speed = ref_speed
         else:
             new_path_plan.tracking_pose = Pose2D()
             new_path_plan.tracking_pose.x = self.generated_path[self.path_pointer].x
