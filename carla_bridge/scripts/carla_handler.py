@@ -31,6 +31,8 @@ from functional_utility import Pose2D, Frenet
 from utility import LanePoint
 from actors import Actor, Vehicle, Pedestrian
 from options import StopLineStatus
+sys.path.append("../../grasp_path_planner/scripts/")
+from settings import *
 
 
 class RoadOption(Enum):
@@ -1013,12 +1015,15 @@ class CarlaHandler:
             # get waypoint closest to the actor
             actor_nearest_waypoint = self.get_nearest_waypoint(actor)
             # append the actor to the correct lane list based on their lane id
-            if actor_nearest_waypoint.lane_id in left_lane_ids and actor_nearest_waypoint.road_id in current_road_id:
+            if actor_nearest_waypoint.lane_id in current_lane_ids and actor_nearest_waypoint.road_id in current_road_id:
+                actors_in_current_lane.append(actor)
+                if DEBUG: self.draw_waypoints([actor_nearest_waypoint], life_time=0.05, color=False, text='C')
+            elif actor_nearest_waypoint.lane_id in left_lane_ids and actor_nearest_waypoint.road_id in current_road_id:
                 actors_in_left_lane.append(actor)
+                if DEBUG: self.draw_waypoints([actor_nearest_waypoint], life_time=0.05, color=False, text='L')
             elif actor_nearest_waypoint.lane_id in right_lane_ids and actor_nearest_waypoint.road_id in current_road_id:
                 actors_in_right_lane.append(actor)
-            elif actor_nearest_waypoint.lane_id in current_lane_ids and actor_nearest_waypoint.road_id in current_road_id:
-                actors_in_current_lane.append(actor)
+                if DEBUG: self.draw_waypoints([actor_nearest_waypoint], life_time=0.05, color=False, text='R')
 
         # return as Vehicle object list, instead of carla.Vehicle object list
         if as_Vehicle:

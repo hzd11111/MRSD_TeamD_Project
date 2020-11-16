@@ -17,11 +17,12 @@ CURRENT_SCENARIO = Scenario.P2P
 CURRENT_MODE = Mode.TEST
 WANDB_DRYRUN = True
 NEW_RUN = False
+DEBUG = True
 
 VIZ = False
 VIS_LIDAR = False
 NUM_NON_EGO_VEHICLES = 200
-TEST_ROUTE = 8
+TEST_ROUTE = 3
 
 #assert !(CURRENT_SCENARIO==Scenario.P2P and CURRENT_MODE==Mode.TRAIN), "P2P Cannot be called in train mode"
 
