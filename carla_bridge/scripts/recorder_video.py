@@ -45,9 +45,13 @@ def to_rgb_array(image):
 
 def process_video(writer, image):
     '''Process sensor data and save as video'''
-    image = to_rgb_array(image)
-    bgr_image = cv2.cvtColor(image, cv2.COLOR_RGB2BGR)
-    writer.write(bgr_image)
+    try:
+        image = to_rgb_array(image)
+        bgr_image = cv2.cvtColor(image, cv2.COLOR_RGB2BGR)
+        writer.write(bgr_image)
+    except KeyboardInterrupt:
+        print("Stopped in process_video function")
+        writer.release()
 
 
 parser = argparse.ArgumentParser(description='Save Carla Video.')
@@ -55,7 +59,7 @@ parser.add_argument('-f', '--filename', help='filename for video', default="outp
 args = parser.parse_args()
 
 fourcc = cv2.VideoWriter_fourcc('M','J','P','G')
-writer = cv2.VideoWriter(args.filename,fourcc, 20.0, (640,480))
+writer = cv2.VideoWriter(args.filename, fourcc, 20.0, (WIDTH, HEIGHT))
 process_video_wrapped = partial(process_video, writer)
 client = carla.Client("localhost", 2000)
 client.set_timeout(10.0)
@@ -86,4 +90,6 @@ try:
         
 except KeyboardInterrupt:
     camera.destroy()
+    if writer.isOpened():
+        writer.release()
     print('Exit')
