@@ -103,8 +103,9 @@ class NeuralNetworkSelector:
 
         # determine the distance to the last pose of global path
         curr_pose = env_desc.cur_vehicle_state.location_global
+        curr_speed = env_desc.cur_vehicle_state.speed
         distance_to_goal = curr_pose.distance(last_global_path_pose)
-        return distance_to_goal < 2
+        return distance_to_goal < 2 or (distance_to_goal < 5 and curr_speed < 1)
 
     def stopStateCondition(self, env_desc):
         # get the last point of the global path

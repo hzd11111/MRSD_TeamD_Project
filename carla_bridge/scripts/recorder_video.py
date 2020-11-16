@@ -55,10 +55,10 @@ def process_video(writer, image):
 
 
 parser = argparse.ArgumentParser(description='Save Carla Video.')
-parser.add_argument('-f', '--filename', help='filename for video', default="output.avi")
+parser.add_argument('-f', '--filename', help='filename for video', default="output.mp4")
 args = parser.parse_args()
 
-fourcc = cv2.VideoWriter_fourcc('M','J','P','G')
+fourcc = cv2.VideoWriter_fourcc(*'MP4V')
 writer = cv2.VideoWriter(args.filename, fourcc, 20.0, (WIDTH, HEIGHT))
 process_video_wrapped = partial(process_video, writer)
 client = carla.Client("localhost", 2000)
