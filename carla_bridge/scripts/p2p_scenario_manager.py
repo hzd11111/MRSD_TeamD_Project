@@ -17,16 +17,26 @@ from topology_extraction import (
 )
 from utils import get_intersection_topology, get_full_lanes
 from options import Scenario, GlobalPathAction
-from settings import TEST_ROUTE
+from settings import TEST_ROUTE, CURRENT_SCENARIO
 
-if(TEST_ROUTE == 9):
-    np.random.seed(0)
-    random.seed(0)
+# if(TEST_ROUTE == 9 and CURRENT_SCENARIO == Scenario.P2P):
+#     np.random.seed(22)
+#     random.seed(22)
     
-if(TEST_ROUTE == 5):
-    print("Starting route 5....")
-    np.random.seed(0)
-    random.seed(0)
+# if(TEST_ROUTE == 5 and CURRENT_SCENARIO == Scenario.P2P):
+#     print("Starting route 5....")
+#     np.random.seed(0)
+#     random.seed(0)
+    
+# if(TEST_ROUTE == 7 and CURRENT_SCENARIO == Scenario.P2P):
+#     print("Starting route 7....")
+#     np.random.seed(0)
+#     random.seed(0)
+    
+# if(TEST_ROUTE == 8 and CURRENT_SCENARIO == Scenario.P2P):
+#     print("Starting route 8....")
+#     np.random.seed(0)
+#     random.seed(0)
     
     
 '''
@@ -43,11 +53,12 @@ Description of routes:Lane Following is involved in all of them
 7. (Bug free lanes) LF - GS - LCL - LF - LT - RT - LF - RT
 8. (Bug free lanes) LCR - LF - RT - LF - GS - LCL - LT - LF
 9. (GS - LT - RLC - RT - LLC)
+10. LF - LT - LF - GS - LCR
 '''
 route_start_locations = [(-47.5,-18.8,0.06) ,(-66.5,-91.5,0), (-66.5,-95,0), (-131.7,-70.3,0), \
-                        (-125.1,-17.9,0), (-47, 52, 0), (-47.5,-13.8,0), (96,37,0), (29,-130,0), (-220,3.08,0)]
+                        (-125.1,-17.9,0), (-47, 52, 0), (-47.5,-13.8,0), (96,37,0), (29,-130,0), (-220,3.08,0),(-91.22312927246094, 151.28395080566406, 0.055450439453125), (24.58, 68.39, 0)]
 route_end_locations = [(-92.1,-91.5,0), (-167.1,-91.6,0), (-120.9,-120.970520,0), (-128.6,-18.8,0), \
-                        (-121.2,-69.9,0), (-95,-91.5,0), (34,-124,0), (-72,140,0), (-128,-49,-0), (-74.20005798339844, -88.00556182861328, 0.0)]
+                        (-121.2,-69.9,0), (-95,-91.5,0), (34,-124,0), (-72,140,0), (-128,-49,-0), (-74.20005798339844, -88.00556182861328, 0.0),(-163.62777709960938, 84.37947082519531, 0.0), (-81.98, 143.73, 0)]
 
 class P2PScenario:
     def __init__(self, client) -> None:
@@ -56,13 +67,13 @@ class P2PScenario:
 
         self.traffic_manager = self.client.get_trafficmanager(8000)
         self.traffic_manager.set_global_distance_to_leading_vehicle(2)
-
+        
         self.world = self.client.get_world()
         self.vehicles_list = []
         print("Intersection Manager Initialized...")
 
         # Global Planner
-        self.global_planner = get_global_planner(self.world, 1)
+        self.global_planner = get_global_planner(self.world, 2)
         
         
         
@@ -189,6 +200,8 @@ class P2PScenario:
         for n, v in enumerate(my_vehicles):
 
             self.traffic_manager.auto_lane_change(v, False)
+            self.traffic_manager.ignore_lights_percentage(v, 50)
+
 
         warm_start_curr = 0
         while warm_start_curr < warm_start_duration:

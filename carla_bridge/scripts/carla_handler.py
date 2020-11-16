@@ -999,11 +999,12 @@ class CarlaHandler:
         for pair in road_ids_with_lane_bug: # loop over all buggy pairs
             if current_road_id[0] in pair:  # check if current road_id is buggy
                 # for buggy lanes, also add the negative of lane_id
-                left_lane_ids.append(left_lane_ids[0] * -1)
-                right_lane_ids.append(right_lane_ids[0] * -1)
+                if(len(left_lane_ids) != 0):
+                    left_lane_ids.append(left_lane_ids[0] * -1)
+                if(len(right_lane_ids) != 0):
+                    right_lane_ids.append(right_lane_ids[0] * -1)
                 break
         ########
-
         for actor in all_vehicles:
 
             # skip the ego vehicle for the following calculations

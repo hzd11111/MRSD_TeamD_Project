@@ -10,7 +10,7 @@ class TrajGenerator:
     SAME_POSE_THRESHOLD = 2
     SAME_POSE_LOWER_THRESHOLD = 0.01
     MAX_GLOBAL_SPEED = 20
-    MAX_STRAIGHT_SPEED = 28
+    MAX_STRAIGHT_SPEED = 17
 
     # constructor
     def __init__(self, traj_parameters):
@@ -519,7 +519,7 @@ class TrajGenerator:
         new_path_plan.tracking_pose = current_lane.frenetToGlobal(next_point_frenet)
         new_path_plan.reset_sim = False
         new_path_plan.tracking_speed = max(self.traj_parameters['min_speed'],
-                                           self.start_speed - action_progress * self.traj_parameters['decelerate_amt'])
+                                           self.start_speed - action_progress * (self.traj_parameters['decelerate_amt']+0))
         new_path_plan.end_of_action = end_of_action
         new_path_plan.action_progress = action_progress
         new_path_plan.path_planner_terminate = False
@@ -683,7 +683,7 @@ class TrajGenerator:
             new_path_plan.tracking_pose.x = self.generated_path[self.path_pointer].x
             new_path_plan.tracking_pose.y = self.generated_path[self.path_pointer].y
             new_path_plan.tracking_pose.theta = self.generated_path[self.path_pointer].theta
-            new_path_plan.tracking_speed = self.generated_path[self.path_pointer].speed
+            new_path_plan.tracking_speed = min(self.generated_path[self.path_pointer].speed, self.MAX_STRAIGHT_SPEED)
         new_path_plan.reset_sim = False
         new_path_plan.end_of_action = end_of_action
         new_path_plan.action_progress = action_progress

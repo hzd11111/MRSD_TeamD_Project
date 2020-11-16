@@ -26,6 +26,7 @@ TRAJ_PARAM = {
     "decelerate_amt": 5,
     "min_speed": 0.5,
 }
+
 # else:
 #     TRAJ_PARAM = {
 #         "look_up_distance": 0,

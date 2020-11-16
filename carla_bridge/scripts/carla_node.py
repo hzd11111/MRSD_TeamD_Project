@@ -407,7 +407,7 @@ class CarlaManager:
         
 
         ### Set traffic light status based on scenario
-        if(self.force_custom_traffic == 1):
+        if(self.force_custom_traffic == 0):
             if(CURRENT_SCENARIO == Scenario.LEFT_TURN):
                 # Oncoming opposite direction lane turns green
                 for lane in adjacent_lanes:
@@ -1022,8 +1022,8 @@ class CarlaManager:
 
                 self.draw_global_path(self.global_path_in_intersection)
                 
-                self.force_custom_traffic = np.random.randint(5)
-                if(self.force_custom_traffic == 1):
+                self.force_custom_traffic = np.random.randint(1)
+                if(self.force_custom_traffic == 0):
                     print("Custom Traffic Light Routine started.......")
                 else:
                     print("Default Traffic Light Routine started.......")

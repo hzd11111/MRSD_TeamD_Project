@@ -28,6 +28,9 @@ class TrafficLightManager():
 
         self.all_traffic_lights = self.world.get_actors().filter("traffic.traffic_light*")
         self.road_to_tl_actor_dict = self.get_road_to_tl_actorid_dict()
+        
+        for tl_ in self.all_traffic_lights:
+            tl_.set_state(carla.TrafficLightState.Red)
 
     def get_road_to_tl_actorid_dict(self):
         dic = {}

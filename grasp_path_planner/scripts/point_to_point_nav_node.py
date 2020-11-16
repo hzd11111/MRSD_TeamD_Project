@@ -37,7 +37,7 @@ TRAJ_PARAM = {
     "look_up_distance": 0,
     "lane_change_length": 15,
     "lane_change_time_constant": 1.5,
-    "lane_change_time_disc": 0.05,
+    "lane_change_time_disc": 0.2,
     "action_time_disc": 0.2,
     "action_duration": 0.8,
     "accelerate_amt": 10,

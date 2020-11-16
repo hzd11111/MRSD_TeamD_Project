@@ -11,7 +11,22 @@ class Mode(Enum):
     TRAIN = 0
     TEST = 1
 
-
+'''
+LF - Lane Follow, RT/LT - Right/Left Turn, LCR/LCL - Lane chane right/left
+GS - Go straight
+Description of routes:Lane Following is involved in all of them
+0. Left turn at an intersection
+1. Go straight intersection
+2. Right turn intersection
+3. Lane change and right turn
+4. Left Lane Change
+5. Lane Fol - Go Str - Lane Fol - Left Turn - Lane Follow
+6. Lane Ch Right - Lane Fol - Right Turn - Left Change Lane - Left Turn
+7. (Bug free lanes) LF - GS - LCL - LF - LT - RT - LF - RT
+8. (Bug free lanes) LCR - LF - RT - LF - GS - LCL - LT - LF
+9. (GS - LT - RLC - RT - LLC)
+10. LF - LT - LF - GS - LCR
+'''
 ############ Mode and Model Selection ##############################
 CURRENT_SCENARIO = Scenario.P2P
 CURRENT_MODE = Mode.TEST
@@ -20,8 +35,8 @@ NEW_RUN = False
 
 VIZ = False
 VIS_LIDAR = False
-NUM_NON_EGO_VEHICLES = 200
-TEST_ROUTE = 8
+NUM_NON_EGO_VEHICLES = 150
+TEST_ROUTE = 11
 
 #assert !(CURRENT_SCENARIO==Scenario.P2P and CURRENT_MODE==Mode.TRAIN), "P2P Cannot be called in train mode"
 
@@ -41,7 +56,7 @@ elif CURRENT_SCENARIO == Scenario.SWITCH_LANE_RIGHT:
     MODEL_CP_PATH = dir_path + "/Models/Lane_Switch_Right_CP"
 elif CURRENT_SCENARIO == Scenario.GO_STRAIGHT:
     MODEL_SAVE_PATH = dir_path + "/Models/DQN_Straight"
-    MODEL_LOAD_PATH = dir_path + "/Models/DQN_Straight"
+    MODEL_LOAD_PATH = dir_path + "/Models/DQN_Straight_Extended"
     MODEL_CP_PATH = dir_path + "/Models/Straight_CP"
 elif CURRENT_SCENARIO == Scenario.RIGHT_TURN:
     MODEL_SAVE_PATH = dir_path + "/Models/DQN_Right_Turn"
@@ -65,8 +80,8 @@ FIXED_DELTA_SECONDS = 0.05
 NO_RENDER_MODE = False
 
 # TRAFFIC LIGHT DURATION
-TRAFFIC_LIGHT_RED_DURATION = 1
-TRAFFIC_LIGHT_GREEN_DURATION = 15
+TRAFFIC_LIGHT_RED_DURATION = 2
+TRAFFIC_LIGHT_GREEN_DURATION = 5
 TRAFFIC_LIGHT_YELLOW_DURATION = 0.25
 
 # TRAFFIC MANAGER SETTINGS
