@@ -23,20 +23,36 @@ from settings import TEST_ROUTE, CURRENT_SCENARIO
 #     np.random.seed(22)
 #     random.seed(22)
     
-# if(TEST_ROUTE == 5 and CURRENT_SCENARIO == Scenario.P2P):
-#     print("Starting route 5....")
-#     np.random.seed(0)
-#     random.seed(0)
+if(TEST_ROUTE == 5 and CURRENT_SCENARIO == Scenario.P2P):
+    print("Starting route 5....")
+    np.random.seed(0)
+    random.seed(0)
     
-# if(TEST_ROUTE == 7 and CURRENT_SCENARIO == Scenario.P2P):
-#     print("Starting route 7....")
-#     np.random.seed(0)
-#     random.seed(0)
+if(TEST_ROUTE == 7 and CURRENT_SCENARIO == Scenario.P2P):
+    print("Starting route 7....")
+    np.random.seed(0)
+    random.seed(0)
     
 # if(TEST_ROUTE == 8 and CURRENT_SCENARIO == Scenario.P2P):
 #     print("Starting route 8....")
 #     np.random.seed(0)
 #     random.seed(0)
+
+if(TEST_ROUTE == 9 and CURRENT_SCENARIO == Scenario.P2P):
+    print("Starting route 9....")
+    np.random.seed(2020)
+    random.seed(2020)
+    
+if(TEST_ROUTE == 10 and CURRENT_SCENARIO == Scenario.P2P):
+    print("Starting route 10....")
+    np.random.seed(100)
+    random.seed(100)
+    
+    
+if(TEST_ROUTE == 12 and CURRENT_SCENARIO == Scenario.P2P):
+    print("Starting route 12....")
+    np.random.seed(0)
+    random.seed(0)
     
     
 '''
@@ -56,11 +72,12 @@ Description of routes:Lane Following is involved in all of them
 10. LF - LT - LF - GS - LCR
 11. RT - LF - LT - LF
 12. RT - LF - RT
+13. LCR - RT - LF - GS - LF
 '''
 route_start_locations = [(-47.5,-18.8,0.06) ,(-66.5,-91.5,0), (-66.5,-95,0), (-131.7,-70.3,0), \
-                        (-125.1,-17.9,0), (-47, 52, 0), (-47.5,-13.8,0), (96,37,0), (29,-130,0), (-220,3.08,0),(-91.22312927246094, 151.28395080566406, 0.055450439453125), (24.58, 68.39, 0),(26.79, -106.88, 0)]
+                        (-125.1,-17.9,0), (-47, 52, 0), (-47.5,-13.8,0), (96,37,0), (29,-130,0), (-220,3.08,0),(-91.22312927246094, 151.28395080566406, 0.055450439453125), (24.58, 68.39, 0),(26.79, -106.88, 0), (-65.01, 144.0317840576172, 0.055450439453125)]
 route_end_locations = [(-92.1,-91.5,0), (-167.1,-91.6,0), (-120.9,-120.970520,0), (-128.6,-18.8,0), \
-                        (-121.2,-69.9,0), (-95,-91.5,0), (34,-124,0), (-72,140,0), (-128,-49,-0), (-74.20005798339844, -88.00556182861328, 0.0),(-163.62777709960938, 84.37947082519531, 0.0), (-81.98, 143.73, 0), (-73.24, -138.42, 0)]
+                        (-121.2,-69.9,0), (-95,-91.5,0), (34,-124,0), (-72,140,0), (-128,-49,-0), (-74.20005798339844, -88.00556182861328, 0.0),(-163.62777709960938, 84.37947082519531, 0.0), (-81.98, 143.73, 0), (-73.24, -138.42, 0), (101.519524, 66.279343, 0.0)]
 
 class P2PScenario:
     def __init__(self, client) -> None:

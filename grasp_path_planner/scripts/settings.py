@@ -17,15 +17,15 @@ GS - Go straight
 Description of routes:Lane Following is involved in all of them
 0. Left turn at an intersection
 1. Go straight intersection
-2. Right turn intersection
+2. Right turn intersections
 3. Lane change and right turn
-4. Left Lane Change
+4. Left Lane Changewe
 5. Lane Fol - Go Str - Lane Fol - Left Turn - Lane Follow
 6. Lane Ch Right - Lane Fol - Right Turn - Left Change Lane - Left Turn
 7. (Bug free lanes) LF - GS - LCL - LF - LT - RT - LF - RT
 8. (Bug free lanes) LCR - LF - RT - LF - GS - LCL - LT - LF
 9. (GS - LT - RLC - RT - LLC)
-10. LF - LT - LF - GS - LCR
+10. LF - LT - LF - LCR - GS
 11. RT - LF - LT - LF
 12. RT - LF - RT
 '''
@@ -38,9 +38,9 @@ NEW_RUN = False
 VIZ = False
 VIS_LIDAR = False
 NUM_NON_EGO_VEHICLES = 200
-TEST_ROUTE = 10
+TEST_ROUTE = 13
 
-#assert !(CURRENT_SCENARIO==Scenario.P2P and CURRENT_MODE==Mode.TRAIN), "P2P Cannot be called in train mode"
+#assert !(CURRENT_SCENARIO==Scenario.P2P and CURRENT_MODE==Mode.TRAIN), "P2P Cannot be called in train mode"we
 
 if CURRENT_SCENARIO == Scenario.LANE_FOLLOWING:
     MODEL_SAVE_PATH = dir_path + "/Models/DQN_Lane_Following"

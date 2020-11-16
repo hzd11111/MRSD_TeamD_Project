@@ -10,7 +10,7 @@ class TrajGenerator:
     SAME_POSE_THRESHOLD = 2
     SAME_POSE_LOWER_THRESHOLD = 0.01
     MAX_GLOBAL_SPEED = 20
-    MAX_STRAIGHT_SPEED = 20
+    MAX_STRAIGHT_SPEED = 22
 
     # constructor
     def __init__(self, traj_parameters):
