@@ -546,8 +546,8 @@ class TrajGenerator:
 
     def cubicSplineGen(self, lane_dist, v_cur):
         v_cur = v_cur / 3.6
-        if v_cur < 10:
-            v_cur = 10
+        if v_cur < 5:
+            v_cur = 5
         # determine external parameters
         w = lane_dist
         l = self.traj_parameters['lane_change_length']
