@@ -202,7 +202,7 @@ class P2PScenario:
         for n, v in enumerate(my_vehicles):
 
             self.traffic_manager.auto_lane_change(v, False)
-            self.traffic_manager.ignore_lights_percentage(v, 50)
+            # self.traffic_manager.ignore_lights_percentage(v, 50)
 
 
         warm_start_curr = 0

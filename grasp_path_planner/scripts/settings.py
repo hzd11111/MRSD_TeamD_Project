@@ -37,8 +37,8 @@ NEW_RUN = False
 
 VIZ = False
 VIS_LIDAR = False
-NUM_NON_EGO_VEHICLES = 150
-TEST_ROUTE = 3
+NUM_NON_EGO_VEHICLES = 200
+TEST_ROUTE = 10
 
 #assert !(CURRENT_SCENARIO==Scenario.P2P and CURRENT_MODE==Mode.TRAIN), "P2P Cannot be called in train mode"
 
