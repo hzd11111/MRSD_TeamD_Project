@@ -138,11 +138,14 @@ class Point2PointPlanner:
 
 if __name__ == '__main__':
     try:
-        # initialize p2p planner
-        p2p_planner = Point2PointPlanner()
-        p2p_planner.initialize()
-        p2p_planner.resetSim()
-        p2p_planner.run()
+        while True:
+            # initialize p2p planner
+            p2p_planner = Point2PointPlanner()
+            p2p_planner.initialize()
+            p2p_planner.resetSim()
+            p2p_planner.run()
+            
+            if not P2P_LOOPING: break
 
     except rospy.ROSInterruptException:
         pass
