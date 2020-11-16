@@ -79,13 +79,14 @@ class P2PScenario:
         blueprints = [
             x for x in blueprints if int(x.get_attribute("number_of_wheels")) == 4
         ]
+        ego_blueprints = [x for x in blueprints if x.id.endswith("model3")]
+
         blueprints = [x for x in blueprints if not x.id.endswith("isetta")]
         blueprints = [x for x in blueprints if not x.id.endswith("carlacola")]
         blueprints = [x for x in blueprints if not x.id.endswith("t2")]
         blueprints = [x for x in blueprints if not x.id.endswith("police")]
         blueprints = [x for x in blueprints if not x.id.endswith("cybertruck")]
-
-        ego_blueprints = [x for x in blueprints if x.id.endswith("model3")]
+        blueprints = [x for x in blueprints if not x.id.endswith("model3")]
 
         spawn_points = self.world.get_map().get_spawn_points()
         number_of_spawn_points = len(spawn_points)
