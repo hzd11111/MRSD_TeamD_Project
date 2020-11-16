@@ -22,6 +22,7 @@ def draw_waypoints(
     waypoints: List[carla.libcarla.Waypoint],
     life_time: float = 30.0,  # Seconds
     color: List[int] = [0, 255, 0],
+    text="O"
 ) -> None:
     """
     Draws a list of waypoints in the given CARLA world.
@@ -29,7 +30,7 @@ def draw_waypoints(
     for waypoint in waypoints:
         world.debug.draw_string(
             waypoint.transform.location,
-            "O",
+            text,
             draw_shadow=False,
             color=carla.Color(r=color[0], g=color[1], b=color[2]),
             life_time=life_time,

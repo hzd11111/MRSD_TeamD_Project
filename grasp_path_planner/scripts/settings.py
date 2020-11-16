@@ -35,6 +35,7 @@ CURRENT_SCENARIO = Scenario.P2P
 CURRENT_MODE = Mode.TEST
 WANDB_DRYRUN = True
 NEW_RUN = False
+DEBUG = True
 
 VIZ = False
 VIS_LIDAR = False

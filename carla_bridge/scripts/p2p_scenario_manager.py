@@ -375,7 +375,7 @@ class P2PScenario:
         # Generate the route using the global route planner object.
         route = grp.trace_route(start_location, end_location)
         global_path_wps = [route[i][0] for i in range(len(route))]
-        draw_waypoints(self.world, global_path_wps, life_time=30)
+        draw_waypoints(self.world, global_path_wps, life_time=120, color=[255,255,255], text='*')
 
         return route, global_path_wps
 
