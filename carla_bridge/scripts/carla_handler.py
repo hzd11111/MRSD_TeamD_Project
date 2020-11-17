@@ -66,6 +66,11 @@ class CarlaHandler:
         self.blueprint_library = self.world.get_blueprint_library()
         self.actor_dict = {}
 
+        # for spectating in the vehicle view
+        self.spectator = self.world.get_spectator()
+        self.camera = None
+        self.camera_parent_vehicle = None
+
         self.world.set_weather(find_weather_presets()[2][0])
         
         ### CARLA buggy road-ids lists for Town 05
@@ -1117,6 +1122,7 @@ class CarlaHandler:
         waypoint = self.world_map.get_waypoint()
 
     def get_distance_to_lane_end(self, vehicle):
+
         carla_vehicle = self.world.get_actor(vehicle.actor_id)
         nearest_waypoint = self.get_nearest_waypoint(carla_vehicle)
 
@@ -1132,3 +1138,28 @@ class CarlaHandler:
             waypoints_to_end_of_lane.extend(next_wp.next_until_lane_end(1))
 
         return len(waypoints_to_end_of_lane)
+    
+    def update_spectator(self, ego_vehicle):
+        if self.camera == None: # first run
+            self.camera = self.get_dummy_camera(ego_vehicle)
+        if ego_vehicle.id != self.camera_parent_vehicle.id: # new run
+            self.camera.destroy()
+            self.camera = self.get_dummy_camera(ego_vehicle)
+
+        self.spectator.set_transform(self.camera.get_transform())
+    
+    def get_dummy_camera(self, ego_vehicle):
+        
+        bp_library = self.world.get_blueprint_library()
+        camera_bp = bp_library.find('sensor.camera.rgb')
+        camera_bp.set_attribute('image_size_x', '1')
+        camera_bp.set_attribute('image_size_y', '1')
+
+        transform = carla.Transform(carla.Location(x=-15.5, z=8.5), carla.Rotation(pitch=-10.0))
+        Attachment = carla.AttachmentType
+        camera = self.world.spawn_actor(camera_bp, transform, 
+                        attach_to=ego_vehicle, attachment_type=Attachment.Rigid)
+        camera.attributes['sensor_tick'] = 10
+        self.camera_parent_vehicle = ego_vehicle
+
+        return camera
