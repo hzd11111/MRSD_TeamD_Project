@@ -48,7 +48,11 @@ if(TEST_ROUTE == 10 and CURRENT_SCENARIO == Scenario.P2P):
     np.random.seed(100)
     random.seed(100)
     
-    
+if(TEST_ROUTE == 11 and CURRENT_SCENARIO == Scenario.P2P):
+    print("Starting route 10....")
+    np.random.seed(2020)
+    random.seed(2020)
+   
 if(TEST_ROUTE == 12 and CURRENT_SCENARIO == Scenario.P2P):
     print("Starting route 12....")
     np.random.seed(10)

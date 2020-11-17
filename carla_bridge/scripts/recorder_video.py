@@ -84,7 +84,7 @@ parser.add_argument('-f', '--filename', help='filename for video', default="outp
 args = parser.parse_args()
 
 fourcc = cv2.VideoWriter_fourcc(*'MP4V')
-writer = cv2.VideoWriter(args.filename, fourcc, 20.0, (WIDTH, HEIGHT))
+writer = cv2.VideoWriter(args.filename, fourcc, 45.0, (WIDTH, HEIGHT))
 process_video_wrapped = partial(process_video, writer)
 client = carla.Client("localhost", 2000)
 client.set_timeout(10.0)
