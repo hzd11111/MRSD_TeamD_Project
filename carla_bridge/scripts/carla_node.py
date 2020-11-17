@@ -934,11 +934,19 @@ class CarlaManager:
 
         # draw trajectories
         self.painter.draw_polylines(self.trajectories)
-        
-        ego_velocity = self.ego_vehicle.get_velocity()
-        velocity_str = "{:.2f}, ".format(ego_velocity.x) + "{:.2f}".format(ego_velocity.y) \
-                + ", {:.2f}".format(ego_velocity.z)
-        self.painter.draw_texts([velocity_str],
+        all_vehicles = self.carla_handler.world.get_actors().filter("vehicle*")
+        min_dist = float('inf')
+        for v in all_vehicles:
+            if v.id != self.ego_vehicle.id:
+                x_diff = abs(ego_location.x - v.get_location().x)
+                y_diff = abs(ego_location.y - v.get_location().y)
+                min_dist = min(min_dist, math.sqrt(x_diff*x_diff + y_diff*y_diff))
+
+        # ego_velocity = self.ego_vehicle.get_velocity()
+        # velocity_str = "{:.2f}, ".format(ego_velocity.x) + "{:.2f}".format(ego_velocity.y) \
+        #         + ", {:.2f}".format(ego_velocity.z)
+        dist_str = "{:.2f}".format(min_dist)
+        self.painter.draw_texts([dist_str],
                     [[ego_location.x, ego_location.y, ego_location.z + 10.0]], size=20)
 
     def apply_control_after_reset(self):

@@ -534,7 +534,7 @@ class CarlaHandler:
 
         return full_info, ego_lane_info, allocated_actor_ids
 
-    def get_lane_info_only_actors(self, all_vehicles, lane_list, ego_road_lane_ID_pair):
+    def get_lane_info_only_actors(self, all_vehicles, lane_list, ego_road_lane_ID_pair, debug_statement="DEFAULT"):
 
         full_info = []
         ego_lane_info = []
@@ -583,6 +583,9 @@ class CarlaHandler:
                 this_connection_actors.extend(
                     road_lane_to_vehicle_id[(elem[2][0], elem[2][1])]
                 )
+                
+
+
 
                 ### Convert actors to custom objects
                 this_connection_actors = [
@@ -598,10 +601,25 @@ class CarlaHandler:
                 ego_lane_info.append(
                     [this_connection_actors, [], this_connection_road_lanes]
                 )
+                
+                if DEBUG: 
+                    for vehicle in this_connection_actors:
+                        actor_debug = self.world.get_actor(vehicle.actor_id)
+                        wp_debug = self.world_map.get_waypoint(
+                                        actor_debug.get_location(), project_to_road=True
+                                    )
+                        self.draw_waypoints([wp_debug], life_time=0.05, color=False, text="E")
             else:
                 full_info.append(
                     [this_connection_actors, [], this_connection_road_lanes]
                 )
+                if DEBUG: 
+                    for vehicle in this_connection_actors:
+                        actor_debug = self.world.get_actor(vehicle.actor_id)
+                        wp_debug = self.world_map.get_waypoint(
+                                        actor_debug.get_location(), project_to_road=True
+                                    )
+                        self.draw_waypoints([wp_debug], life_time=0.05, color=False, text=debug_statement)
 
         return full_info, ego_lane_info, allocated_actor_ids
     
@@ -700,25 +718,25 @@ class CarlaHandler:
                 intersecting_left_info,
                 _,
                 allocated_left,
-            ) = self.get_lane_info_only_actors(all_vehicles, intersecting_left, None)
+            ) = self.get_lane_info_only_actors(all_vehicles, intersecting_left, None, "IL")
             (
                 intersecting_right_info,
                 _,
                 allocated_right,
-            ) = self.get_lane_info_only_actors(all_vehicles, intersecting_right, None)
+            ) = self.get_lane_info_only_actors(all_vehicles, intersecting_right, None, "IR")
             (
                 parallel_same_dir_info,
                 ego_lane_info,
                 allocated_parallel_same,
             ) = self.get_lane_info_only_actors(
-                all_vehicles, parallel_same_dir, ego_road_lane_ID_pair
+                all_vehicles, parallel_same_dir, ego_road_lane_ID_pair, "PS"
             )
             (
                 parallel_opposite_dir_info,
                 _,
                 allocated_parallel_opposite,
             ) = self.get_lane_info_only_actors(
-                all_vehicles, parallel_opposite_dir, None
+                all_vehicles, parallel_opposite_dir, None, "PO"
             )
 
             all_allocated_vehicle_ids = (
@@ -938,7 +956,11 @@ class CarlaHandler:
                 prev_waypoints = pwp.previous_until_lane_start(10)
                 prev_waypoints.extend(right_lane_waypoints)
                 right_lane_waypoints = prev_waypoints
-
+        
+        current_lane_waypoints = [wp for wp in current_lane_waypoints if wp.road_id in self.buggy_road_list]
+        left_lane_waypoints = [wp for wp in left_lane_waypoints if wp.road_id in self.buggy_road_list]
+        right_lane_waypoints = [wp for wp in right_lane_waypoints if wp.road_id in self.buggy_road_list]
+        
         return current_lane_waypoints, left_lane_waypoints, right_lane_waypoints
 
     def get_nearest_waypoint(self, actor):
@@ -1020,6 +1042,11 @@ class CarlaHandler:
             
             # get waypoint closest to the actor
             actor_nearest_waypoint = self.get_nearest_waypoint(actor)
+            # if DEBUG:
+            #     rid = actor_nearest_waypoint.road_id
+            #     lid = actor_nearest_waypoint.lane_id
+            #     self.draw_waypoints([actor_nearest_waypoint], life_time=0.03, color=False, text='  '+str(rid)+','+str(lid))
+            
             # append the actor to the correct lane list based on their lane id
             if actor_nearest_waypoint.lane_id in current_lane_ids and actor_nearest_waypoint.road_id in current_road_id:
                 actors_in_current_lane.append(actor)
