@@ -52,9 +52,14 @@ if(TEST_ROUTE == 7 and CURRENT_SCENARIO == Scenario.P2P):
     print("Starting route 7....")
     np.random.seed(0)
     random.seed(0)
-    
+
 if(TEST_ROUTE == 4 and CURRENT_SCENARIO == Scenario.P2P):
     print("Starting route 4....")
+    np.random.seed(0)
+    random.seed(0)
+
+if(TEST_ROUTE == 8 and CURRENT_SCENARIO == Scenario.P2P):
+    print("Starting route 8....")
     np.random.seed(0)
     random.seed(0)
 
@@ -93,6 +98,11 @@ if(TEST_ROUTE == 15 and CURRENT_SCENARIO == Scenario.P2P):
     np.random.seed(0)
     random.seed(0)
     
+if(TEST_ROUTE == 16 and CURRENT_SCENARIO == Scenario.P2P):
+    print("Starting route 16....")
+    np.random.seed(0)
+    random.seed(0)
+    
     
 '''
 LF - Lane Follow, RT/LT - Right/Left Turn, LCR/LCL - Lane chane right/left
@@ -123,14 +133,15 @@ route_start_locations = [(-47.5,-18.8,0.06),   #0
                          (-47, 52, 0),#5
                          (-47, 52, 0),#6
                          (96,37,0),#7
-                         (29,-130,0),#8
+                         (32.786911,-69.258972,0),#8
                          (-208,3.08,0),#9
                          (-91.22312927246094, 151.28395080566406, 0.055450439453125),#10
                          (24.58, 68.39, 0),#11
                          (26.79, -106.88, 0),#12
                          (-65.01, 144.0317840576172, 0.055450439453125),#13
                          (-121.52399444580078, -23.87297248840332, -1.52587890625e-05),#14
-                         (-184.5650177001953, 22.083250045776367, 0.055450439453125)] #15
+                         (-184.5650177001953, 22.083250045776367, 0.055450439453125), #15
+                         (-47.04050064086914, 16.90705680847168, 0.055450439453125)] #16
 
 
 
@@ -149,8 +160,8 @@ route_end_locations = [(-92.1,-91.5,0), #0
                        (-73.24, -138.42, 0),#12
                        (35.099251, 32.073341, 0.0),#13
                        (-159.607421875, -91.63422393798828, 0.0),#14
-                       (-95.68251037597656, 91.45722198486328, 0.0)#15
-]
+                       (-95.68251037597656, 91.45722198486328, 0.0),#15
+                       (-79.68252563476562, 91.47552490234375, 0.0)] #16
 
 
 class P2PScenario:
