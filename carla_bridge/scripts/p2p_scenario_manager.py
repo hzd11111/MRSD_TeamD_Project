@@ -22,7 +22,27 @@ from settings import TEST_ROUTE, CURRENT_SCENARIO
 # if(TEST_ROUTE == 9 and CURRENT_SCENARIO == Scenario.P2P):
 #     np.random.seed(22)
 #     random.seed(22)
-    
+
+if(TEST_ROUTE == 0 and CURRENT_SCENARIO == Scenario.P2P):
+    print("Starting route 0....")
+    np.random.seed(0)
+    random.seed(0)
+
+if(TEST_ROUTE == 1 and CURRENT_SCENARIO == Scenario.P2P):
+    print("Starting route 1....")
+    np.random.seed(10)
+    random.seed(10)
+
+if(TEST_ROUTE == 2 and CURRENT_SCENARIO == Scenario.P2P):
+    print("Starting route 2....")
+    np.random.seed(0)
+    random.seed(0)
+
+if(TEST_ROUTE == 3 and CURRENT_SCENARIO == Scenario.P2P):
+    print("Starting route 3....")
+    np.random.seed(0)
+    random.seed(0)
+
 if(TEST_ROUTE == 5 and CURRENT_SCENARIO == Scenario.P2P):
     print("Starting route 5....")
     np.random.seed(0)
