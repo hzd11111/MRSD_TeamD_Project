@@ -100,7 +100,7 @@ GS - Go straight
 Description of routes:Lane Following is involved in all of them
 0. Left turn at an intersection
 1. Go straight intersection
-2. Right turn intersection
+2. Left turn intersection
 3. Lane change and right turn
 4. Left Lane Change
 5. Lane Fol - Go Str - Lane Fol - Left Turn - Lane Follow
@@ -117,7 +117,7 @@ Description of routes:Lane Following is involved in all of them
 '''
 route_start_locations = [(-47.5,-18.8,0.06),   #0
                          (-66.5,-91.5,0),      #1
-                         (-66.5,-95,0),#2
+                         (-99.9840560913086, -91.54576110839844, 0.0),#2
                          (-131.7,-70.3,0),#3
                          (-125.1,-17.9,0),#4
                          (-47, 52, 0),#5
@@ -136,7 +136,7 @@ route_start_locations = [(-47.5,-18.8,0.06),   #0
 
 route_end_locations = [(-92.1,-91.5,0), #0
                        (-167.1,-91.6,0), #1
-                       (-120.9,-120.970520,0), #2
+                       (-128.4347686767578, -33.49810729980469, -1.52587890625e-05), #2
                        (-128.6,-18.8,0), #3
                        (-121.2,-69.9,0), #4
                        (-95,-91.5,0), #5
@@ -151,6 +151,7 @@ route_end_locations = [(-92.1,-91.5,0), #0
                        (-159.607421875, -91.63422393798828, 0.0),#14
                        (-95.68251037597656, 91.45722198486328, 0.0)#15
 ]
+
 
 class P2PScenario:
     def __init__(self, client) -> None:

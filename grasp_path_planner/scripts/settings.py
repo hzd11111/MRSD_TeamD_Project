@@ -42,7 +42,7 @@ DEBUG = True
 VIZ = False
 VIS_LIDAR = False
 NUM_NON_EGO_VEHICLES = 200
-TEST_ROUTE = 2  # -1 for random
+TEST_ROUTE = 0  # -1 for random
 P2P_LOOPING = True
 SPECTATOR_FOLLOWING = False
 

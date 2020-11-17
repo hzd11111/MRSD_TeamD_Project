@@ -10,7 +10,9 @@ class TrajGenerator:
     SAME_POSE_THRESHOLD = 2
     SAME_POSE_LOWER_THRESHOLD = 0.01
     MAX_GLOBAL_SPEED = 20
-    MAX_STRAIGHT_SPEED = 19
+    MAX_STRAIGHT_SPEED = 20
+    LOW_SPEED_THRESHOLD = 1.5
+    
 
     # constructor
     def __init__(self, traj_parameters):
@@ -211,6 +213,8 @@ class TrajGenerator:
         new_path_plan.tracking_pose = tracking_pose
         new_path_plan.reset_sim = False
         new_path_plan.tracking_speed = min(max(self.traj_parameters['min_speed'],self.start_speed), self.MAX_GLOBAL_SPEED)
+        if(new_path_plan.tracking_speed < self.LOW_SPEED_THRESHOLD):
+            new_path_plan.tracking_speed = 0.0
         new_path_plan.end_of_action = end_of_action
         new_path_plan.action_progress = action_progress
         new_path_plan.path_planner_terminate = path_planner_terminate
@@ -342,6 +346,8 @@ class TrajGenerator:
         new_path_plan.reset_sim = False
         new_path_plan.tracking_speed = min(max(self.traj_parameters['min_speed'],
                                            self.start_speed - action_progress * self.traj_parameters['decelerate_amt']), self.MAX_GLOBAL_SPEED)
+        if(new_path_plan.tracking_speed < self.LOW_SPEED_THRESHOLD):
+            new_path_plan.tracking_speed = 0.0
         new_path_plan.end_of_action = end_of_action
         new_path_plan.action_progress = action_progress
         new_path_plan.path_planner_terminate = path_planner_terminate
@@ -408,6 +414,8 @@ class TrajGenerator:
         new_path_plan.tracking_pose = current_lane.frenetToGlobal(next_point_frenet)
         new_path_plan.reset_sim = False
         new_path_plan.tracking_speed = max(self.traj_parameters['min_speed'],self.start_speed)
+        if(new_path_plan.tracking_speed < self.LOW_SPEED_THRESHOLD):
+            new_path_plan.tracking_speed = 0.0
         new_path_plan.end_of_action = end_of_action
         new_path_plan.action_progress = action_progress
         new_path_plan.path_planner_terminate = False
@@ -520,6 +528,8 @@ class TrajGenerator:
         new_path_plan.reset_sim = False
         new_path_plan.tracking_speed = max(self.traj_parameters['min_speed'],
                                            self.start_speed - action_progress * (self.traj_parameters['decelerate_amt']+0))
+        if(new_path_plan.tracking_speed < self.LOW_SPEED_THRESHOLD):
+            new_path_plan.tracking_speed = 0.0
         new_path_plan.end_of_action = end_of_action
         new_path_plan.action_progress = action_progress
         new_path_plan.path_planner_terminate = False
