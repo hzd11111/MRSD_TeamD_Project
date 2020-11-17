@@ -53,10 +53,10 @@ if(TEST_ROUTE == 7 and CURRENT_SCENARIO == Scenario.P2P):
     np.random.seed(0)
     random.seed(0)
     
-# if(TEST_ROUTE == 8 and CURRENT_SCENARIO == Scenario.P2P):
-#     print("Starting route 8....")
-#     np.random.seed(0)
-#     random.seed(0)
+if(TEST_ROUTE == 4 and CURRENT_SCENARIO == Scenario.P2P):
+    print("Starting route 4....")
+    np.random.seed(0)
+    random.seed(0)
 
 if(TEST_ROUTE == 9 and CURRENT_SCENARIO == Scenario.P2P):
     print("Starting route 9....")
@@ -69,7 +69,7 @@ if(TEST_ROUTE == 10 and CURRENT_SCENARIO == Scenario.P2P):
     random.seed(100)
     
 if(TEST_ROUTE == 11 and CURRENT_SCENARIO == Scenario.P2P):
-    print("Starting route 10....")
+    print("Starting route 11....")
     np.random.seed(2020)
     random.seed(2020)
    
