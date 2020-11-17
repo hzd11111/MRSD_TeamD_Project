@@ -153,6 +153,8 @@ class CarlaManager:
         ##########################################
         # APPLY CONTROL BLOCK
         ##########################################
+        if SPECTATOR_FOLLOWING: self.carla_handler.update_spectator(self.ego_vehicle)
+
         plan = PathPlan.fromRosMsg(data.path_plan)
 
         reset_sim = False
@@ -673,7 +675,8 @@ class CarlaManager:
         '''
         Part 1: Apply vehicle control and step/reset the environment
         '''
-    
+        if SPECTATOR_FOLLOWING: self.carla_handler.update_spectator(self.ego_vehicle)
+
         plan = PathPlan.fromRosMsg(data.path_plan)
         
         # if env needs reset, or its first run of sim -> reset environment 
