@@ -53,7 +53,32 @@ def process_video(writer, image):
         print("Stopped in process_video function")
         writer.release()
 
+def get_camera(ego_vehicle, fn):
+    camera_bp =  world.get_blueprint_library().find('sensor.camera.rgb')
+    camera_bp.set_attribute('image_size_x', str(WIDTH))
+    camera_bp.set_attribute('image_size_y', str(HEIGHT))
 
+    transform = carla.Transform(carla.Location(x=-15.5, z=12.5), carla.Rotation(pitch=-20.))
+    Attachment = carla.AttachmentType
+
+    camera = world.spawn_actor(camera_bp, transform, attach_to=ego_vehicle, attachment_type=Attachment.Rigid)
+    camera.listen(fn)
+    return camera
+
+def get_ego_vehicle():
+    world.wait_for_tick(seconds=10)
+    ego_vehicle = None
+    
+    while ego_vehicle == None:
+        all_vehicles = world.get_actors().filter('vehicle.*')
+        for vehicle in all_vehicles:
+            if vehicle.attributes['role_name'] == EGO_NAME:
+                ego_vehicle = vehicle
+                break
+                
+        if ego_vehicle is not None: break
+            
+    return ego_vehicle
 parser = argparse.ArgumentParser(description='Save Carla Video.')
 parser.add_argument('-f', '--filename', help='filename for video', default="output.mp4")
 args = parser.parse_args()
@@ -67,29 +92,45 @@ world = client.get_world()
 Map = world.get_map()
 world.wait_for_tick(seconds=60)
 
-all_vehicles = world.get_actors().filter('vehicle.*')
-for vehicle in all_vehicles:
-    if vehicle.attributes['role_name'] == EGO_NAME:
-        ego_vehicle = vehicle
+# all_vehicles = world.get_actors().filter('vehicle.*')
+# for vehicle in all_vehicles:
+#     if vehicle.attributes['role_name'] == EGO_NAME:
+#         ego_vehicle = vehicle
+#         break
+# print(ego_vehicle)
+
+# camera_bp =  world.get_blueprint_library().find('sensor.camera.rgb')
+# camera_bp.set_attribute('image_size_x', str(WIDTH))
+# camera_bp.set_attribute('image_size_y', str(HEIGHT))
+
+# transform = carla.Transform(carla.Location(x=-15.5, z=12.5), carla.Rotation(pitch=8.0))
+# Attachment = carla.AttachmentType
+
+# camera = world.spawn_actor(camera_bp, transform, attach_to=ego_vehicle, attachment_type=Attachment.SpringArm)
+# camera.listen(process_video_wrapped)
+
+while True: #loops over multiple runs
+    ego_vehicle = get_ego_vehicle()
+    camera = get_camera(ego_vehicle, process_video_wrapped)
+    
+    try:
+        while True:
+            world.wait_for_tick(seconds=60)
+            
+            # ego id may change between runs, so need to reattach camera
+            if ego_vehicle.get_location().x == 0.000000:
+                camera.destroy()
+                ego_vehicle = get_ego_vehicle()
+                print(ego_vehicle)
+                camera = get_camera(ego_vehicle, process_video_wrapped)
+
+    except KeyboardInterrupt:
+        camera.destroy()
+        if writer.isOpened():
+            writer.release()
+        print('Exit')
+    finally:
+        camera.destroy()
+        if writer.isOpened():
+            writer.release()
         break
-print(ego_vehicle)
-
-camera_bp =  world.get_blueprint_library().find('sensor.camera.rgb')
-camera_bp.set_attribute('image_size_x', str(WIDTH))
-camera_bp.set_attribute('image_size_y', str(HEIGHT))
-
-transform = carla.Transform(carla.Location(x=-15.5, z=12.5), carla.Rotation(pitch=8.0))
-Attachment = carla.AttachmentType
-
-camera = world.spawn_actor(camera_bp, transform, attach_to=ego_vehicle, attachment_type=Attachment.SpringArm)
-camera.listen(process_video_wrapped)
-
-try:
-    while True:
-        world.wait_for_tick(seconds=60)
-        
-except KeyboardInterrupt:
-    camera.destroy()
-    if writer.isOpened():
-        writer.release()
-    print('Exit')
