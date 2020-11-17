@@ -242,13 +242,29 @@ class CarlaManager:
         ego_nearest_waypoint = self.carla_handler.world_map.get_waypoint(
             self.ego_vehicle.get_location(), project_to_road=True
         )
-        self.carla_handler.world.debug.draw_string(
-            ego_nearest_waypoint.transform.location,
-            "O",
-            draw_shadow=False,
-            color=carla.Color(r=0, g=255, b=0),
-            life_time=1,
-        )
+        # self.carla_handler.world.debug.draw_string(
+        #     ego_nearest_waypoint.transform.location,
+        #     "O",
+        #     draw_shadow=False,
+        #     color=carla.Color(r=0, g=255, b=0),
+        #     life_time=1,
+        # )
+        if(self.collision_marker == 0):
+            self.carla_handler.world.debug.draw_string(
+                ego_nearest_waypoint.transform.location,
+                "O",
+                draw_shadow=False,
+                color=carla.Color(r=0, g=255, b=0),
+                life_time=1,
+            )
+        elif(self.collision_marker == 1):
+            self.carla_handler.world.debug.draw_string(
+                ego_nearest_waypoint.transform.location,
+                "O",
+                draw_shadow=False,
+                color=carla.Color(r=255, g=0, b=0),
+                life_time=1,
+            )
 
         vehicle_ego = Vehicle(self.carla_handler.world, self.ego_vehicle.id)
 
@@ -602,7 +618,8 @@ class CarlaManager:
             tracking_loc = carla.Location(x=tracking_pose.x,
                                             y=tracking_pose.y,
                                             z=2)
-            draw_string(location=tracking_loc, text='+', color=(255,0,0))
+            
+            # draw_string(location=tracking_loc, text='+', color=(255,0,0))
 
             # apply vehicle control using custom controller
             if not is_autopilot:
@@ -708,7 +725,10 @@ class CarlaManager:
         
         ego_vehicle = Vehicle(self.carla_handler.world, self.ego_vehicle.id)
 
-        draw_string(ego_vehicle)
+        if(self.collision_marker == 0):
+            draw_string(ego_vehicle)
+        elif(self.collision_marker == 1):
+            draw_string(ego_vehicle, color=(255,0,0))
         # draw_string(location=self.tm.goal_waypoint.transform.location, text='X', # Removing it for P2P nav
         #                                                     color=(0,0,255))
         
@@ -1184,7 +1204,7 @@ class CarlaManager:
             self.resetEnv_P2P()
 
     def pathRequest_selector(self, data):
-        
+
         plan = PathPlan.fromRosMsg(data.path_plan)
         if(VIZ): self.draw_carla_viz()
 
