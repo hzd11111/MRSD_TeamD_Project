@@ -30,8 +30,8 @@ if(TEST_ROUTE == 0 and CURRENT_SCENARIO == Scenario.P2P):
 
 if(TEST_ROUTE == 1 and CURRENT_SCENARIO == Scenario.P2P):
     print("Starting route 1....")
-    np.random.seed(10)
-    random.seed(10)
+    np.random.seed(2020)
+    random.seed(2020)
 
 if(TEST_ROUTE == 2 and CURRENT_SCENARIO == Scenario.P2P):
     print("Starting route 2....")
@@ -182,6 +182,9 @@ class P2PScenario:
         
 
     def reset(self, warm_start_duration=5, num_vehicles=50):
+        if CURRENT_SCENARIO is Scenario.P2P and TEST_ROUTE is 1:
+            np.random.seed(2020)
+            random.seed(2020)
         self.vehicles_list = []
 
         synchronous_master = True
