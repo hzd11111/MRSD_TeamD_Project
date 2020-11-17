@@ -1204,6 +1204,9 @@ class CarlaManager:
             self.resetEnv_P2P()
 
     def pathRequest_selector(self, data):
+        
+        if(self.collision_marker == 1):
+            print("COLLISION DETECTED.....................")
 
         plan = PathPlan.fromRosMsg(data.path_plan)
         if(VIZ): self.draw_carla_viz()

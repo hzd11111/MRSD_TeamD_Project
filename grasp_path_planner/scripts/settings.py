@@ -42,8 +42,8 @@ DEBUG = True
 VIZ = False
 VIS_LIDAR = False
 NUM_NON_EGO_VEHICLES = 200
-TEST_ROUTE = 0  # -1 for random
-P2P_LOOPING = True
+TEST_ROUTE = 2
+P2P_LOOPING = False
 SPECTATOR_FOLLOWING = False
 
 #assert !(CURRENT_SCENARIO==Scenario.P2P and CURRENT_MODE==Mode.TRAIN), "P2P Cannot be called in train mode"we

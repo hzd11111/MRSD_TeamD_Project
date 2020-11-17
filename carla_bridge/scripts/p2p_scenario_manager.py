@@ -23,81 +23,136 @@ from settings import TEST_ROUTE, CURRENT_SCENARIO
 #     np.random.seed(22)
 #     random.seed(22)
 
+# if(TEST_ROUTE == 0 and CURRENT_SCENARIO == Scenario.P2P):
+#     print("Starting route 0....")
+#     np.random.seed(0)
+#     random.seed(0)
+
+# if(TEST_ROUTE == 1 and CURRENT_SCENARIO == Scenario.P2P):
+#     print("Starting route 1....")
+#     np.random.seed(2020)
+#     random.seed(2020)
+
+# if(TEST_ROUTE == 2 and CURRENT_SCENARIO == Scenario.P2P):
+#     print("Starting route 2....")
+#     np.random.seed(0)
+#     random.seed(0)
+
+# if(TEST_ROUTE == 3 and CURRENT_SCENARIO == Scenario.P2P):
+#     print("Starting route 3....")
+#     np.random.seed(0)
+#     random.seed(0)
+    
+# if(TEST_ROUTE == 4 and CURRENT_SCENARIO == Scenario.P2P):
+#     print("Starting route 4....")
+#     np.random.seed(0)
+#     random.seed(0)
+
+# if(TEST_ROUTE == 5 and CURRENT_SCENARIO == Scenario.P2P):
+#     print("Starting route 5....")
+#     np.random.seed(0)
+#     random.seed(0)
+    
+# if(TEST_ROUTE == 7 and CURRENT_SCENARIO == Scenario.P2P):
+#     print("Starting route 7....")
+#     np.random.seed(0)
+#     random.seed(0)
+    
+# if(TEST_ROUTE == 8 and CURRENT_SCENARIO == Scenario.P2P):
+#     print("Starting route 8....")
+#     np.random.seed(0)
+#     random.seed(0)
+
+# if(TEST_ROUTE == 9 and CURRENT_SCENARIO == Scenario.P2P):
+#     print("Starting route 9....")
+#     np.random.seed(2020)
+#     random.seed(2020)
+    
+# if(TEST_ROUTE == 10 and CURRENT_SCENARIO == Scenario.P2P):
+#     print("Starting route 10....")
+#     np.random.seed(100)
+#     random.seed(100)
+    
+# if(TEST_ROUTE == 11 and CURRENT_SCENARIO == Scenario.P2P):
+#     print("Starting route 10....")
+#     np.random.seed(2020)
+#     random.seed(2020)
+   
+# if(TEST_ROUTE == 12 and CURRENT_SCENARIO == Scenario.P2P):
+#     print("Starting route 12....")
+#     np.random.seed(10)
+#     random.seed(10)
+    
+# if(TEST_ROUTE == 13 and CURRENT_SCENARIO == Scenario.P2P):
+#     print("Starting route 13....")
+#     np.random.seed(0)
+#     random.seed(0)
+    
+# if(TEST_ROUTE == 14 and CURRENT_SCENARIO == Scenario.P2P):
+#     print("Starting route 14....")
+#     np.random.seed(0)
+#     random.seed(0)
+    
+# if(TEST_ROUTE == 15 and CURRENT_SCENARIO == Scenario.P2P):
+#     print("Starting route 15....")
+#     np.random.seed(1)
+#     random.seed(1)
+    
+# if(TEST_ROUTE == 16 and CURRENT_SCENARIO == Scenario.P2P):
+#     print("Starting route 16....")
+#     np.random.seed(0)
+#     random.seed(0)
+route_mapping = {0 : 2, 1:4, 2:8, 3:9, 4:10, 5:11, 6:12, 7:14, 8:15, 9:16}
+
 if(TEST_ROUTE == 0 and CURRENT_SCENARIO == Scenario.P2P):
-    print("Starting route 0....")
+    print("Starting route " + route_mapping[TEST_ROUTE])
     np.random.seed(0)
-    random.seed(0)
+    random.seed(0)    
 
 if(TEST_ROUTE == 1 and CURRENT_SCENARIO == Scenario.P2P):
-    print("Starting route 1....")
-    np.random.seed(2020)
-    random.seed(2020)
-
+    print("Starting route " + route_mapping[TEST_ROUTE])
+    np.random.seed(0)
+    random.seed(0)   
+    
 if(TEST_ROUTE == 2 and CURRENT_SCENARIO == Scenario.P2P):
-    print("Starting route 2....")
-    np.random.seed(0)
-    random.seed(0)
-
-if(TEST_ROUTE == 3 and CURRENT_SCENARIO == Scenario.P2P):
-    print("Starting route 3....")
-    np.random.seed(0)
-    random.seed(0)
-
-if(TEST_ROUTE == 5 and CURRENT_SCENARIO == Scenario.P2P):
-    print("Starting route 5....")
+    print("Starting route " + route_mapping[TEST_ROUTE])
     np.random.seed(0)
     random.seed(0)
     
+if(TEST_ROUTE == 3 and CURRENT_SCENARIO == Scenario.P2P):
+    print("Starting route " + route_mapping[TEST_ROUTE])
+    np.random.seed(2020)
+    random.seed(2020)
+    
+if(TEST_ROUTE == 4 and CURRENT_SCENARIO == Scenario.P2P):
+    print("Starting route " + route_mapping[TEST_ROUTE])
+    np.random.seed(100)
+    random.seed(100)
+    
+if(TEST_ROUTE == 5 and CURRENT_SCENARIO == Scenario.P2P):
+    print("Starting route " + route_mapping[TEST_ROUTE])
+    np.random.seed(2020)
+    random.seed(2020)
+    
+if(TEST_ROUTE == 6 and CURRENT_SCENARIO == Scenario.P2P):
+    print("Starting route " + route_mapping[TEST_ROUTE])
+    np.random.seed(10)
+    random.seed(10)
+    
 if(TEST_ROUTE == 7 and CURRENT_SCENARIO == Scenario.P2P):
-    print("Starting route 7....")
+    print("Starting route " + route_mapping[TEST_ROUTE])
     np.random.seed(0)
     random.seed(0)
     
 if(TEST_ROUTE == 8 and CURRENT_SCENARIO == Scenario.P2P):
-    print("Starting route 8....")
-    np.random.seed(0)
-    random.seed(0)
-
+    print("Starting route " + route_mapping[TEST_ROUTE])
+    np.random.seed(1)
+    random.seed(1)
+    
 if(TEST_ROUTE == 9 and CURRENT_SCENARIO == Scenario.P2P):
-    print("Starting route 9....")
-    np.random.seed(2020)
-    random.seed(2020)
-    
-if(TEST_ROUTE == 10 and CURRENT_SCENARIO == Scenario.P2P):
-    print("Starting route 10....")
-    np.random.seed(100)
-    random.seed(100)
-    
-if(TEST_ROUTE == 11 and CURRENT_SCENARIO == Scenario.P2P):
-    print("Starting route 10....")
-    np.random.seed(2020)
-    random.seed(2020)
-   
-if(TEST_ROUTE == 12 and CURRENT_SCENARIO == Scenario.P2P):
-    print("Starting route 12....")
-    np.random.seed(10)
-    random.seed(10)
-    
-if(TEST_ROUTE == 13 and CURRENT_SCENARIO == Scenario.P2P):
-    print("Starting route 13....")
+    print("Starting route " + route_mapping[TEST_ROUTE])
     np.random.seed(0)
     random.seed(0)
-    
-if(TEST_ROUTE == 14 and CURRENT_SCENARIO == Scenario.P2P):
-    print("Starting route 14....")
-    np.random.seed(0)
-    random.seed(0)
-    
-if(TEST_ROUTE == 15 and CURRENT_SCENARIO == Scenario.P2P):
-    print("Starting route 15....")
-    np.random.seed(0)
-    random.seed(0)
-    
-if(TEST_ROUTE == 16 and CURRENT_SCENARIO == Scenario.P2P):
-    print("Starting route 16....")
-    np.random.seed(0)
-    random.seed(0)
-    
     
 '''
 LF - Lane Follow, RT/LT - Right/Left Turn, LCR/LCL - Lane chane right/left
@@ -159,6 +214,8 @@ route_end_locations = [(-92.1,-91.5,0), #0
                        (-79.68252563476562, 91.47552490234375, 0.0)] #16
 
 
+
+
 class P2PScenario:
     def __init__(self, client) -> None:
 
@@ -189,9 +246,9 @@ class P2PScenario:
         
 
     def reset(self, warm_start_duration=5, num_vehicles=50):
-        if CURRENT_SCENARIO is Scenario.P2P and TEST_ROUTE is 1:
-            np.random.seed(2020)
-            random.seed(2020)
+        # if CURRENT_SCENARIO is Scenario.P2P and TEST_ROUTE is 1:
+        #     np.random.seed(2020)
+        #     random.seed(2020)
         self.vehicles_list = []
 
         synchronous_master = True
@@ -452,7 +509,7 @@ class P2PScenario:
         
         random_ind = np.random.randint(0, len(route_start_locations))
         if TEST_ROUTE != -1:
-            random_ind = TEST_ROUTE
+            random_ind = route_mapping[TEST_ROUTE]
         start_location = carla.Location(*route_start_locations[random_ind])
         end_location = carla.Location(*route_end_locations[random_ind])
 
