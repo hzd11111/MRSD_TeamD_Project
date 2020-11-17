@@ -53,10 +53,10 @@ if(TEST_ROUTE == 7 and CURRENT_SCENARIO == Scenario.P2P):
     np.random.seed(0)
     random.seed(0)
     
-# if(TEST_ROUTE == 8 and CURRENT_SCENARIO == Scenario.P2P):
-#     print("Starting route 8....")
-#     np.random.seed(0)
-#     random.seed(0)
+if(TEST_ROUTE == 8 and CURRENT_SCENARIO == Scenario.P2P):
+    print("Starting route 8....")
+    np.random.seed(0)
+    random.seed(0)
 
 if(TEST_ROUTE == 9 and CURRENT_SCENARIO == Scenario.P2P):
     print("Starting route 9....")
@@ -123,7 +123,7 @@ route_start_locations = [(-47.5,-18.8,0.06),   #0
                          (-47, 52, 0),#5
                          (-47, 52, 0),#6
                          (96,37,0),#7
-                         (29,-130,0),#8
+                         (32.786911,-69.258972,0),#8
                          (-208,3.08,0),#9
                          (-91.22312927246094, 151.28395080566406, 0.055450439453125),#10
                          (24.58, 68.39, 0),#11
@@ -151,6 +151,7 @@ route_end_locations = [(-92.1,-91.5,0), #0
                        (-159.607421875, -91.63422393798828, 0.0),#14
                        (-95.68251037597656, 91.45722198486328, 0.0)#15
 ]
+
 
 
 class P2PScenario:
