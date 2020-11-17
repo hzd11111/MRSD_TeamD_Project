@@ -951,7 +951,11 @@ class CarlaHandler:
                 prev_waypoints = pwp.previous_until_lane_start(10)
                 prev_waypoints.extend(right_lane_waypoints)
                 right_lane_waypoints = prev_waypoints
-
+        
+        current_lane_waypoints = [wp for wp in current_lane_waypoints if wp.road_id in self.buggy_road_list]
+        left_lane_waypoints = [wp for wp in left_lane_waypoints if wp.road_id in self.buggy_road_list]
+        right_lane_waypoints = [wp for wp in right_lane_waypoints if wp.road_id in self.buggy_road_list]
+        
         return current_lane_waypoints, left_lane_waypoints, right_lane_waypoints
 
     def get_nearest_waypoint(self, actor):
@@ -1033,6 +1037,11 @@ class CarlaHandler:
             
             # get waypoint closest to the actor
             actor_nearest_waypoint = self.get_nearest_waypoint(actor)
+            # if DEBUG:
+            #     rid = actor_nearest_waypoint.road_id
+            #     lid = actor_nearest_waypoint.lane_id
+            #     self.draw_waypoints([actor_nearest_waypoint], life_time=0.03, color=False, text='  '+str(rid)+','+str(lid))
+            
             # append the actor to the correct lane list based on their lane id
             if actor_nearest_waypoint.lane_id in current_lane_ids and actor_nearest_waypoint.road_id in current_road_id:
                 actors_in_current_lane.append(actor)
