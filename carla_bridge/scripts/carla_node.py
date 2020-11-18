@@ -147,6 +147,7 @@ class CarlaManager:
         ### Viz Placeholders
         self.camera = None
         self.lidar = None
+        self.max_speed_till_now = 0.0
 
     def intersection_pathRequest(self, data):
 
@@ -952,6 +953,11 @@ class CarlaManager:
         ego_location = self.ego_vehicle.get_location()
         self.trajectories[0].append([ego_location.x, ego_location.y, ego_location.z])
 
+        # get max speed
+        if(self.ego_vehicle is not None):
+            self.max_speed_till_now = max(self.max_speed_till_now, self.ego_vehicle.get_velocity())
+
+
         # draw trajectories
         self.painter.draw_polylines(self.trajectories)
         all_vehicles = self.carla_handler.world.get_actors().filter("vehicle*")
@@ -960,13 +966,13 @@ class CarlaManager:
             if v.id != self.ego_vehicle.id:
                 x_diff = abs(ego_location.x - v.get_location().x)
                 y_diff = abs(ego_location.y - v.get_location().y)
-                min_dist = min(min_dist, math.sqrt(x_diff*x_diff + y_diff*y_diff))
+                min_dist = max(min(min_dist, math.sqrt(x_diff*x_diff + y_diff*y_diff)-2.4),0)
 
         # ego_velocity = self.ego_vehicle.get_velocity()
         # velocity_str = "{:.2f}, ".format(ego_velocity.x) + "{:.2f}".format(ego_velocity.y) \
         #         + ", {:.2f}".format(ego_velocity.z)
         dist_str = "{:.2f}".format(min_dist)
-        self.painter.draw_texts([dist_str],
+        self.painter.draw_texts(["Distance to closest vehicle: " + dist_str + " \nMax speed till now: " + str(self.max_speed_till_now)],
                     [[ego_location.x, ego_location.y, ego_location.z + 10.0]], size=20)
 
     def apply_control_after_reset(self):
