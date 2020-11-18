@@ -974,8 +974,8 @@ class CarlaManager:
         # velocity_str = "{:.2f}, ".format(ego_velocity.x) + "{:.2f}".format(ego_velocity.y) \
         #         + ", {:.2f}".format(ego_velocity.z)
         dist_str = "{:.2f}".format(min_dist)
-        self.painter.draw_texts(["Distance to closest vehicle: " + dist_str + " \nMax speed till now: " + str(self.max_speed_till_now)],
-                    [[ego_location.x, ego_location.y, ego_location.z + 10.0]], size=20)
+        self.painter.draw_texts(["Min Dist:" + dist_str + ", Max Speed Till Now: " + str(self.max_speed_till_now)],
+                    [[ego_location.x, ego_location.y, ego_location.z + 10.0]], size=10)
 
     def apply_control_after_reset(self):
         if(self.collision_sensor is not None):
