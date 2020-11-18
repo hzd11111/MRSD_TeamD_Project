@@ -110,7 +110,7 @@ class StateManager:
         if len(adj_lane_vehs) > 5:
             adj_lane_vehs = sorted(
                 adj_lane_vehs,
-                lambda item: item[0].location_global.distance(env_desc.cur_vehicle_state.location_global)
+                key=lambda item: item[0].location_global.distance(env_desc.cur_vehicle_state.location_global)
                 )[:5]
 
         for vehicle, lane in adj_lane_vehs:
@@ -151,7 +151,7 @@ class StateManager:
             pedestrian_states.append(pedestrian_state)
 
         if len(pedestrian_states) > 3:
-            pedestrian_states = sorted(pedestrian_states, lambda item: item[0])[:3]
+            pedestrian_states = sorted(pedestrian_states, key=lambda item: item[0])[:3]
         elif len(pedestrian_states) < 3:
             dummy_vehicles = list(itertools.repeat(
                 dummy_vehicle, 3 - len(pedestrian_states)))
@@ -232,7 +232,7 @@ class StateManager:
             pedestrian_states.append(pedestrian_state)
 
         if len(pedestrian_states) > 3:
-            pedestrian_states = sorted(pedestrian_states, lambda item: item[0])[:, 3]
+            pedestrian_states = sorted(pedestrian_states, key=lambda item: item[0])[:3]
         elif len(pedestrian_states) < 3:
             dummy_vehicles = list(itertools.repeat(
                 dummy_vehicle, 3 - len(pedestrian_states)))
@@ -309,7 +309,7 @@ class StateManager:
             pedestrian_states.append(pedestrian_state)
 
         if len(pedestrian_states) > 3:
-            pedestrian_states = sorted(pedestrian_states, lambda item: item[0])[:,3]
+            pedestrian_states = sorted(pedestrian_states, key=lambda item: item[0])[:3]
         elif len(pedestrian_states) < 3:
             dummy_peds = list(itertools.repeat(
                 dummy_ped, 3 - len(pedestrian_states)))
@@ -517,7 +517,7 @@ class StateManager:
         pedestrian_states = list(filter(lambda item: item[0] >= 0, pedestrian_states))
         # select top 3 or add dummy pedestrians
         if len(pedestrian_states) > 3:
-            pedestrian_states = sorted(pedestrian_states, lambda item: item[1])[:3]
+            pedestrian_states = sorted(pedestrian_states, key=lambda item: item[1])[:3]
         elif len(pedestrian_states) < 3:
             dummy_peds = list(itertools.repeat(
                 dummy_ped, 3 - len(pedestrian_states)))
@@ -727,7 +727,7 @@ class StateManager:
         # select smallest 3 y frenet pedestrians or add dummy pedestrians
         # TODO: Do i have to filter for positive x like in left turn?
         if len(pedestrian_states_perp) > 3:
-            pedestrian_states_perp = sorted(pedestrian_states_perp, lambda item: item[1])[:3]
+            pedestrian_states_perp = sorted(pedestrian_states_perp, key=lambda item: item[1])[:3]
         elif len(pedestrian_states_perp) < 3:
             dummy_peds = list(itertools.repeat(
                 dummy_ped, 3 - len(pedestrian_states_perp)))
@@ -750,7 +750,7 @@ class StateManager:
         # select smallest 3 y frenet pedestrians or add dummy pedestrians
         # TODO: Do i have to filter for positive x like in left turn?
         if len(pedestrian_states_curr) > 3:
-            pedestrian_states_curr = sorted(pedestrian_states_curr, lambda item: item[1])[:3]
+            pedestrian_states_curr = sorted(pedestrian_states_curr, key=lambda item: item[1])[:3]
         elif len(pedestrian_states_curr) < 3:
             dummy_peds = list(itertools.repeat(
                 dummy_ped, 3 - len(pedestrian_states_curr)))
