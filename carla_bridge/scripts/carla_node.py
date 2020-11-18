@@ -955,7 +955,9 @@ class CarlaManager:
 
         # get max speed
         if(self.ego_vehicle is not None):
-            self.max_speed_till_now = max(self.max_speed_till_now, self.ego_vehicle.get_velocity())
+            speed = self.ego_vehicle.get_velocity()
+            speed = np.linalg.norm([speed.x, speed.y, speed.z]) * 3.6
+            self.max_speed_till_now = max(self.max_speed_till_now, speed)
 
 
         # draw trajectories
