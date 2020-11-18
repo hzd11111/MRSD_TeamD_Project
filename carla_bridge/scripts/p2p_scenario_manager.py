@@ -146,8 +146,8 @@ if(TEST_ROUTE == 7 and CURRENT_SCENARIO == Scenario.P2P):
     
 if(TEST_ROUTE == 8 and CURRENT_SCENARIO == Scenario.P2P):
     print("Starting route " + str(route_mapping[TEST_ROUTE]))
-    np.random.seed(1)
-    random.seed(1)
+    np.random.seed(0)
+    random.seed(0)
     
 if(TEST_ROUTE == 9 and CURRENT_SCENARIO == Scenario.P2P):
     print("Starting route " + str(route_mapping[TEST_ROUTE]))

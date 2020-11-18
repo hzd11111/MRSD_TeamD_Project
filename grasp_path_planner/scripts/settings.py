@@ -39,12 +39,12 @@ WANDB_DRYRUN = True
 NEW_RUN = False
 DEBUG = True
 
-VIZ = False
+VIZ = True
 VIS_LIDAR = False
 NUM_NON_EGO_VEHICLES = 200
-TEST_ROUTE = 2
+TEST_ROUTE = 8
 P2P_LOOPING = False
-SPECTATOR_FOLLOWING = False
+SPECTATOR_FOLLOWING = True
 
 #assert !(CURRENT_SCENARIO==Scenario.P2P and CURRENT_MODE==Mode.TRAIN), "P2P Cannot be called in train mode"we
 
