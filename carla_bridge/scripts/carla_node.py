@@ -974,7 +974,7 @@ class CarlaManager:
         # velocity_str = "{:.2f}, ".format(ego_velocity.x) + "{:.2f}".format(ego_velocity.y) \
         #         + ", {:.2f}".format(ego_velocity.z)
         dist_str = "{:.2f}".format(min_dist)
-        self.painter.draw_texts(["Min Dist:" + dist_str + ", Max Speed Till Now: " + str(self.max_speed_till_now)],
+        self.painter.draw_texts(["Min Dist:" + dist_str + " m, Max Speed Till Now: " + str(self.max_speed_till_now) + " km/h"],
                     [[ego_location.x, ego_location.y, ego_location.z + 10.0]], size=10)
 
     def apply_control_after_reset(self):
