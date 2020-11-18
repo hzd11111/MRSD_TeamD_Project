@@ -71,7 +71,8 @@ class CarlaHandler:
         self.camera = None
         self.camera_parent_vehicle = None
 
-        self.world.set_weather(find_weather_presets()[2][0])
+        # print(find_weather_presets())
+        self.world.set_weather(find_weather_presets()[0][0])
         
         ### CARLA buggy road-ids lists for Town 05
         self.buggy_road_list = [5,49,17,47,16,25,18,40,26,29,50,52]
