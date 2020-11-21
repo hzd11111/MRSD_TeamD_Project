@@ -3,6 +3,7 @@ from utility import EnvDesc
 import numpy as np
 import itertools
 import sys
+from settings import CARTESIAN
 sys.path.append("../../carla_utils/utils")
 
 # ROS Packages
@@ -475,6 +476,196 @@ class StateManager:
         assert(len(entire_state) == 244)
         return np.array(entire_state)
 
+    def createIntersectionLeftTurnStateCartesian(self, env_desc):
+        """
+        Create a state for intersection when taking a left turn
+        """
+        dummy_vehicle = [1000, 1000, np.cos(0), np.sin(0), 0, 0] + [0, 0, 1] + [0]
+        dummy_ped = [1000, 1000, np.cos(0), np.sin(0), 0, 0] + [0, 1] + [0]
+        pedestrian_states = []
+        ego_vehicle_state = [
+            0,
+            0,
+            np.cos(0),
+            np.sin(0),
+            env_desc.cur_vehicle_state.speed,
+            env_desc.cur_vehicle_state.acceleration] + \
+            self.createTrafficLightOneHotVec(env_desc.cur_vehicle_state.traffic_light_status)
+        print(self.createTrafficLightOneHotVec(env_desc.cur_vehicle_state.traffic_light_status))
+        # extract front vehicle and back vehicle and pedestrian in current lane
+        # TODO: Make sure vehicle in front or back are always present
+        current_lane = env_desc.current_lane
+        front_vehicle = current_lane.VehicleInFront(env_desc.cur_vehicle_state)
+        back_vehicle = current_lane.VehicleBehind(env_desc.cur_vehicle_state)
+
+        # filter out pedestrians with negative x frenet
+        pedestrian_states = list(filter(lambda item: item[0] >= 0, pedestrian_states))
+
+        # select top 3 or add dummy pedestrians
+        if len(pedestrian_states) > 3:
+            pedestrian_states = sorted(pedestrian_states, key=lambda item: item[1])[:3]
+        elif len(pedestrian_states) < 3:
+            dummy_peds = list(itertools.repeat(
+                dummy_ped, 3 - len(pedestrian_states)))
+            pedestrian_states += dummy_peds
+
+        if front_vehicle is None:
+            front_vehicle_state = dummy_vehicle
+        else:
+            local_state, local_vel = env_desc.cur_vehicle_state.cartesianFromControllingVehicle(front_vehicle)
+            front_vehicle_state = [local_state.x,
+                                   local_state.y,
+                                   np.cos(local_state.theta),
+                                   np.sin(local_state.theta),
+                                   local_vel,
+                                   0] + \
+                self.createTrafficLightOneHotVec(front_vehicle.traffic_light_status) + [1]
+
+        if back_vehicle is None:
+            back_vehicle_state = dummy_vehicle
+        else:
+            local_state, local_vel = env_desc.cur_vehicle_state.cartesianFromControllingVehicle(back_vehicle)
+            back_vehicle_state = [local_state.x,
+                                  local_state.y,
+                                  np.cos(local_state.theta),
+                                  np.sin(local_state.theta),
+                                  local_vel,
+                                  0] + \
+                self.createTrafficLightOneHotVec(back_vehicle.traffic_light_status) + [1]
+
+        # identify vehicles from perpendicular lanes within 20m
+        parallel_lane_vehs = []
+        perpendicular_lane_vehs = []
+        for lane in env_desc.next_intersection:
+            for vehicle in lane.lane_vehicles:
+                perpendicular_lane_vehs.append([vehicle, lane])
+
+        # identify the vehicles from parallel lane
+        for lane in env_desc.adjacent_lanes:
+            if lane.same_direction is False and lane.is_misc is False:
+                for vehicle in lane.lane_vehicles:
+                    parallel_lane_vehs.append([vehicle, lane])
+
+        # take 10 vehicles with the smalled abs frenet x from perpendicular_lane_vehs
+        perpendicular_lane_vehs_in_ego = []
+        for vehicle, lane in perpendicular_lane_vehs:
+            local_state, local_vel = env_desc.cur_vehicle_state.cartesianFromControllingVehicle(vehicle)
+            vehicle_state = [local_state.x,
+                             local_state.y,
+                             np.cos(local_state.theta),
+                             np.sin(local_state.theta),
+                             local_vel,
+                             0] + \
+                self.createTrafficLightOneHotVec(vehicle.traffic_light_status) + [1]
+            perpendicular_lane_vehs_in_ego.append(vehicle_state)
+
+        if len(perpendicular_lane_vehs_in_ego) > 10:
+            perpendicular_lane_vehs_in_ego = sorted(
+                perpendicular_lane_vehs_in_ego, key=lambda item: abs(item[0]))
+            perpendicular_lane_vehs_in_ego = perpendicular_lane_vehs_in_ego[:10]
+        elif len(perpendicular_lane_vehs_in_ego) < 10:
+            dummy_vehicles = list(itertools.repeat(
+                dummy_vehicle, 10 - len(perpendicular_lane_vehs_in_ego)))
+            perpendicular_lane_vehs_in_ego += dummy_vehicles
+
+        # take 10 closest in the parallel lane
+        parallel_lane_vehs_in_ego = []
+        # if there are more than 10 vehicles than sort them globally and select 10 closest
+        # collect the frenet coordinates
+        for vehicle, lane in parallel_lane_vehs:
+            local_state, local_vel = env_desc.cur_vehicle_state.cartesianFromControllingVehicle(vehicle)
+            vehicle_state = [local_state.x,
+                             local_state.y,
+                             np.cos(local_state.theta),
+                             np.sin(local_state.theta),
+                             local_vel,
+                             0] + \
+                self.createTrafficLightOneHotVec(vehicle.traffic_light_status) + [1]
+            parallel_lane_vehs_in_ego.append(vehicle_state)
+
+        # filter out vehicles with negative x frenet
+        parallel_lane_vehs_in_ego = list(filter(lambda item: item[0] >= 0, parallel_lane_vehs_in_ego))
+        # if the number of vehicles in the parallel lanes are less than 10 add dummy
+        if len(parallel_lane_vehs_in_ego) > 10:
+            parallel_lane_vehs_in_ego = parallel_lane_vehs_in_ego[:10]
+        elif len(parallel_lane_vehs_in_ego) < 10:
+            dummy_vehicles = list(itertools.repeat(
+                dummy_vehicle, 10 - len(parallel_lane_vehs_in_ego)))
+            parallel_lane_vehs_in_ego += dummy_vehicles
+
+        intersection_vehs_in_ego = []
+        intersection_vehs = []
+        for lane in env_desc.adjacent_lanes:
+            if lane.is_misc is True:
+                for vehicle in lane.lane_vehicles:
+                    if vehicle.location_global.distance(
+                       env_desc.cur_vehicle_state.location_global) < 40.0:
+                        intersection_vehs.append(vehicle)
+
+        # if number of vehicles in intersection are more then 3 then take 3 closest
+        if len(intersection_vehs) > 3:
+            intersection_vehs = sorted(
+                intersection_vehs,
+                key=lambda item: item.location_global.distance(
+                    env_desc.cur_vehicle_state.location_global))
+            intersection_vehs = intersection_vehs[:3]
+
+        for vehicle in intersection_vehs:
+            local_state, local_vel = env_desc.cur_vehicle_state.cartesianFromControllingVehicle(vehicle)
+            vehicle_state = [local_state.x,
+                             local_state.y,
+                             np.cos(local_state.theta),
+                             np.sin(local_state.theta),
+                             local_vel,
+                             0] + \
+                self.createTrafficLightOneHotVec(vehicle.traffic_light_status) + [1]
+            intersection_vehs_in_ego.append(vehicle_state)
+
+        # if number of vehicles in intersection are less than 3 then add dummies
+        if len(intersection_vehs_in_ego) < 3:
+            dummy_vehicles = list(itertools.repeat(
+                dummy_vehicle, 3 - len(intersection_vehs_in_ego)))
+            intersection_vehs_in_ego += dummy_vehicles
+
+        # get the stopline distance, light status and merging lane distance
+        current_lane_status = []
+        current_lane_status += self.createTrafficLightOneHotVec(
+            env_desc.cur_vehicle_state.traffic_light_status)
+
+        # stop line distance
+        # for point in env_desc.current_lane.lane_points:
+        #     if point.stop_line is not StopLineStatus.NO_STOP:
+        #         current_lane_status += [abs(point.frenet_pose.x)]
+        
+        distance_to_stop_line = env_desc.cur_vehicle_state.traffic_light_stop_distance
+        current_lane_status += [distance_to_stop_line]
+        print("Distance to stop line is", distance_to_stop_line)
+
+        # get the merging distance
+        min_merging_dist = 100
+        for lane in env_desc.next_intersection:
+            if lane.directed_right is False:
+                if min_merging_dist > lane.intersecting_distance:
+                    min_merging_dist = lane.intersecting_distance
+        current_lane_status += [min_merging_dist]
+
+        if len(current_lane_status) != 8:
+            current_lane_status += list(itertools.repeat(
+                0, 8 - len(current_lane_status)))
+
+        # concatenate all the states and lane distance
+        entire_state = current_lane_status + ego_vehicle_state + \
+            front_vehicle_state + \
+            back_vehicle_state + \
+            [coord for state in pedestrian_states for coord in state] + \
+            [coord for state in perpendicular_lane_vehs_in_ego for coord in state] + \
+            [coord for state in parallel_lane_vehs_in_ego for coord in state] + \
+            [coord for state in intersection_vehs_in_ego for coord in state]
+
+        print(len(entire_state))
+        assert(len(entire_state) == 294)  # TODO: Update this after adding lights
+        return np.array(entire_state)
+
     def createIntersectionLeftTurnState(self, env_desc):
         """
         Create a state for intersection when taking a left turn
@@ -893,6 +1084,8 @@ class StateManager:
         elif scenario == Scenario.GO_STRAIGHT:
             return self.createIntersectionStraightState(env_desc)
         elif scenario == Scenario.LEFT_TURN:
+            if CARTESIAN:
+                return self.createIntersectionLeftTurnStateCartesian(env_desc)
             return self.createIntersectionLeftTurnState(env_desc)
         elif scenario == Scenario.RIGHT_TURN:
             return self.createIntersectionRightTurnState(env_desc)

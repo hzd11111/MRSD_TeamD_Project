@@ -33,18 +33,19 @@ Description of routes:Lane Following is involved in all of them
 15. RT - RT - LCL - LF - LT - LF
 '''
 ############ Mode and Model Selection ##############################
-CURRENT_SCENARIO = Scenario.P2P
-CURRENT_MODE = Mode.TEST
+CURRENT_SCENARIO = Scenario.LEFT_TURN
+CURRENT_MODE = Mode.TRAIN
 WANDB_DRYRUN = True
-NEW_RUN = False
+NEW_RUN = True
 DEBUG = True
+CARTESIAN = True
 
-VIZ = True
+VIZ = False
 VIS_LIDAR = False
 NUM_NON_EGO_VEHICLES = 200
 TEST_ROUTE = 2
 P2P_LOOPING = False
-SPECTATOR_FOLLOWING = True
+SPECTATOR_FOLLOWING = False
 
 #assert !(CURRENT_SCENARIO==Scenario.P2P and CURRENT_MODE==Mode.TRAIN), "P2P Cannot be called in train mode"we
 

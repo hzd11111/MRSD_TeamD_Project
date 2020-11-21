@@ -138,7 +138,7 @@ class Actor:
 
         return self.location_frenet
 
-    def cartesionFromControllingVehicle(self, adj_vehicle):
+    def cartesianFromControllingVehicle(self, adj_vehicle):
 
         # result_state = VehicleState()
         result_state = Pose2D()
@@ -157,8 +157,8 @@ class Actor:
         H_Rot[0, -1] = 0
         H_Rot[1, -1] = 0
         H_Rot[0, 0] = np.cos(self.location_global.theta)
-        H_Rot[0, 1] = -np.sin(self.location_global.theta)
-        H_Rot[1, 0] = np.sin(self.location_global.theta)
+        H_Rot[0, 1] = np.sin(self.location_global.theta)
+        H_Rot[1, 0] = -np.sin(self.location_global.theta)
         H_Rot[1, 1] = np.cos(self.location_global.theta)
         H_trans = np.eye(3)
         H_trans[0, -1] = -self.location_global.x
@@ -173,7 +173,7 @@ class Actor:
         result_state.theta = theta - self.location_global.theta
         # calculate and set relative speed
         res_vel = np.array([vx - cvx, vy - cvy])
-
+        res_vel = np.linalg.norm(res_vel)
         return result_state, res_vel
 
     # ---------GETTERS------------------------------
