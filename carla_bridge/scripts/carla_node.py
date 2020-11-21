@@ -1061,7 +1061,7 @@ class CarlaManager:
 
                 self.draw_global_path(self.global_path_in_intersection)
                 
-                self.force_custom_traffic = np.random.randint(1)
+                self.force_custom_traffic = np.random.randint(2)
                 if(self.force_custom_traffic == 0):
                     print("Custom Traffic Light Routine started.......")
                 else:

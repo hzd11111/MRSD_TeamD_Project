@@ -68,7 +68,7 @@ class FullPlannerManager:
 
         if NEW_RUN and self.event == Scenario.LEFT_TURN:
             model = DQN(CustomIntersectionLeftTurn, env, verbose=1,
-                        learning_starts=256, batch_size=256, exploration_fraction=0.9,
+                        learning_starts=256, batch_size=256,# exploration_fraction=0.9,
                         target_network_update_freq=100,
                         tensorboard_log=dir_path + "/Logs", gamma=0.93, learning_rate=0.0001)
 
@@ -90,7 +90,7 @@ class FullPlannerManager:
         # wandb.save("./*.py")
         # wandb.save("./*.md")
         else:
-            model.learn(total_timesteps=50000, callback=checkpoint_callback)
+            model.learn(total_timesteps=20000, callback=checkpoint_callback)
             model.save(MODEL_SAVE_PATH)
         # wandb.save(MODEL_SAVE_PATH + ".zip")
 
