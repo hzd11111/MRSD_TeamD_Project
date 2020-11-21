@@ -138,6 +138,44 @@ class Actor:
 
         return self.location_frenet
 
+    def cartesionFromControllingVehicle(self, adj_vehicle):
+
+        # result_state = VehicleState()
+        result_state = Pose2D()
+        x = adj_vehicle.location_global.x
+        y = adj_vehicle.location_global.y
+        theta = adj_vehicle.location_global.theta
+        speed = adj_vehicle.speed
+        vx = speed * np.cos(theta)
+        vy = speed * np.sin(theta)
+        # get current_vehicle_speeds
+        cvx = self.speed * np.cos(self.location_global.theta)
+        cvy = self.speed * np.sin(self.location_global.theta)
+        # make homogeneous transform
+        H_Rot = np.eye(3)
+        H_Rot[-1, -1] = 1
+        H_Rot[0, -1] = 0
+        H_Rot[1, -1] = 0
+        H_Rot[0, 0] = np.cos(self.location_global.theta)
+        H_Rot[0, 1] = -np.sin(self.location_global.theta)
+        H_Rot[1, 0] = np.sin(self.location_global.theta)
+        H_Rot[1, 1] = np.cos(self.location_global.theta)
+        H_trans = np.eye(3)
+        H_trans[0, -1] = -self.location_global.x
+        H_trans[1, -1] = -self.location_global.y
+        H = np.matmul(H_Rot, H_trans)
+
+        # calculate and set relative position
+        res = np.matmul(H, np.array([x, y, 1]).reshape(3, 1))
+        result_state.x = res[0, 0]
+        result_state.y = res[1, 0]
+        # calculate and set relative orientation
+        result_state.theta = theta - self.location_global.theta
+        # calculate and set relative speed
+        res_vel = np.array([vx - cvx, vy - cvy])
+
+        return result_state, res_vel
+
     # ---------GETTERS------------------------------
 
     def get_state_dict(self, actor=None):
