@@ -17,7 +17,7 @@ from topology_extraction import (
 )
 from utils import get_intersection_topology, get_full_lanes
 from options import Scenario, GlobalPathAction
-from settings import TEST_ROUTE, CURRENT_SCENARIO
+from settings import TEST_ROUTE, CURRENT_SCENARIO, IGNORE_LIGHTS_PERCENTAGE
 
 # if(TEST_ROUTE == 9 and CURRENT_SCENARIO == Scenario.P2P):
 #     np.random.seed(22)
@@ -42,7 +42,7 @@ from settings import TEST_ROUTE, CURRENT_SCENARIO
 #     print("Starting route 3....")
 #     np.random.seed(0)
 #     random.seed(0)
-    
+
 # if(TEST_ROUTE == 4 and CURRENT_SCENARIO == Scenario.P2P):
 #     print("Starting route 4....")
 #     np.random.seed(0)
@@ -52,12 +52,12 @@ from settings import TEST_ROUTE, CURRENT_SCENARIO
 #     print("Starting route 5....")
 #     np.random.seed(0)
 #     random.seed(0)
-    
+
 # if(TEST_ROUTE == 7 and CURRENT_SCENARIO == Scenario.P2P):
 #     print("Starting route 7....")
 #     np.random.seed(0)
 #     random.seed(0)
-    
+
 # if(TEST_ROUTE == 8 and CURRENT_SCENARIO == Scenario.P2P):
 #     print("Starting route 8....")
 #     np.random.seed(0)
@@ -67,94 +67,94 @@ from settings import TEST_ROUTE, CURRENT_SCENARIO
 #     print("Starting route 9....")
 #     np.random.seed(2020)
 #     random.seed(2020)
-    
+
 # if(TEST_ROUTE == 10 and CURRENT_SCENARIO == Scenario.P2P):
 #     print("Starting route 10....")
 #     np.random.seed(100)
 #     random.seed(100)
-    
+
 # if(TEST_ROUTE == 11 and CURRENT_SCENARIO == Scenario.P2P):
 #     print("Starting route 10....")
 #     np.random.seed(2020)
 #     random.seed(2020)
-   
+
 # if(TEST_ROUTE == 12 and CURRENT_SCENARIO == Scenario.P2P):
 #     print("Starting route 12....")
 #     np.random.seed(10)
 #     random.seed(10)
-    
+
 # if(TEST_ROUTE == 13 and CURRENT_SCENARIO == Scenario.P2P):
 #     print("Starting route 13....")
 #     np.random.seed(0)
 #     random.seed(0)
-    
+
 # if(TEST_ROUTE == 14 and CURRENT_SCENARIO == Scenario.P2P):
 #     print("Starting route 14....")
 #     np.random.seed(0)
 #     random.seed(0)
-    
+
 # if(TEST_ROUTE == 15 and CURRENT_SCENARIO == Scenario.P2P):
 #     print("Starting route 15....")
 #     np.random.seed(1)
 #     random.seed(1)
-    
+
 # if(TEST_ROUTE == 16 and CURRENT_SCENARIO == Scenario.P2P):
 #     print("Starting route 16....")
 #     np.random.seed(0)
 #     random.seed(0)
-route_mapping = {0 : 2, 1:4, 2:8, 3:9, 4:10, 5:11, 6:12, 7:14, 8:15, 9:16}
+route_mapping = {0: 2, 1: 4, 2: 8, 3: 9, 4: 10, 5: 11, 6: 12, 7: 14, 8: 15, 9: 16}
 
-if(TEST_ROUTE == 0 and CURRENT_SCENARIO == Scenario.P2P):
-    print("Starting route " + str(route_mapping[TEST_ROUTE]))
-    np.random.seed(0)
-    random.seed(0)    
-
-if(TEST_ROUTE == 1 and CURRENT_SCENARIO == Scenario.P2P):
-    print("Starting route " + str(route_mapping[TEST_ROUTE]))
-    np.random.seed(0)
-    random.seed(0)   
-    
-if(TEST_ROUTE == 2 and CURRENT_SCENARIO == Scenario.P2P):
+if TEST_ROUTE == 0 and CURRENT_SCENARIO == Scenario.P2P:
     print("Starting route " + str(route_mapping[TEST_ROUTE]))
     np.random.seed(0)
     random.seed(0)
-    
-if(TEST_ROUTE == 3 and CURRENT_SCENARIO == Scenario.P2P):
+
+if TEST_ROUTE == 1 and CURRENT_SCENARIO == Scenario.P2P:
+    print("Starting route " + str(route_mapping[TEST_ROUTE]))
+    np.random.seed(0)
+    random.seed(0)
+
+if TEST_ROUTE == 2 and CURRENT_SCENARIO == Scenario.P2P:
+    print("Starting route " + str(route_mapping[TEST_ROUTE]))
+    np.random.seed(0)
+    random.seed(0)
+
+if TEST_ROUTE == 3 and CURRENT_SCENARIO == Scenario.P2P:
     print("Starting route " + str(route_mapping[TEST_ROUTE]))
     np.random.seed(2020)
     random.seed(2020)
-    
-if(TEST_ROUTE == 4 and CURRENT_SCENARIO == Scenario.P2P):
+
+if TEST_ROUTE == 4 and CURRENT_SCENARIO == Scenario.P2P:
     print("Starting route " + str(route_mapping[TEST_ROUTE]))
     np.random.seed(100)
     random.seed(100)
-    
-if(TEST_ROUTE == 5 and CURRENT_SCENARIO == Scenario.P2P):
+
+if TEST_ROUTE == 5 and CURRENT_SCENARIO == Scenario.P2P:
     print("Starting route " + str(route_mapping[TEST_ROUTE]))
     np.random.seed(2020)
     random.seed(2020)
-    
-if(TEST_ROUTE == 6 and CURRENT_SCENARIO == Scenario.P2P):
+
+if TEST_ROUTE == 6 and CURRENT_SCENARIO == Scenario.P2P:
     print("Starting route " + str(route_mapping[TEST_ROUTE]))
     np.random.seed(10)
     random.seed(10)
-    
-if(TEST_ROUTE == 7 and CURRENT_SCENARIO == Scenario.P2P):
+
+if TEST_ROUTE == 7 and CURRENT_SCENARIO == Scenario.P2P:
     print("Starting route " + str(route_mapping[TEST_ROUTE]))
     np.random.seed(0)
     random.seed(0)
-    
-if(TEST_ROUTE == 8 and CURRENT_SCENARIO == Scenario.P2P):
+
+if TEST_ROUTE == 8 and CURRENT_SCENARIO == Scenario.P2P:
     print("Starting route " + str(route_mapping[TEST_ROUTE]))
     np.random.seed(0)
     random.seed(0)
-    
-if(TEST_ROUTE == 9 and CURRENT_SCENARIO == Scenario.P2P):
+
+if TEST_ROUTE == 9 and CURRENT_SCENARIO == Scenario.P2P:
     print("Starting route " + str(route_mapping[TEST_ROUTE]))
     np.random.seed(0)
     random.seed(0)
-    
-'''
+
+"""
 LF - Lane Follow, RT/LT - Right/Left Turn, LCR/LCL - Lane chane right/left
 GS - Go straight
 Description of routes:Lane Following is involved in all of them
@@ -174,46 +174,47 @@ Description of routes:Lane Following is involved in all of them
 13. LCR - RT - LF - GS - LF
 14. LCL - LF - LT - LF
 15. RT - RT - LCL - LF - LT - LF
-'''
-route_start_locations = [(-47.5,-18.8,0.06),   #0
-                         (-66.5,-91.5,0),      #1
-                         (-99.9840560913086, -91.54576110839844, 0.0),#2
-                         (-131.7,-70.3,0),#3
-                         (-125.1,-17.9,0),#4
-                         (-47, 52, 0),#5
-                         (-47, 52, 0),#6
-                         (96,37,0),#7
-                         (32.786911,-69.258972,0),#8
-                         (-208,3.08,0),#9
-                         (-91.22312927246094, 151.28395080566406, 0.055450439453125),#10
-                         (24.58, 68.39, 0),#11
-                         (26.79, -106.88, 0),#12
-                         (-65.01, 144.0317840576172, 0.055450439453125),#13
-                         (-121.52399444580078, -23.87297248840332, -1.52587890625e-05),#14
-                         (-184.5650177001953, 22.083250045776367, 0.055450439453125), #15
-                         (-47.04050064086914, 16.90705680847168, 0.055450439453125)] #16
+"""
+route_start_locations = [
+    (-47.5, -18.8, 0.06),  # 0
+    (-66.5, -91.5, 0),  # 1
+    (-99.9840560913086, -91.54576110839844, 0.0),  # 2
+    (-131.7, -70.3, 0),  # 3
+    (-125.1, -17.9, 0),  # 4
+    (-47, 52, 0),  # 5
+    (-47, 52, 0),  # 6
+    (96, 37, 0),  # 7
+    (32.786911, -69.258972, 0),  # 8
+    (-208, 3.08, 0),  # 9
+    (-91.22312927246094, 151.28395080566406, 0.055450439453125),  # 10
+    (24.58, 68.39, 0),  # 11
+    (26.79, -106.88, 0),  # 12
+    (-65.01, 144.0317840576172, 0.055450439453125),  # 13
+    (-121.52399444580078, -23.87297248840332, -1.52587890625e-05),  # 14
+    (-184.5650177001953, 22.083250045776367, 0.055450439453125),  # 15
+    (-47.04050064086914, 16.90705680847168, 0.055450439453125),
+]  # 16
 
 
-
-route_end_locations = [(-92.1,-91.5,0), #0
-                       (-167.1,-91.6,0), #1
-                       (-128.4347686767578, -33.49810729980469, -1.52587890625e-05), #2
-                       (-128.6,-18.8,0), #3
-                       (-121.2,-69.9,0), #4
-                       (-95,-91.5,0), #5
-                       (-95,-91.5,0),#6
-                       (-72,140,0),#7
-                       (-128,-49,-0),#8
-                       (-74.20005798339844, -82.00556182861328, 0.0),#9
-                       (-163.62777709960938, 84.37947082519531, 0.0),#10
-                       (-81.98, 143.73, 0),#11
-                       (-73.24, -138.42, 0),#12
-                       (35.099251, 32.073341, 0.0),#13
-                       (-159.607421875, -91.63422393798828, 0.0),#14
-                       (-95.68251037597656, 91.45722198486328, 0.0),#15
-                       (-79.68252563476562, 91.47552490234375, 0.0)] #16
-
-
+route_end_locations = [
+    (-92.1, -91.5, 0),  # 0
+    (-167.1, -91.6, 0),  # 1
+    (-128.4347686767578, -33.49810729980469, -1.52587890625e-05),  # 2
+    (-128.6, -18.8, 0),  # 3
+    (-121.2, -69.9, 0),  # 4
+    (-95, -91.5, 0),  # 5
+    (-95, -91.5, 0),  # 6
+    (-72, 140, 0),  # 7
+    (-128, -49, -0),  # 8
+    (-74.20005798339844, -82.00556182861328, 0.0),  # 9
+    (-163.62777709960938, 84.37947082519531, 0.0),  # 10
+    (-81.98, 143.73, 0),  # 11
+    (-73.24, -138.42, 0),  # 12
+    (35.099251, 32.073341, 0.0),  # 13
+    (-159.607421875, -91.63422393798828, 0.0),  # 14
+    (-95.68251037597656, 91.45722198486328, 0.0),  # 15
+    (-79.68252563476562, 91.47552490234375, 0.0),
+]  # 16
 
 
 class P2PScenario:
@@ -223,16 +224,14 @@ class P2PScenario:
 
         self.traffic_manager = self.client.get_trafficmanager(8000)
         self.traffic_manager.set_global_distance_to_leading_vehicle(2)
-        
+
         self.world = self.client.get_world()
         self.vehicles_list = []
         print("Intersection Manager Initialized...")
 
         # Global Planner
         self.global_planner = get_global_planner(self.world, 2)
-        
-        
-        
+
         # Intersection information pre-computation
         ## Get the topology
         tree = get_opendrive_tree(self.world)
@@ -242,8 +241,6 @@ class P2PScenario:
 
         ## Get map waypoints
         self.waypoints_finer = self.world.get_map().generate_waypoints(distance=1)
-        
-        
 
     def reset(self, warm_start_duration=5, num_vehicles=50):
         # if CURRENT_SCENARIO is Scenario.P2P and TEST_ROUTE is 1:
@@ -269,6 +266,10 @@ class P2PScenario:
         blueprints = [x for x in blueprints if not x.id.endswith("model3")]
 
         spawn_points = self.world.get_map().get_spawn_points()
+        if num_vehicles > 280:
+            spawn_points = [
+                wp.transform for wp in self.waypoints_finer
+            ]  # self.world.get_map().get_spawn_points()
         number_of_spawn_points = len(spawn_points)
 
         if num_vehicles < number_of_spawn_points:
@@ -291,7 +292,7 @@ class P2PScenario:
         # draw_waypoints(self.world, global_path_wps, life_time=100)
 
         spawn_waypoint = global_path_wps[0]
-        #spawn_waypoint = spawn_waypoint.previous(1)[0]
+        # spawn_waypoint = spawn_waypoint.previous(1)[0]
         # import pdb; pdb.set_trace()
         # Ego Vehicle
         for n, transform in enumerate([spawn_waypoint.transform]):
@@ -299,7 +300,7 @@ class P2PScenario:
                 break
             blueprint = random.choice(ego_blueprints)
             if blueprint.has_attribute("color"):
-                color = '255,0,0'
+                color = "255,0,0"
                 # color = random.choice(
                 #     blueprint.get_attribute("color").recommended_values
                 # )
@@ -309,7 +310,7 @@ class P2PScenario:
                     blueprint.get_attribute("driver_id").recommended_values
                 )
                 blueprint.set_attribute("driver_id", driver_id)
-            blueprint.set_attribute('role_name', 'ego')
+            blueprint.set_attribute("role_name", "ego")
             # transform = t.transform
             transform.location.z += 2.0
             ego_batch.append(
@@ -323,7 +324,7 @@ class P2PScenario:
                 break
             blueprint = random.choice(blueprints)
             if blueprint.has_attribute("color"):
-                color = '0,0,0'
+                color = "0,0,0"
                 # color = random.choice(
                 #     blueprint.get_attribute("color").recommended_values
                 # )
@@ -360,8 +361,7 @@ class P2PScenario:
         for n, v in enumerate(my_vehicles):
 
             self.traffic_manager.auto_lane_change(v, False)
-            # self.traffic_manager.ignore_lights_percentage(v, 50)
-
+            self.traffic_manager.ignore_lights_percentage(v, IGNORE_LIGHTS_PERCENTAGE)
 
         warm_start_curr = 0
         while warm_start_curr < warm_start_duration:
@@ -375,27 +375,37 @@ class P2PScenario:
             [SetAutopilot(ego_vehicle, False)], synchronous_master
         )
 
-        
         ### Pre-computation for intersections
-        global_path_actions = self.get_global_path_actions(route)[:-2] # -2 to end the path slightly before the final point.
-        
+        global_path_actions = self.get_global_path_actions(route)[
+            :-2
+        ]  # -2 to end the path slightly before the final point.
+
         ## Get the list of intersections that the global path will take in sequence. Also get the planned high level actions for each of these intersections.
         list_of_intersection_ids_to_pass_in_ordered_sequence = []
         list_of_high_level_actions_to_take_in_ordered_sequence = []
         first_wp_for_each_junction = []
-        
-        
-        
+
         for global_path_point in global_path_wps[:-2]:
-            if(global_path_point.is_junction and global_path_point.get_junction().id not in list_of_intersection_ids_to_pass_in_ordered_sequence):
-                list_of_intersection_ids_to_pass_in_ordered_sequence.append(global_path_point.get_junction().id)
+            if (
+                global_path_point.is_junction
+                and global_path_point.get_junction().id
+                not in list_of_intersection_ids_to_pass_in_ordered_sequence
+            ):
+                list_of_intersection_ids_to_pass_in_ordered_sequence.append(
+                    global_path_point.get_junction().id
+                )
                 first_wp_for_each_junction.append(global_path_point)
-                
+
         for global_path_action in global_path_actions:
-            if(global_path_action == GlobalPathAction.GO_STRAIGHT or global_path_action == GlobalPathAction.RIGHT_TURN or global_path_action == GlobalPathAction.LEFT_TURN):
-                list_of_high_level_actions_to_take_in_ordered_sequence.append(global_path_action)
-                
-        
+            if (
+                global_path_action == GlobalPathAction.GO_STRAIGHT
+                or global_path_action == GlobalPathAction.RIGHT_TURN
+                or global_path_action == GlobalPathAction.LEFT_TURN
+            ):
+                list_of_high_level_actions_to_take_in_ordered_sequence.append(
+                    global_path_action
+                )
+
         ## Find the road_id and lane_id on the lane through which the ego_vehicle will enter each intersection.
         road_and_lane_ids_for_incoming_roads_in_global_path_for_each_intersection = []
         for first_wp_in_junction in first_wp_for_each_junction:
@@ -405,19 +415,21 @@ class P2PScenario:
                 previous_wp = first_wp_in_junction.previous(2)[0]
                 road_id = previous_wp.road_id
                 lane_id = previous_wp.lane_id
-                road_and_lane_ids_for_incoming_roads_in_global_path_for_each_intersection.append((road_id, lane_id))
+                road_and_lane_ids_for_incoming_roads_in_global_path_for_each_intersection.append(
+                    (road_id, lane_id)
+                )
             else:
                 if first_wp_in_junction.next(2)[0].is_junction:
-                    print("lol-2")    
+                    print("lol-2")
                 next_wp = first_wp_in_junction.next(2)[0]
                 road_id = next_wp.road_id
-                lane_id = next_wp.lane_id            
-                road_and_lane_ids_for_incoming_roads_in_global_path_for_each_intersection.append((road_id, lane_id))
-                
+                lane_id = next_wp.lane_id
+                road_and_lane_ids_for_incoming_roads_in_global_path_for_each_intersection.append(
+                    (road_id, lane_id)
+                )
 
         ## Get intersection topologies for each intersection accoring to the global path
-        
-        
+
         ### Precompute Stuff
 
         intersection_topologies = []
@@ -425,7 +437,9 @@ class P2PScenario:
         incoming_road_lane_id_to_outgoing_lane_id_dict_for_each_intersection = []
         list_of_intersection_waypoints_for_each_intersection = []
 
-        for i,junction in enumerate(list_of_intersection_ids_to_pass_in_ordered_sequence):
+        for i, junction in enumerate(
+            list_of_intersection_ids_to_pass_in_ordered_sequence
+        ):
 
             (
                 road_id_set,
@@ -433,15 +447,23 @@ class P2PScenario:
                 outgoing_road_lane_id_set,
                 incoming_road_lane_id_to_outgoing_lane_id_dict,
             ) = self.get_road_sets(junction)
-            
+
             # Get intersection path waypoints
-            current_scenario_setups = self.get_scenario_setups(self.waypoints_finer, junction, incoming_road_lane_id_set, outgoing_road_lane_id_set, incoming_road_lane_id_to_outgoing_lane_id_dict)[list_of_high_level_actions_to_take_in_ordered_sequence[i]]
-            
-            current_road_lane_id = road_and_lane_ids_for_incoming_roads_in_global_path_for_each_intersection[i]
+            current_scenario_setups = self.get_scenario_setups(
+                self.waypoints_finer,
+                junction,
+                incoming_road_lane_id_set,
+                outgoing_road_lane_id_set,
+                incoming_road_lane_id_to_outgoing_lane_id_dict,
+            )[list_of_high_level_actions_to_take_in_ordered_sequence[i]]
+
+            current_road_lane_id = road_and_lane_ids_for_incoming_roads_in_global_path_for_each_intersection[
+                i
+            ]
             for setup in current_scenario_setups:
-                if(setup[0] == current_road_lane_id):
+                if setup[0] == current_road_lane_id:
                     current_setup = setup
-                        
+
             incoming_road_lane = current_setup[0]
             outgoing_road_lane = current_setup[1]
             incoming_lane_waypoints = [
@@ -464,27 +486,35 @@ class P2PScenario:
             if outgoing_lane_orientation == 1:
                 outgoing_lane_waypoints = outgoing_lane_waypoints[::-1]
 
-            start_location = incoming_lane_waypoints[-1].transform.location  # Start of lane
+            start_location = incoming_lane_waypoints[
+                -1
+            ].transform.location  # Start of lane
             end_location = outgoing_lane_waypoints[
-                min(len(outgoing_lane_waypoints)-1,5)
+                min(len(outgoing_lane_waypoints) - 1, 5)
             ].transform.location  # 10 m after end of intersection
 
             route = self.global_planner.trace_route(start_location, end_location)
             global_path_wps_for_intersection = [route[i][0] for i in range(len(route))]
-            list_of_intersection_waypoints_for_each_intersection.append(global_path_wps_for_intersection)
+            list_of_intersection_waypoints_for_each_intersection.append(
+                global_path_wps_for_intersection
+            )
             #################################################################################
-            
-            
-            
+
             intersection_topology, road_lane_to_orientation = get_intersection_topology(
                 self.waypoints_finer,
                 incoming_road_lane_id_set,
                 outgoing_road_lane_id_set,
                 junction,
-                road_and_lane_ids_for_incoming_roads_in_global_path_for_each_intersection[i],
-            )      
+                road_and_lane_ids_for_incoming_roads_in_global_path_for_each_intersection[
+                    i
+                ],
+            )
             # Adding ego key to parallel lane same dir list
-            intersection_topology[2].append(road_and_lane_ids_for_incoming_roads_in_global_path_for_each_intersection[i])
+            intersection_topology[2].append(
+                road_and_lane_ids_for_incoming_roads_in_global_path_for_each_intersection[
+                    i
+                ]
+            )
             intersection_topology = get_full_lanes(
                 intersection_topology[0],
                 intersection_topology[1],
@@ -492,21 +522,33 @@ class P2PScenario:
                 intersection_topology[3],
                 incoming_road_lane_id_to_outgoing_lane_id_dict,
             )
-            
+
             intersection_topologies.append(intersection_topology)
-            road_lane_to_orientation_for_each_intersection.append(road_lane_to_orientation)
-            incoming_road_lane_id_to_outgoing_lane_id_dict_for_each_intersection.append(incoming_road_lane_id_to_outgoing_lane_id_dict)
+            road_lane_to_orientation_for_each_intersection.append(
+                road_lane_to_orientation
+            )
+            incoming_road_lane_id_to_outgoing_lane_id_dict_for_each_intersection.append(
+                incoming_road_lane_id_to_outgoing_lane_id_dict
+            )
 
-        
+        print("Control handed to system....")
 
-        
-        print("Control handed to system....")     
-        
-
-        return ego_vehicle, my_vehicles, global_path_wps, route, global_path_actions, intersection_topologies, incoming_road_lane_id_to_outgoing_lane_id_dict_for_each_intersection, road_lane_to_orientation_for_each_intersection, road_and_lane_ids_for_incoming_roads_in_global_path_for_each_intersection, list_of_intersection_waypoints_for_each_intersection, list_of_intersection_ids_to_pass_in_ordered_sequence
+        return (
+            ego_vehicle,
+            my_vehicles,
+            global_path_wps,
+            route,
+            global_path_actions,
+            intersection_topologies,
+            incoming_road_lane_id_to_outgoing_lane_id_dict_for_each_intersection,
+            road_lane_to_orientation_for_each_intersection,
+            road_and_lane_ids_for_incoming_roads_in_global_path_for_each_intersection,
+            list_of_intersection_waypoints_for_each_intersection,
+            list_of_intersection_ids_to_pass_in_ordered_sequence,
+        )
 
     def get_random_route(self):
-        
+
         random_ind = np.random.randint(0, len(route_start_locations))
         if TEST_ROUTE != -1:
             random_ind = route_mapping[TEST_ROUTE]
@@ -517,7 +559,9 @@ class P2PScenario:
         # Generate the route using the global route planner object.
         route = grp.trace_route(start_location, end_location)
         global_path_wps = [route[i][0] for i in range(len(route))]
-        draw_waypoints(self.world, global_path_wps, life_time=10, color=[255,255,255], text='*')
+        draw_waypoints(
+            self.world, global_path_wps, life_time=10, color=[255, 255, 255], text="*"
+        )
 
         return route, global_path_wps
 
@@ -526,8 +570,7 @@ class P2PScenario:
         vehicles_list = world.get_actors().filter("vehicle*")
         for vehicle in vehicles_list:
             vehicle.destroy()
-            
-            
+
     def get_scenario_setups(
         self,
         waypoints,
@@ -535,7 +578,7 @@ class P2PScenario:
         incoming_road_lane_id_set,
         outgoing_road_lane_id_set,
         incoming_road_lane_id_to_outgoing_lane_id_dict,
-        ):
+    ):
         scenario_to_setup = {}
         scenario_to_setup[GlobalPathAction.LEFT_TURN] = []
         scenario_to_setup[GlobalPathAction.RIGHT_TURN] = []
@@ -607,7 +650,7 @@ class P2PScenario:
                         )
 
         return scenario_to_setup
-    
+
     def get_road_sets(self, junction_id):
 
         incoming_road_lane_id_set = set([])
@@ -704,7 +747,7 @@ class P2PScenario:
             outgoing_road_lane_id_set,
             incoming_road_lane_id_to_outgoing_lane_id_dict,
         )
-        
+
     def get_global_path_actions(self, route):
 
         global_path_actions = [route[i][1] for i in range(len(route))]
@@ -737,10 +780,10 @@ class P2PScenario:
                 global_path_actions[i] = GlobalPathAction.SWITCH_LANE_RIGHT
 
         return global_path_actions
-            
+
 
 if __name__ == "__main__":
-    
+
     client = carla.Client("localhost", 2000)
     world = client.get_world()
     client.set_timeout(10.0)
@@ -749,5 +792,9 @@ if __name__ == "__main__":
     p2p_tm.destroy_all_actors()
     ego_vehicle, my_vehicles, global_path_wps, route = p2p_tm.reset()
     draw_waypoints(world, global_path_wps, life_time=30)
-    for i in range(100): world.tick(); time.sleep(0.1)
-    import ipdb; ipdb.set_trace()
+    for i in range(100):
+        world.tick()
+        time.sleep(0.1)
+    import ipdb
+
+    ipdb.set_trace()

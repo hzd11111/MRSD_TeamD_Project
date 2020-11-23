@@ -1178,7 +1178,9 @@ class CarlaManager:
 
         # Traffic light manager
         self.TLManager = TrafficLightManager(self.client)
-        # self.set_global_traffic_light_duration()
+        
+        if(CONTROL_TRAFFIC_LIGHTS):
+            self.set_global_traffic_light_duration()
 
         if synchronous_mode:
             settings = self.carla_handler.world.get_settings()
